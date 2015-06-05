@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title>{% block title %}Arachnado Web Crawler{% end %}</title>
+    <link href="http://maxcdn.bootstrapcdn.com/bootswatch/3.3.4/flatly/bootstrap.css" rel="stylesheet">
+</head>
+
+<body>
+    <nav class="navbar navbar-default navbar-static-top">
+        <div class="container">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="/">Arachnado</a>
+            </div>
+
+            <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                <ul class="nav navbar-nav">
+                    <li><a id="connection-monitor"></a></li>
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                    <form class="navbar-form navbar-left" method="post" action="/start">
+                        <button type="submit" class="btn btn-success">Crawl</button>
+                        <div class="form-group">
+                            <input type="text" class="form-control" name="domain" placeholder="domain">
+                        </div>
+                    </form>
+                    {% block nav-settings %}<li><a href="/settings">Settings</a></li>{% end %}
+                    {% block nav-help %}<li><a href="/help">Help</a></li>{% end %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <div class="container">
+        {% block content %}{% end %}
+    </div>
+
+    <script src="//code.jquery.com/jquery-2.1.4.min.js"></script>
+    <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+    <script src="https://fb.me/react-with-addons-0.13.3.js"></script>
+    <script src="https://fb.me/JSXTransformer-0.13.3.js"></script>
+
+    <script src="/static/js/ws_event_dispatcher.js"></script>
+    <script>
+        $(window).load(function() {
+            var loc = document.location;
+            var serverUrl = "ws://" + loc.hostname + ":" + loc.port + "/ws";
+            window.socket = new FancyWebSocket(serverUrl);
+        });
+    </script>
+
+    <script type="text/jsx;harmony=true" src="/static/js/ConnectionMonitor.jsx"></script>
+</body>
+</html>

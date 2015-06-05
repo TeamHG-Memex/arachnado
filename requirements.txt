@@ -1,0 +1,2 @@
+https://github.com/scrapy/scrapy/archive/d9bcd48606afd3301598b12a5fb037738daa11db.zip
+tornado == 4.2

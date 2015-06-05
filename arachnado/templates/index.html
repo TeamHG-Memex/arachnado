@@ -1,0 +1,42 @@
+{% extends "base.html %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-xs-4">
+            <table class="table table-condensed">
+                <caption></caption>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Seed URL</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="success">
+                        <th scope="row">1</th>
+                        <td>reddit.com</td>
+                        <td>crawling</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">2</th>
+                        <td>reddit.com</td>
+                        <td>finished</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">5</th>
+                        <td>scrapy.org</td>
+                        <td>finished</td>
+                    </tr>
+
+                </tbody>
+            </table>
+        </div>
+        <div class="col-xs-8">
+            <div class="jumbotron">
+                <h1>Stats & Charts</h1>
+                <p>Here we'll display various crawling stats: both global and per-job.</p>
+            </div>
+        </div>
+    </div>
+{% end %}
