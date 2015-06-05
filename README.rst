@@ -20,7 +20,7 @@ Install all requirements from `requirements.txt` using pip::
 Run
 ---
 
-To run CrawlIt execute the following command from the repo root::
+To run Arachnado execute the following command from the repo root::
 
     python -m arachnado
 
