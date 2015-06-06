@@ -70,3 +70,5 @@ var FancyWebSocket = function(url){
     }
   }
 };
+
+exports.FancyWebSocket = FancyWebSocket;

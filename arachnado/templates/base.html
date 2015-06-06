@@ -16,7 +16,7 @@
                     <span class="icon-bar"></span>
                     <span class="icon-bar"></span>
                 </button>
-                <a class="navbar-brand" href="/">Arachnado</a>
+                <a class="navbar-brand" href="{{ reverse_url('index') }}">Arachnado</a>
             </div>
 
             <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
@@ -24,14 +24,14 @@
                     <li><a id="connection-monitor"></a></li>
                 </ul>
                 <ul class="nav navbar-nav navbar-right">
-                    <form class="navbar-form navbar-left" method="post" action="/start">
+                    <form class="navbar-form navbar-left" method="post" action="{{ reverse_url('start') }}">
                         <button type="submit" class="btn btn-success">Crawl</button>
                         <div class="form-group">
                             <input type="text" class="form-control" name="domain" placeholder="domain">
                         </div>
                     </form>
-                    {% block nav-settings %}<li><a href="/settings">Settings</a></li>{% end %}
-                    {% block nav-help %}<li><a href="/help">Help</a></li>{% end %}
+                    {% block nav-settings %}<li><a href="{{ reverse_url('settings') }}">Settings</a></li>{% end %}
+                    {% block nav-help %}<li><a href="{{ reverse_url('help') }}">Help</a></li>{% end %}
                 </ul>
             </div>
         </div>
@@ -43,17 +43,8 @@
     <script src="//code.jquery.com/jquery-2.1.4.min.js"></script>
     <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
     <script src="https://fb.me/react-with-addons-0.13.3.js"></script>
-    <script src="https://fb.me/JSXTransformer-0.13.3.js"></script>
 
-    <script src="/static/js/ws_event_dispatcher.js"></script>
-    <script>
-        $(window).load(function() {
-            var loc = document.location;
-            var serverUrl = "ws://" + loc.hostname + ":" + loc.port + "/ws";
-            window.socket = new FancyWebSocket(serverUrl);
-        });
-    </script>
-
-    <script type="text/jsx;harmony=true" src="/static/js/ConnectionMonitor.jsx"></script>
+    <script src="{{ static_url('build/vendor.js') }}"></script>
+    <script src="{{ static_url('build/app.js') }}"></script>
 </body>
 </html>

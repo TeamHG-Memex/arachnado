@@ -2,7 +2,7 @@
 from __future__ import absolute_import
 import os
 import itertools
-from tornado import web
+from tornado.web import Application, RequestHandler, url
 
 from .spider import get_crawler
 from .monitor import Monitor
@@ -13,37 +13,38 @@ at_root = lambda *args: os.path.join(os.path.dirname(__file__), *args)
 
 def get_application(crawler_process):
     handlers = [
-        (r"/", Index),
-        (r"/help", Help),
-        (r"/settings", Settings),
-        (r"/start", StartCrawler, {'crawler_process': crawler_process}),
-        (r"/ws", Monitor, {'crawler_process': crawler_process}),
+        url(r"/", Index, name="index"),
+        url(r"/help", Help, name="help"),
+        url(r"/settings", Settings, name="settings"),
+        url(r"/start", StartCrawler, {'crawler_process': crawler_process}, name="start"),
+        url(r"/ws", Monitor, {'crawler_process': crawler_process}, name="ws"),
     ]
-    return web.Application(
+    return Application(
         handlers=handlers,
         template_path=at_root("templates"),
         compiled_template_cache=False,
         static_path=at_root("static"),
         # no_keep_alive=True,
+        compress_response=True,
     )
 
 
-class Index(web.RequestHandler):
+class Index(RequestHandler):
     def get(self):
         return self.render("index.html")
 
 
-class Help(web.RequestHandler):
+class Help(RequestHandler):
     def get(self):
         return self.render("help.html")
 
 
-class Settings(web.RequestHandler):
+class Settings(RequestHandler):
     def get(self):
         return self.render("settings.html")
 
 
-class StartCrawler(ApiHandler, web.RequestHandler):
+class StartCrawler(ApiHandler, RequestHandler):
     """
     This endpoint starts crawling for a domain.
     """

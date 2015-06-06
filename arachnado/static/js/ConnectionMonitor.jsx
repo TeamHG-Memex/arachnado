@@ -2,6 +2,9 @@
 A widget which shows if a server is idle/crawling or if we're not connected.
 */
 
+var React = require('react');
+var { Label } = require('react-bootstrap');
+
 var ConnectionMonitorWidget = React.createClass({
     STATE_CLASSES: {
         'offline': 'danger',
@@ -10,8 +13,8 @@ var ConnectionMonitorWidget = React.createClass({
     },
 
     render: function () {
-        var className = "label label-" + this.STATE_CLASSES[this.props.status] || "default";
-        return <span className={className}>{this.props.status}</span>;
+        var cls = this.STATE_CLASSES[this.props.status] || "default";
+        return <Label bsStyle={cls}>{this.props.status}</Label>;
     }
 });
 
@@ -36,5 +39,6 @@ var ConnectionMonitor = React.createClass({
     }
 });
 
-
-React.render(<ConnectionMonitor/>, document.getElementById('connection-monitor'));
+export function install(id) {
+    React.render(<ConnectionMonitor/>, document.getElementById(id));
+}

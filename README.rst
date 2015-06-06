@@ -13,9 +13,25 @@ License is MIT.
 Install
 -------
 
-Install all requirements from `requirements.txt` using pip::
+Python 2.7 is required to run server.
+To build static assets node.js + npm are required.
+
+Install all Python requirements from `requirements.txt` using pip::
 
     pip install -U -r requirements.txt
+
+Install all JavaScript requirements using npm. Run the following command
+from the repo root::
+
+    npm install
+
+then rebuild static files (we use Webpack_)::
+
+    npm run build
+
+or auto-build static files on each change::
+
+    npm run watch
 
 Run
 ---
