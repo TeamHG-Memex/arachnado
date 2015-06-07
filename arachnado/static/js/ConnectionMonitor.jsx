@@ -25,13 +25,13 @@ var ConnectionMonitor = React.createClass({
     },
 
     componentWillMount: function () {
-        window.socket.on("open", (function () {
+        this.props.socket.on("open", () => {
             this.setState({status: 'online'});
-        }).bind(this));
+        });
 
-        window.socket.on("close", (function () {
+        this.props.socket.on("close", () => {
             this.setState({status: 'offline'});
-        }).bind(this));
+        });
     },
 
     render: function () {
@@ -39,6 +39,7 @@ var ConnectionMonitor = React.createClass({
     }
 });
 
-export function install(id) {
-    React.render(<ConnectionMonitor/>, document.getElementById(id));
+export function install(socket, elemId) {
+    var elem = document.getElementById(elemId);
+    React.render(<ConnectionMonitor socket={socket}/>, elem);
 }

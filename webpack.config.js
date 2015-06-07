@@ -3,8 +3,8 @@ var webpack = require('webpack');
 
 module.exports = {
     entry: {
-        'app': './arachnado/static/js/entry.js',
-        'vendor': ['react-bootstrap'],
+        'app': './arachnado/static/js/main.js',
+        'vendor': ['react-bootstrap', 'eventemitter3'],
     },
     output: {
         path: path.resolve(__dirname, 'arachnado/static/build'),
@@ -16,7 +16,7 @@ module.exports = {
         ]
     },
     plugins: [
-        new webpack.optimize.CommonsChunkPlugin(/* chunkName= */"vendor", /* filename= */"vendor.js")
+        new webpack.optimize.CommonsChunkPlugin("vendor", "vendor.js")
     ],
     externals: {
         react: 'React'

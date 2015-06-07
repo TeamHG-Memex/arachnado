@@ -29,7 +29,13 @@ def get_application(crawler_process):
     )
 
 
-class Index(RequestHandler):
+class NoEtagsMixin(object):
+    """ A mixin to fix browser caching of static files referred from a page """
+    def compute_etag(self):
+        return None
+
+
+class Index(NoEtagsMixin, RequestHandler):
     def get(self):
         return self.render("index.html")
 

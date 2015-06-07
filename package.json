@@ -25,6 +25,7 @@
     "webpack": "^1.9.10"
   },
   "dependencies": {
+    "eventemitter3": "^1.1.0",
     "react": "^0.13.3",
     "react-bootstrap": "^0.23.1",
     "reflux": "^0.2.7"
