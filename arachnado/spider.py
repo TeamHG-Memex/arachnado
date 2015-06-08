@@ -23,7 +23,7 @@ DEFAULT_SETTINGS = {
 }
 
 
-def get_crawler(settings=None):
+def create_crawler(settings=None):
     _settings = DEFAULT_SETTINGS.copy()
     _settings.update(settings or {})
     return Crawler(CrawlWebsiteSpider, _settings)

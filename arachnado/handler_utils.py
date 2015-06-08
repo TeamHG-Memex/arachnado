@@ -14,3 +14,9 @@ class ApiHandler(web.RequestHandler):
         else:
             self.json_args = None
             self.is_json = False
+
+
+class NoEtagsMixin(object):
+    """ A mixin to fix browser caching of static files referred from a page """
+    def compute_etag(self):
+        return None

@@ -4,16 +4,16 @@ import os
 import itertools
 from tornado.web import Application, RequestHandler, url
 
-from .spider import get_crawler
+from .spider import create_crawler
 from .monitor import Monitor
-from .api import ApiHandler
+from .handler_utils import ApiHandler, NoEtagsMixin
 
 at_root = lambda *args: os.path.join(os.path.dirname(__file__), *args)
 
 
 def get_application(crawler_process):
     handlers = [
-        url(r"/", Index, name="index"),
+        url(r"/", Index, {'crawler_process': crawler_process}, name="index"),
         url(r"/help", Help, name="help"),
         url(r"/settings", Settings, name="settings"),
         url(r"/start", StartCrawler, {'crawler_process': crawler_process}, name="start"),
@@ -29,15 +29,13 @@ def get_application(crawler_process):
     )
 
 
-class NoEtagsMixin(object):
-    """ A mixin to fix browser caching of static files referred from a page """
-    def compute_etag(self):
-        return None
-
-
 class Index(NoEtagsMixin, RequestHandler):
+    def initialize(self, crawler_process):
+        self.crawler_process = crawler_process
+
     def get(self):
-        return self.render("index.html")
+        jobs = self.crawler_process.jobs
+        return self.render("index.html", initial_data={"jobs": jobs})
 
 
 class Help(RequestHandler):
@@ -54,15 +52,12 @@ class StartCrawler(ApiHandler, RequestHandler):
     """
     This endpoint starts crawling for a domain.
     """
-    crawl_ids = itertools.count(1)
-
     def initialize(self, crawler_process):
         self.crawler_process = crawler_process
 
     def crawl(self, domain):
-        crawler = get_crawler()
-        crawl_id = next(self.crawl_ids)
-        self.crawler_process.crawl(crawler, domain=domain, crawl_id=crawl_id)
+        crawler = create_crawler()
+        self.crawler_process.crawl(crawler, domain=domain)
 
     def post(self):
         if self.is_json:

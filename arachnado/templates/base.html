@@ -21,7 +21,7 @@
 
             <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
                 <ul class="nav navbar-nav">
-                    <li><a id="connection-monitor"></a></li>
+                    <li><a id="arachnado-connection-monitor"></a></li>
                 </ul>
                 <ul class="nav navbar-nav navbar-right">
                     <form class="navbar-form navbar-left" method="post" action="{{ reverse_url('start') }}">
@@ -40,11 +40,18 @@
         {% block content %}{% end %}
     </div>
 
+    <script>
+        window.WS_SERVER_ADDRESS = JSON.parse('{% raw json_encode(reverse_url("ws")) %}');
+        {% block initial_data %}{% end %}
+    </script>
+
     <script src="//code.jquery.com/jquery-2.1.4.min.js"></script>
     <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
     <script src="https://fb.me/react-with-addons-0.13.3.js"></script>
 
     <script src="{{ static_url('build/vendor.js') }}"></script>
-    <script src="{{ static_url('build/app.js') }}"></script>
+    <script src="{{ static_url('build/common.js') }}"></script>
+
+    {% block js %}{% end %}
 </body>
 </html>

@@ -1,14 +1,20 @@
 var path = require('path');
 var webpack = require('webpack');
 
+function _static(name){
+    return path.resolve(__dirname, 'arachnado/static/', name);
+}
+
 module.exports = {
     entry: {
-        'app': './arachnado/static/js/main.js',
-        'vendor': ['react-bootstrap', 'eventemitter3'],
+        'common': _static("js/common.js"),
+        'index': _static("js/index.js"),
+
+        'vendor': ['react-bootstrap', 'eventemitter3', 'reflux'],
     },
     output: {
-        path: path.resolve(__dirname, 'arachnado/static/build'),
-        filename: 'app.js',
+        path: _static("build"),
+        filename: '[name].js',
     },
     module: {
         loaders: [
@@ -20,5 +26,6 @@ module.exports = {
     ],
     externals: {
         react: 'React'
-    }
+    },
+    //devtool: "#inline-source-map",
 };

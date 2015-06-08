@@ -3,34 +3,7 @@
 {% block content %}
     <div class="row">
         <div class="col-xs-4">
-            <table class="table table-condensed">
-                <caption></caption>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Seed URL</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr class="success">
-                        <th scope="row">1</th>
-                        <td>reddit.com</td>
-                        <td>crawling</td>
-                    </tr>
-                    <tr>
-                        <th scope="row">2</th>
-                        <td>reddit.com</td>
-                        <td>finished</td>
-                    </tr>
-                    <tr>
-                        <th scope="row">5</th>
-                        <td>scrapy.org</td>
-                        <td>finished</td>
-                    </tr>
-
-                </tbody>
-            </table>
+            <div id="arachnado-job-list"></div>
         </div>
         <div class="col-xs-8">
             <div class="jumbotron">
@@ -39,4 +12,9 @@
             </div>
         </div>
     </div>
+{% end %}
+
+{% block js %}<script src="{{ static_url('build/index.js') }}"></script>{% end %}
+{% block initial_data %}
+    window.INITIAL_DATA = JSON.parse('{% raw json_encode(initial_data) %}');
 {% end %}

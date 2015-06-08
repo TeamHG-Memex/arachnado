@@ -5,6 +5,8 @@ It allows multiple callbacks and forces a common message format.
 
 var EventEmitter = require("eventemitter3");
 
+var endpointSockets = {};
+
 export class FancyWebSocket {
 
     constructor(url) {
@@ -12,10 +14,12 @@ export class FancyWebSocket {
         this._conn = new WebSocket(url);
         this._conn.onmessage = (evt) => {
             var json = JSON.parse(evt.data);
+            //console.log("WS data:", json);
             this._ee.emit(json.event, json.data);
         };
-        this._conn.onclose = () => { this._ee.emit('close', null) };
         this._conn.onopen = () => { this._ee.emit('open', null) };
+        this._conn.onclose = (e) => { this._ee.emit('close', e) };
+        this._conn.onerror = (e) => { this._ee.emit('error', e) };
     }
 
     /* Listen to incoming messages */
@@ -29,10 +33,15 @@ export class FancyWebSocket {
         this._conn.send(payload);
     }
 
-    /* Return a new FancyWebSocket on the same domain/port as current URL */
+    /* Return a FancyWebSocket on the same domain/port as current URL */
     static forEndpoint(endpoint){
+        if (endpointSockets[endpoint]) {
+            return endpointSockets[endpoint];
+        }
         var loc = document.location;
-        var url = "ws://" + loc.hostname + ":" + loc.port + "/" + endpoint;
-        return new FancyWebSocket(url);
+        var url = "ws://" + loc.hostname + ":" + loc.port + endpoint;
+        var socket = new FancyWebSocket(url);
+        endpointSockets[endpoint] = socket;
+        return socket;
     }
 }
