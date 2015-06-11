@@ -8,7 +8,7 @@ class ApiHandler(web.RequestHandler):
     """ Base handler for JSON APIs """
 
     def prepare(self):
-        if self.request.headers["Content-Type"].startswith("application/json"):
+        if self.request.headers.get("Content-Type", "").startswith("application/json"):
             self.json_args = json.loads(self.request.body)
             self.is_json = True
         else:

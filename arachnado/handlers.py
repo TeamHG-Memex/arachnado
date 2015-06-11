@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 import os
-import itertools
+
 from tornado.web import Application, RequestHandler, url
 
-from .spider import create_crawler
-from .monitor import Monitor
-from .handler_utils import ApiHandler, NoEtagsMixin
+from arachnado.utils import json_encode
+from arachnado.spider import create_crawler
+from arachnado.monitor import Monitor
+from arachnado.handler_utils import ApiHandler, NoEtagsMixin
 
 at_root = lambda *args: os.path.join(os.path.dirname(__file__), *args)
 
@@ -17,7 +18,7 @@ def get_application(crawler_process):
         url(r"/help", Help, name="help"),
         url(r"/settings", Settings, name="settings"),
         url(r"/start", StartCrawler, {'crawler_process': crawler_process}, name="start"),
-        url(r"/ws", Monitor, {'crawler_process': crawler_process}, name="ws"),
+        url(r"/ws-updates", Monitor, {'crawler_process': crawler_process}, name="ws"),
     ]
     return Application(
         handlers=handlers,
@@ -35,7 +36,12 @@ class Index(NoEtagsMixin, RequestHandler):
 
     def get(self):
         jobs = self.crawler_process.jobs
-        return self.render("index.html", initial_data={"jobs": jobs})
+        proc_stats = self.crawler_process.procmon.get_recent()
+        initial_data_json = json_encode({
+            "jobs": jobs,
+            "processStats": proc_stats,
+        })
+        return self.render("index.html", initial_data_json=initial_data_json)
 
 
 class Help(RequestHandler):

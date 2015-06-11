@@ -44,4 +44,10 @@ export class FancyWebSocket {
         endpointSockets[endpoint] = socket;
         return socket;
     }
+
+    /* Return a default instance */
+    static instance() {
+        return FancyWebSocket.forEndpoint(window.WS_SERVER_ADDRESS);
+    }
+
 }

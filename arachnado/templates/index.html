@@ -1,20 +1,10 @@
 {% extends "base.html %}
 
 {% block content %}
-    <div class="row">
-        <div class="col-xs-4">
-            <div id="arachnado-job-list"></div>
-        </div>
-        <div class="col-xs-8">
-            <div class="jumbotron">
-                <h1>Stats & Charts</h1>
-                <p>Here we'll display various crawling stats: both global and per-job.</p>
-            </div>
-        </div>
-    </div>
+    <div id="arachnado-index-page"></div>
 {% end %}
 
 {% block js %}<script src="{{ static_url('build/index.js') }}"></script>{% end %}
 {% block initial_data %}
-    window.INITIAL_DATA = JSON.parse('{% raw json_encode(initial_data) %}');
+    window.INITIAL_DATA = JSON.parse('{% raw initial_data_json %}');
 {% end %}

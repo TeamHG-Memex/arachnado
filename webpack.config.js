@@ -8,7 +8,7 @@ function _static(name){
 module.exports = {
     entry: {
         'common': _static("js/common.js"),
-        'index': _static("js/index.js"),
+        'index': _static("js/index.jsx"),
 
         'vendor': ['react-bootstrap', 'eventemitter3', 'reflux'],
     },
@@ -18,7 +18,11 @@ module.exports = {
     },
     module: {
         loaders: [
-            { test: /\.jsx?$/, exclude: /node_modules/, loader: "babel-loader"},
+            {
+                test: /\.jsx?$/,
+                exclude: /node_modules/,
+                loader: "babel-loader"
+            },
         ]
     },
     plugins: [
@@ -26,6 +30,6 @@ module.exports = {
     ],
     externals: {
         react: 'React'
-    },
+    }
     //devtool: "#inline-source-map",
 };

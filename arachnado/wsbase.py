@@ -2,7 +2,11 @@
 from __future__ import absolute_import
 import json
 import logging
+
 from tornado import websocket
+
+from arachnado.utils import json_encode
+
 
 logger = logging.getLogger(__name__)
 
@@ -15,9 +19,11 @@ class BaseWSHandler(websocket.WebSocketHandler):
     Subclasses should use ``on_event`` instead of ``on_message`` and
     ``write_event`` instead of ``write_message``.
     """
+
     def write_event(self, event, data):
         """ Send a message to the client """
-        self.write_message({'event': event, 'data': data})
+        message = json_encode({'event': event, 'data': data})
+        self.write_message(message)
 
     def on_message(self, message):
         try:
