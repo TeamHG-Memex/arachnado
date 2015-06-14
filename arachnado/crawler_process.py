@@ -120,11 +120,8 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
 
     def stop(self):
         """ Terminate the process (exit from application). """
-        # a workaround for https://github.com/scrapy/scrapy/issues/1279
         self.procmon.stop()
-        d = super(ArachnadoCrawlerProcess, self).stop()
-        d.addBoth(self._stop_reactor)
-        return d
+        return super(ArachnadoCrawlerProcess, self).stop()
 
     def on_spider_closed(self, spider, reason):
         # spiders are closed not that often, insert(0,...) should be fine
