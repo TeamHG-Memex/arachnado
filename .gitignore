@@ -3,3 +3,7 @@
 node_modules/
 arachnado/static/build/
 npm-debug.log
+.ipynb_checkpoints/
+arachnado.egg-info/
+build/
+dist/

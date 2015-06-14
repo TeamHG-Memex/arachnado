@@ -30,6 +30,10 @@ def main():
     crawler_process.start(stop_after_crawl=False)
 
 
-if __name__ == "__main__":
+def run():
     setup_event_loop(use_tornado=True, debug=True)
     main()
+
+
+if __name__ == "__main__":
+    run()
