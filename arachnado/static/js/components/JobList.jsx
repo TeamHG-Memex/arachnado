@@ -68,7 +68,7 @@ var JobListWidget = React.createClass({
     render: function () {
         var rows = this.props.jobs.map(job => {return <JobRow job={job} key={job.id}/>});
 
-        return <Table condensed>
+        return <Table fill>
             <thead>
                 <tr>
                     <th>ID</th>

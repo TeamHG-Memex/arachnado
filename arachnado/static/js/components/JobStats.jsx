@@ -3,6 +3,7 @@ var React = require("react");
 var Reflux = require("reflux");
 var filesize = require("filesize");
 var { Table } = require("react-bootstrap");
+var { KeyValueTable } = require("./KeyValueTable.jsx");
 
 var JobListStore = require("../stores/JobListStore");
 
@@ -46,9 +47,7 @@ export var AggregateJobStats = React.createClass({
                 </tr>
             );
         });
-        return <Table condensed>
-            <tbody>{rows}</tbody>
-        </Table>;
+        return <KeyValueTable>{rows}</KeyValueTable>;
     },
 
     getAggregateStats: function () {

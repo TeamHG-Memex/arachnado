@@ -1,19 +1,29 @@
 var React = require("react");
+var { Panel } = require("react-bootstrap");
+
 var { JobList } = require("./components/JobList.jsx");
-var { ProcessStats }= require("./components/ProcessStats.jsx");
-var { AggregateJobStats }= require("./components/JobStats.jsx");
+var { AggregateJobStats } = require("./components/JobStats.jsx");
+var { ProcessStatsTable } = require("./components/ProcessStats.jsx");
+
 
 var Index = React.createClass({
     render: function () {
         return (
             <div className="row">
-                <div className="col-xs-6">
-                    <JobList/>
+                <div className="col-md-5">
+                    <Panel collapsible defaultExpanded header="Jobs" bsStyle="primary">
+                        <JobList/>
+                    </Panel>
                 </div>
-                <div className="col-xs-6">
-                    <div className="well">
+                <div className="col-md-4">
+                    <Panel collapsible defaultExpanded header="Aggregate Crawl Stats">
                         <AggregateJobStats/>
-                    </div>
+                    </Panel>
+                </div>
+                <div className="col-md-3">
+                    <Panel collapsible defaultExpanded header="Arachnado Stats">
+                        <ProcessStatsTable />
+                    </Panel>
                 </div>
             </div>
         );

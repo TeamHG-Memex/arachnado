@@ -3,10 +3,7 @@ var { FancyWebSocket } = require("../utils/FancyWebSocket");
 require("babel-core/polyfill");
 
 
-export var Actions = Reflux.createActions([
-    "setAll",
-    "updateStats",
-]);
+export var Actions = Reflux.createActions(["setAll", "updateStats"]);
 
 
 export var store = Reflux.createStore({
