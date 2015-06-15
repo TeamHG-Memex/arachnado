@@ -7,6 +7,7 @@ var Reflux = require("reflux");
 var { Table } = require("react-bootstrap");
 
 var ProcessStatsStore = require("../stores/ProcessStatsStore");
+var ConnectionStatusStore = require("../stores/ConnectionStatusStore");
 var { KeyValueTable } = require("./KeyValueTable.jsx");
 
 
@@ -16,9 +17,13 @@ function formatTimeMs(timeMs){
 
 export var HeaderProcessStats = React.createClass({
     mixins: [
-        Reflux.connect(ProcessStatsStore.store, "stats")
+        Reflux.connect(ProcessStatsStore.store, "stats"),
+        Reflux.connect(ConnectionStatusStore.store, "connectionStatus"),
     ],
     render: function () {
+        if (this.state.connectionStatus == "offline"){
+            return <span></span>;
+        }
         var s = this.state.stats;
         var style = {marginTop: 15}; // for yeti theme
         return <div className="navbar-text" style={style}>
@@ -41,7 +46,7 @@ export var ProcessStatsTable = React.createClass({
             ["VMS", filesize(s.ram_vms || 0)],
             ["file descriptors", s.num_fds]
         ];
-        var rows = items.map(kv => {return <tr><td>{kv[0]}</td><td>{kv[1]}</td></tr>});
+        var rows = items.map(kv => {return <tr key={kv[0]}><td>{kv[0]}</td><td>{kv[1]}</td></tr>});
         return <KeyValueTable>{rows}</KeyValueTable>;
     }
 });
