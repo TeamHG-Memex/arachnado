@@ -25,12 +25,6 @@
                     <li id="arachnado-process-stats"></li>
                 </ul>
                 <ul class="nav navbar-nav navbar-right">
-                    <form class="navbar-form navbar-left" method="post" action="{{ reverse_url('start') }}">
-                        <button type="submit" class="btn btn-success">Crawl</button>
-                        <div class="form-group">
-                            <input type="text" class="form-control" name="domain" placeholder="domain">
-                        </div>
-                    </form>
                     {% block nav-settings %}<li><a href="{{ reverse_url('settings') }}">Settings</a></li>{% end %}
                     {% block nav-help %}<li><a href="{{ reverse_url('help') }}">Help</a></li>{% end %}
                 </ul>
@@ -43,6 +37,7 @@
 
     <script>
         window.WS_SERVER_ADDRESS = JSON.parse('{% raw json_encode(reverse_url("ws")) %}');
+        window.START_CRAWL_URL = JSON.parse('{% raw json_encode(reverse_url("start")) %}');
         window.INITIAL_PROCESS_STATS = JSON.parse('{% raw initial_process_stats_json %}');
         {% block initial_data %}{% end %}
     </script>

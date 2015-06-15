@@ -4,6 +4,7 @@ var { Panel } = require("react-bootstrap");
 var { JobList } = require("./components/JobList.jsx");
 var { AggregateJobStats } = require("./components/JobStats.jsx");
 var { ProcessStatsTable } = require("./components/ProcessStats.jsx");
+var { CrawlForm } = require("./components/CrawlForm.jsx");
 
 
 var Index = React.createClass({
@@ -11,6 +12,9 @@ var Index = React.createClass({
         return (
             <div className="row">
                 <div className="col-md-5">
+                    <Panel collapsible defaultExpanded header="New Crawl" bsStyle="default">
+                        <CrawlForm action={window.START_CRAWL_URL} />
+                    </Panel>
                     <Panel collapsible defaultExpanded header="Jobs" bsStyle="primary">
                         <JobList/>
                     </Panel>

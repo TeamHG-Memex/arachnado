@@ -1,9 +1,14 @@
+require("babel-core/polyfill");
 var Reflux = require("reflux");
 var { FancyWebSocket } = require("../utils/FancyWebSocket");
-require("babel-core/polyfill");
+var API = require("../utils/ArachnadoAPI");
 
 
-export var Actions = Reflux.createActions(["setAll", "updateStats"]);
+export var Actions = Reflux.createActions([
+    "setAll",
+    "updateStats",
+    "startCrawl"
+]);
 
 
 export var store = Reflux.createStore({
@@ -11,6 +16,7 @@ export var store = Reflux.createStore({
         this.jobs = [];
         this.listenTo(Actions.setAll, this.onSetAll);
         this.listenTo(Actions.updateStats, this.onUpdateStats);
+        this.listenTo(Actions.startCrawl, this.doStartCrawl);
     },
 
     getInitialState: function () {
@@ -27,6 +33,10 @@ export var store = Reflux.createStore({
             job.stats = Object.assign(job.stats || {}, changes);
         });
         this.trigger(this.jobs);
+    },
+
+    doStartCrawl: function (domain, options) {
+        API.startCrawl(domain, options);
     }
 });
 

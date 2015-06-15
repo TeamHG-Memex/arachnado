@@ -35,7 +35,7 @@ var NoJobs = React.createClass({
             <p>No jobs to show.</p>
             <p>
                 Start a crawling job either by using "Crawl" button
-                in the header or by using Arachnado HTTP API.
+                or by using Arachnado HTTP API.
             </p>
         </div>);
     }
