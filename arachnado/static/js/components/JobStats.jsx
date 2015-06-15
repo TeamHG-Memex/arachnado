@@ -35,6 +35,7 @@ var SUM_KEYS = [
 ].concat(_response_status_count_keys).concat([
     'downloader/exception_count',
     'downloader/exception_type_count/twisted.internet.error.DNSLookupError',
+    'downloader/exception_type_count/twisted.internet.error.ConnectionRefusedError',
     'dupefilter/filtered',
     'item_scraped_count',
     'log_count/DEBUG',
@@ -51,6 +52,7 @@ var SUM_KEYS = [
 
 var SHORT_NAMES = {
     'downloader/exception_type_count/twisted.internet.error.DNSLookupError': 'downloader/DNS errors',
+    'downloader/exception_type_count/twisted.internet.error.ConnectionRefusedError': 'downloader/Connection Refused',
 };
 
 

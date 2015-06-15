@@ -3,7 +3,6 @@
 CrawlerProcessSignals class.
 """
 from __future__ import absolute_import
-from scrapy import signals
 
 
 class Signal(object):
