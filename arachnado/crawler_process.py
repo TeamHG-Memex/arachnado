@@ -84,6 +84,10 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
         self.procmon.start()
         super(ArachnadoCrawlerProcess, self).__init__(settings or {})
 
+        # don't log DepthMiddleware messages
+        # see https://github.com/scrapy/scrapy/issues/1308
+        logging.getLogger("scrapy.spidermiddlewares.depth").setLevel(logging.INFO)
+
     def crawl(self, crawler_or_spidercls, *args, **kwargs):
         kwargs['crawl_id'] = next(self.crawl_ids)
 

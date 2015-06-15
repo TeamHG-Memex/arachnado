@@ -13,8 +13,9 @@ DEFAULT_SETTINGS = {
     'BOT_NAME': 'arachnado',
 
     'MEMUSAGE_ENABLED': True,
-    'DOWNLOAD_MAXSIZE': 8 * MB,
-    'DOWNLOAD_WARNSIZE': 1 * MB,
+    'DOWNLOAD_MAXSIZE': 1 * MB,
+    # 'DOWNLOAD_WARNSIZE': 1 * MB,  # see https://github.com/scrapy/scrapy/issues/1303
+
     'CLOSESPIDER_PAGECOUNT': 30,  # for debugging
     'LOG_LEVEL': 'DEBUG',
     'TELNETCONSOLE_ENABLED': False,
@@ -50,7 +51,7 @@ class CrawlWebsiteSpider(scrapy.Spider):
 
     def start_requests(self):
         self.logger.info("Started job #%d for domain %s", self.crawl_id, self.domain)
-        yield scrapy.Request("http://%s" % self.domain, self.parse)
+        yield scrapy.Request("http://%s" % self.domain, self.parse, dont_filter=True)
 
     # def get_links(self, response):
     #     from scrapy.link import Link
