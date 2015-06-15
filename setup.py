@@ -47,7 +47,7 @@ setup(
     ],
     install_requires=[
         'scrapy >= 1.0.0rc3',
-        'Twisted >= 11.1',
+        'Twisted >= 12',
         'psutil >= 2.2',
         'tornado >= 4.2',
     ],

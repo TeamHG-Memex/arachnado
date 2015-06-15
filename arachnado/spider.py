@@ -5,7 +5,8 @@ import scrapy
 from scrapy.crawler import Crawler
 from scrapy.linkextractors import LinkExtractor
 
-MB = 1024*1024
+from .utils import MB, add_scheme_if_missing, get_netloc
+
 
 DEFAULT_SETTINGS = {
     # 'DEPTH_LIMIT': 1,
@@ -47,11 +48,14 @@ class CrawlWebsiteSpider(scrapy.Spider):
 
     def __init__(self, *args, **kwargs):
         super(CrawlWebsiteSpider, self).__init__(*args, **kwargs)
-        self.get_links = LinkExtractor(allow_domains=[self.domain]).extract_links
+        self.start_url = add_scheme_if_missing(self.domain)
+        self.get_links = LinkExtractor(
+            allow_domains=[get_netloc(self.start_url)]
+        ).extract_links
 
     def start_requests(self):
         self.logger.info("Started job #%d for domain %s", self.crawl_id, self.domain)
-        yield scrapy.Request("http://%s" % self.domain, self.parse, dont_filter=True)
+        yield scrapy.Request(self.start_url, self.parse, dont_filter=True)
 
     # def get_links(self, response):
     #     from scrapy.link import Link

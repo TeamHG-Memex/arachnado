@@ -12,6 +12,7 @@ export var CrawlForm = React.createClass({
     },
 
     render: function () {
+        // it must be rendered inside a small bootstrap Panel
         var noPadding = {
             paddingLeft: 0, paddingRight: 0, marginLeft: 0, marginRight: 0
         };
@@ -40,8 +41,10 @@ export var CrawlForm = React.createClass({
 
     onSubmit: function (ev) {
         ev.preventDefault();
-        JobListStore.Actions.startCrawl(this.state.value);
-        this.setState({value: ""});
+        if (this.state.value != "") {
+            JobListStore.Actions.startCrawl(this.state.value);
+            this.setState({value: ""});
+        }
     }
 });
 
