@@ -11,7 +11,7 @@ export var KeyValueTable = React.createClass({
             var header = <thead><th>Name</th><th className="col-md-3">Value</th></thead>;
         }
 
-        return <Table>
+        return <Table condensed>
             {header}
             <tbody>{this.props.children}</tbody>
         </Table>;

@@ -132,7 +132,7 @@ var JobListWidget = React.createClass({
     render: function () {
         var rows = this.props.jobs.map(job => {return <JobRow job={job} key={job.id}/>});
 
-        return <Table fill>
+        return <Table fill hover>
             <thead>
                 <tr>
                     <th></th>
