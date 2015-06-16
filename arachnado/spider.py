@@ -3,6 +3,7 @@ from __future__ import absolute_import
 
 import scrapy
 from scrapy.linkextractors import LinkExtractor
+from scrapy.http.response.html import HtmlResponse
 
 from .utils import MB, add_scheme_if_missing, get_netloc
 from .crawler_process import ArachnadoCrawler
@@ -66,5 +67,8 @@ class CrawlWebsiteSpider(scrapy.Spider):
     def parse(self, response):
         yield {'_url': response.url, '_crawl_id': self.crawl_id}
 
-        for link in self.get_links(response):
-            yield scrapy.Request(link.url, self.parse)
+        if isinstance(response, HtmlResponse):
+            for link in self.get_links(response):
+                yield scrapy.Request(link.url, self.parse)
+        else:
+            self.logger.info("non-HTML response is skipped: %s" % response.url)

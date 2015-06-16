@@ -47,7 +47,11 @@ var SUM_KEYS = [
     'scheduler/dequeued/memory',
     'scheduler/enqueued',
     'scheduler/enqueued/memory'
-]).concat(_request_depth_keys);
+]).concat(_request_depth_keys).concat([
+    'spider_exceptions/AttributeError',
+    'spider_exceptions/ValueError',
+    'spider_exceptions/TypeError'
+]);
 
 
 var SHORT_NAMES = {
