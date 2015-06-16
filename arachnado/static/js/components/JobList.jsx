@@ -4,13 +4,14 @@ var React = require("react");
 var Reflux = require("reflux");
 var filesize = require("filesize");
 
-var { Table } = require("react-bootstrap");
+var { Table, Glyphicon, Button } = require("react-bootstrap");
 var JobListStore = require("../stores/JobListStore");
 require("babel-core/polyfill");
 
 
 var STATUS_CLASSES = {
     'crawling': 'success',
+    'stopping': 'info',
     'done': ''
 };
 
@@ -50,9 +51,32 @@ var JobRow = React.createClass({
         var stats = job.stats || {};
         var downloaded = stats['downloader/response_bytes'] || 0;
         var todo = (stats['scheduler/enqueued'] || 0) - (stats['scheduler/dequeued'] || 0);
+
+        var icons = "";
+        if (status == "crawling") {
+            icons = (<span>
+                <a href='#' title="Pause" onClick={this.onStopClicked.bind(null, job.id)}>
+                    <Glyphicon glyph="pause" />
+                </a>
+                &nbsp;
+                <a href='#' title="Stop" onClick={this.onStopClicked.bind(null, job.id)}>
+                    <Glyphicon glyph="stop" />
+                </a>
+            </span>);
+        }
+
+        /*
+        else if (status == "finished" || status == "closed" || status == "shutdown") {
+            icon = <a href='#' title="Remove job from list"
+                      onClick={this.onRemoveFromListClicked.bind(null, job.id)}>
+                <Glyphicon glyph="trash"/>
+            </a>;
+        }
+        */
+
         return (
             <tr className={cls}>
-                <th scope="row">{job.id}</th>
+                <td>{icons}</td>
                 <td>{job.seed}</td>
                 <td>{status}</td>
                 <td>{stats['item_scraped_count'] || 0}</td>
@@ -60,7 +84,22 @@ var JobRow = React.createClass({
                 <td>{filesize(downloaded)}</td>
             </tr>
         );
+    },
+
+    onStopClicked: function (jobId, ev) {
+        ev.preventDefault();
+        if (confirm("Stop this job?")){
+            JobListStore.Actions.stopCrawl(jobId);
+        }
     }
+
+    /*
+    onRemoveFromListClicked: function (jobId, ev) {
+        ev.preventDefault();
+        console.log("onRemoveFromListClicked", jobId);
+    }
+    */
+
 });
 
 
@@ -71,7 +110,7 @@ var JobListWidget = React.createClass({
         return <Table fill>
             <thead>
                 <tr>
-                    <th>ID</th>
+                    <th></th>
                     <th>Seed URL</th>
                     <th>Status</th>
                     <th>Items</th>

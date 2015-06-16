@@ -38,6 +38,7 @@
     <script>
         window.WS_SERVER_ADDRESS = JSON.parse('{% raw json_encode(reverse_url("ws")) %}');
         window.START_CRAWL_URL = JSON.parse('{% raw json_encode(reverse_url("start")) %}');
+        window.STOP_CRAWL_URL = JSON.parse('{% raw json_encode(reverse_url("stop")) %}');
         window.INITIAL_PROCESS_STATS = JSON.parse('{% raw initial_process_stats_json %}');
         {% block initial_data %}{% end %}
     </script>

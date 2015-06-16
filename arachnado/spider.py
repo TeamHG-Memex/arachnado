@@ -2,10 +2,10 @@
 from __future__ import absolute_import
 
 import scrapy
-from scrapy.crawler import Crawler
 from scrapy.linkextractors import LinkExtractor
 
 from .utils import MB, add_scheme_if_missing, get_netloc
+from .crawler_process import ArachnadoCrawler
 
 
 DEFAULT_SETTINGS = {
@@ -33,7 +33,7 @@ DEFAULT_SETTINGS = {
 def create_crawler(settings=None):
     _settings = DEFAULT_SETTINGS.copy()
     _settings.update(settings or {})
-    return Crawler(CrawlWebsiteSpider, _settings)
+    return ArachnadoCrawler(CrawlWebsiteSpider, _settings)
 
 
 class CrawlWebsiteSpider(scrapy.Spider):

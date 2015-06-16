@@ -19,7 +19,8 @@ def get_application(crawler_process):
         url(r"/", Index, context , name="index"),
         url(r"/help", Help, context, name="help"),
         url(r"/settings", Settings, context, name="settings"),
-        url(r"/start", StartCrawler, context, name="start"),
+        url(r"/crawler/start", StartCrawler, context, name="start"),
+        url(r"/crawler/stop", StopCrawler, context, name="stop"),
         url(r"/ws-updates", Monitor, context, name="ws"),
     ]
     return Application(
@@ -35,6 +36,9 @@ def get_application(crawler_process):
 class BaseRequestHandler(RequestHandler):
 
     def initialize(self, crawler_process):
+        """
+        :param arachnado.crawler_process.ArachnadoCrawlerProcess crawler_process: crawler process
+        """
         self.crawler_process = crawler_process
 
     def render(self, *args, **kwargs):
@@ -77,4 +81,20 @@ class StartCrawler(ApiHandler, BaseRequestHandler):
         else:
             domain = self.get_body_argument('domain')
             self.crawl(domain)
+            self.redirect("/")
+
+
+class StopCrawler(ApiHandler, BaseRequestHandler):
+    """ This endpoint stops a running job. """
+    def stop(self, job_id):
+        self.crawler_process.stop_job(int(job_id))
+
+    def post(self):
+        if self.is_json:
+            job_id = self.json_args['job_id']
+            self.stop(job_id)
+            return {"status": "ok"}
+        else:
+            job_id = self.get_body_argument('job_id')
+            self.stop(job_id)
             self.redirect("/")

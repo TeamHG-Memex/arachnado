@@ -8,3 +8,7 @@ export function startCrawl(domain, options){
     };
     $.post(startCrawlUrl, data);
 }
+
+export function stopCrawl(jobId){
+    $.post(window.STOP_CRAWL_URL, {job_id: jobId});
+}

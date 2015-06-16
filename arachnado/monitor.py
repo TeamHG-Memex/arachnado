@@ -30,6 +30,7 @@ class Monitor(BaseWSHandler):
         self.cp.signals.connect(self.on_stats_changed, agg_stats_changed)
         self.cp.signals.connect(self.on_spider_opened, CrawlerProcessSignals.spider_opened)
         self.cp.signals.connect(self.on_spider_closed, CrawlerProcessSignals.spider_closed)
+        self.cp.signals.connect(self.on_spider_closing, CrawlerProcessSignals.spider_closing)
         self.cp.procmon.signals.connect(self.on_process_stats, ProcessStatsMonitor.signal_updated)
         self.write_event("jobs:state", self.cp.jobs)
 
@@ -38,15 +39,17 @@ class Monitor(BaseWSHandler):
         self.cp.signals.disconnect(self.on_stats_changed, agg_stats_changed)
         self.cp.signals.disconnect(self.on_spider_opened, CrawlerProcessSignals.spider_opened)
         self.cp.signals.disconnect(self.on_spider_closed, CrawlerProcessSignals.spider_closed)
+        self.cp.signals.disconnect(self.on_spider_closing, CrawlerProcessSignals.spider_closing)
         self.cp.procmon.signals.disconnect(self.on_process_stats, ProcessStatsMonitor.signal_updated)
 
     def on_spider_opened(self, spider):
-        # logger.debug("on_spider_opened: %s", self.cp.jobs)
-        self.write_event("jobs:state", self.cp.jobs)
+        self._send_jobs_state()
 
     def on_spider_closed(self, spider, reason):
-        # logger.debug("on_spider_closed: %s", self.cp.jobs)
-        self.write_event("jobs:state", self.cp.jobs)
+        self._send_jobs_state()
+
+    def on_spider_closing(self, crawler):
+        self._send_jobs_state()
 
     def on_stats_changed(self, changes, crawler):
         # Don't log anything here! Log events are counted by stats collector,
@@ -56,3 +59,6 @@ class Monitor(BaseWSHandler):
 
     def on_process_stats(self, stats):
         self.write_event("process:stats", stats)
+
+    def _send_jobs_state(self):
+        self.write_event("jobs:state", self.cp.jobs)

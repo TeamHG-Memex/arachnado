@@ -2,10 +2,12 @@
 from __future__ import absolute_import
 import logging
 import itertools
+import six
 
 from scrapy import signals
 from scrapy.signalmanager import SignalManager
 from scrapy.crawler import CrawlerProcess, Crawler
+from scrapy.core.engine import ExecutionEngine
 
 from arachnado.signals import Signal
 from arachnado import stats
@@ -13,7 +15,11 @@ from arachnado.process_stats import ProcessStatsMonitor
 
 logger = logging.getLogger(__name__)
 
+# monkey patch Scrapy to add an extra signal
+signals.spider_closing = object()
 
+
+# a signal which is fired when stats are changed in any of the spiders
 agg_stats_changed = Signal("agg_stats_changed", False)
 STAT_SIGNALS = {
     stats.stats_changed: agg_stats_changed,
@@ -26,6 +32,7 @@ SCRAPY_SIGNAL_NAMES = [
     'item_scraped',
     'item_dropped',
     'spider_closed',
+    'spider_closing',  # custom
     'spider_opened',
     'spider_idle',
     'spider_error',
@@ -49,6 +56,7 @@ def _get_crawler_process_signals_cls():
         spider_opened = Signal('spider_opened', True)
         spider_idle = Signal('spider_idle', False)
         spider_closed = Signal('spider_closed', True)
+        spider_closing = Signal('spider_closing', False)  # custom
         spider_error = Signal('spider_error', False)
         request_scheduled = Signal('request_scheduled', False)
         request_dropped = Signal('request_dropped', False)
@@ -66,6 +74,28 @@ def _get_crawler_process_signals_cls():
 
 
 CrawlerProcessSignals = _get_crawler_process_signals_cls()
+
+
+class ArachnadoExecutionEngine(ExecutionEngine):
+    """
+    Extended ExecutionEngine.
+    It sends a signal when engine gets scheduled to stop.
+    """
+    def close_spider(self, spider, reason='cancelled'):
+        if self.slot.closing:
+            return self.slot.closing
+        self.crawler.crawling = False
+        self.signals.send_catch_log(signals.spider_closing)
+        return super(ArachnadoExecutionEngine, self).close_spider(spider, reason)
+
+
+class ArachnadoCrawler(Crawler):
+    """
+    Extended Crawler.
+    It sends a signal when engine gets scheduled to stop.
+    """
+    def _create_engine(self):
+        return ArachnadoExecutionEngine(self, lambda _: self.stop())
 
 
 class ArachnadoCrawlerProcess(CrawlerProcess):
@@ -105,6 +135,17 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
 
         d = super(ArachnadoCrawlerProcess, self).crawl(crawler_or_spidercls, *args, **kwargs)
         return d
+
+    def _create_crawler(self, spidercls):
+        if isinstance(spidercls, six.string_types):
+            spidercls = self.spider_loader.load(spidercls)
+        return ArachnadoCrawler(spidercls, self.settings)
+
+    def stop_job(self, crawl_id):
+        """ Stop a single crawl job """
+        for crawler in self.crawlers:
+            if getattr(crawler.spider, "crawl_id") == crawl_id:
+                return crawler.stop()
 
     def _resend_signal(self, **kwargs):
         # FIXME: this is a mess. Signal handling should be unified somehow.
@@ -172,15 +213,15 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
     @property
     def active_jobs(self):
         """ Return a list of active jobs """
-        spiders = [c.spider for c in self.crawlers if c.spider is not None]
+        crawlers = [cr for cr in self.crawlers if cr.spider is not None]
         return [
             {
-                'id': spider.crawl_id,
-                'seed': spider.domain,
-                'status': 'crawling',
-                'stats': spider.crawler.stats.get_stats(spider),
+                'id': cr.spider.crawl_id,
+                'seed': cr.spider.domain,
+                'status': 'crawling' if cr.crawling else 'stopping',
+                'stats': cr.spider.crawler.stats.get_stats(cr.spider),
             }
-            for spider in spiders
+            for cr in crawlers
         ]
 
     @property

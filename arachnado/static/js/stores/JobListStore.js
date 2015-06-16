@@ -7,7 +7,8 @@ var API = require("../utils/ArachnadoAPI");
 export var Actions = Reflux.createActions([
     "setAll",
     "updateStats",
-    "startCrawl"
+    "startCrawl",
+    "stopCrawl",
 ]);
 
 
@@ -17,6 +18,7 @@ export var store = Reflux.createStore({
         this.listenTo(Actions.setAll, this.onSetAll);
         this.listenTo(Actions.updateStats, this.onUpdateStats);
         this.listenTo(Actions.startCrawl, this.doStartCrawl);
+        this.listenTo(Actions.stopCrawl, this.doStopCrawl);
     },
 
     getInitialState: function () {
@@ -37,6 +39,10 @@ export var store = Reflux.createStore({
 
     doStartCrawl: function (domain, options) {
         API.startCrawl(domain, options);
+    },
+
+    doStopCrawl: function (jobId) {
+        API.stopCrawl(jobId);
     }
 });
 
