@@ -50,19 +50,18 @@ class CrawlWebsiteSpider(scrapy.Spider):
     def __init__(self, *args, **kwargs):
         super(CrawlWebsiteSpider, self).__init__(*args, **kwargs)
         self.start_url = add_scheme_if_missing(self.domain)
-        self.get_links = LinkExtractor(
-            allow_domains=[get_netloc(self.start_url)]
-        ).extract_links
 
     def start_requests(self):
         self.logger.info("Started job #%d for domain %s", self.crawl_id, self.domain)
-        yield scrapy.Request(self.start_url, self.parse, dont_filter=True)
+        yield scrapy.Request(self.start_url, self.parse_first, dont_filter=True)
 
-    # def get_links(self, response):
-    #     from scrapy.link import Link
-    #     for href in response.xpath("//a/@href").extract():
-    #         url = response.urljoin(href)
-    #         yield Link(url.encode('utf8'))
+    def parse_first(self, response):
+        # If there is a redirect in the first request, use the target domain
+        # to restrict crawl instead of the original.
+        domain = get_netloc(response.url)
+        self.get_links = LinkExtractor(allow_domains=[domain]).extract_links
+        for elem in self.parse(response):
+            yield elem
 
     def parse(self, response):
         yield {'_url': response.url, '_crawl_id': self.crawl_id}
