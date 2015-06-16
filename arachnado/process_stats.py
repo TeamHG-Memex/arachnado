@@ -59,6 +59,7 @@ class ProcessStatsMonitor(object):
             'cpu_time_system': cpu_times.system,
             'num_fds': self.process.num_fds(),
             'context_switches': self.process.num_ctx_switches(),
+            'num_threads': self.process.num_threads(),
         }
         self._recent = stats
         self.signals.send_catch_log(self.signal_updated, stats=stats)

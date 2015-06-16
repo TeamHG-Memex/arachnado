@@ -81,9 +81,14 @@ export var AggregateJobStats = React.createClass({
             );
         }).filter(item => item != "");
         if (rows.length == 0){
-            return <p>Nothing to show.</p>
+            return (
+                <p>
+                    This panel displays various crawl stats.
+                    Nothing to show yet.
+                </p>
+            );
         }
-        return <KeyValueTable>{rows}</KeyValueTable>;
+        return <KeyValueTable noheader={this.props.fill}>{rows}</KeyValueTable>;
     },
 
     getAggregateStats: function () {

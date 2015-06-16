@@ -39,15 +39,17 @@ export var ProcessStatsTable = React.createClass({
         var s = this.state.stats;
         var items = [
             ["CPU %", (s.cpu_percent || 0).toFixed(1)],
-            ["user time", formatTimeMs(s.cpu_time_user)],
-            ["system time", formatTimeMs(s.cpu_time_system)],
+            ["utime", formatTimeMs(s.cpu_time_user)],
+            ["stime", formatTimeMs(s.cpu_time_system)],
             ["RAM %", (s.ram_percent || 0).toFixed(2)],
-            ["RSS", filesize(s.ram_rss || 0)],
+            ["RSS", filesize(s.ram_rss || 0, {round: 1})],
             ["VMS", filesize(s.ram_vms || 0)],
-            ["file descriptors", s.num_fds]
+            ["FDs", s.num_fds],
+            ["threads", s.num_threads],
         ];
+        var noheader = this.props.fill;
         var rows = items.map(kv => {return <tr key={kv[0]}><td>{kv[0]}</td><td>{kv[1]}</td></tr>});
-        return <KeyValueTable>{rows}</KeyValueTable>;
+        return <KeyValueTable noheader={noheader}>{rows}</KeyValueTable>;
     }
 });
 
