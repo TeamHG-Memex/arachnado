@@ -103,7 +103,7 @@ var JobRow = React.createClass({
 
     onStopClicked: function (jobId, ev) {
         ev.preventDefault();
-        if (confirm("Stop this job?")){
+        if (confirm("Stop job #" + jobId + "?")){
             JobListStore.Actions.stopCrawl(jobId);
         }
     },
