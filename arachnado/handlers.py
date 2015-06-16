@@ -12,7 +12,7 @@ from arachnado.handler_utils import ApiHandler, NoEtagsMixin
 at_root = lambda *args: os.path.join(os.path.dirname(__file__), *args)
 
 
-def get_application(crawler_process):
+def get_application(crawler_process, debug=True):
     context = {'crawler_process': crawler_process}
 
     handlers = [
@@ -28,7 +28,8 @@ def get_application(crawler_process):
     return Application(
         handlers=handlers,
         template_path=at_root("templates"),
-        compiled_template_cache=False,
+        compiled_template_cache=not debug,
+        static_hash_cache=not debug,
         static_path=at_root("static"),
         # no_keep_alive=True,
         compress_response=True,
