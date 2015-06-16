@@ -12,6 +12,7 @@ require("babel-core/polyfill");
 var STATUS_CLASSES = {
     'crawling': 'success',
     'stopping': 'info',
+    'suspended': 'warning',
     'done': ''
 };
 
@@ -52,17 +53,30 @@ var JobRow = React.createClass({
         var downloaded = stats['downloader/response_bytes'] || 0;
         var todo = (stats['scheduler/enqueued'] || 0) - (stats['scheduler/dequeued'] || 0);
 
+        var stopButton = (
+            <a href='#' title="Stop" onClick={this.onStopClicked.bind(null, job.id)}>
+                <Glyphicon glyph="stop" />
+            </a>
+        );
+
+        var pauseButton = (
+            <a href='#' title="Pause" onClick={this.onPauseClicked.bind(null, job.id)}>
+                <Glyphicon glyph="pause" />
+            </a>
+        );
+
+        var resumeButton = (
+            <a href='#' title="Resume" onClick={this.onResumeClicked.bind(null, job.id)}>
+                <Glyphicon glyph="play" />
+            </a>
+        );
+
         var icons = "";
         if (status == "crawling") {
-            icons = (<span>
-                <a href='#' title="Pause" onClick={this.onStopClicked.bind(null, job.id)}>
-                    <Glyphicon glyph="pause" />
-                </a>
-                &nbsp;
-                <a href='#' title="Stop" onClick={this.onStopClicked.bind(null, job.id)}>
-                    <Glyphicon glyph="stop" />
-                </a>
-            </span>);
+            icons = (<span>{pauseButton}&nbsp;&nbsp;{stopButton}</span>);
+        }
+        else if (status == "suspended") {
+            icons = (<span>{resumeButton}&nbsp;&nbsp;{stopButton}</span>);
         }
 
         /*
@@ -77,6 +91,7 @@ var JobRow = React.createClass({
         return (
             <tr className={cls}>
                 <td>{icons}</td>
+                <th scope="row">{job.id}</th>
                 <td>{job.seed}</td>
                 <td>{status}</td>
                 <td>{stats['item_scraped_count'] || 0}</td>
@@ -91,6 +106,16 @@ var JobRow = React.createClass({
         if (confirm("Stop this job?")){
             JobListStore.Actions.stopCrawl(jobId);
         }
+    },
+
+    onPauseClicked: function (jobId, ev) {
+        ev.preventDefault();
+        JobListStore.Actions.pauseCrawl(jobId);
+    },
+
+    onResumeClicked: function (jobId, ev) {
+        ev.preventDefault();
+        JobListStore.Actions.resumeCrawl(jobId);
     }
 
     /*
@@ -111,6 +136,7 @@ var JobListWidget = React.createClass({
             <thead>
                 <tr>
                     <th></th>
+                    <th>ID</th>
                     <th>Seed URL</th>
                     <th>Status</th>
                     <th>Items</th>

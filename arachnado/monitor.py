@@ -5,7 +5,7 @@ import logging
 from arachnado.crawler_process import (
     ArachnadoCrawlerProcess,
     agg_stats_changed,
-    CrawlerProcessSignals,
+    CrawlerProcessSignals as CPS,
 )
 from arachnado.process_stats import ProcessStatsMonitor
 from arachnado.wsbase import BaseWSHandler
@@ -28,18 +28,22 @@ class Monitor(BaseWSHandler):
     def on_open(self):
         logger.debug("new connection")
         self.cp.signals.connect(self.on_stats_changed, agg_stats_changed)
-        self.cp.signals.connect(self.on_spider_opened, CrawlerProcessSignals.spider_opened)
-        self.cp.signals.connect(self.on_spider_closed, CrawlerProcessSignals.spider_closed)
-        self.cp.signals.connect(self.on_spider_closing, CrawlerProcessSignals.spider_closing)
+        self.cp.signals.connect(self.on_spider_opened, CPS.spider_opened)
+        self.cp.signals.connect(self.on_spider_closed, CPS.spider_closed)
+
+        for signal in [CPS.spider_closing, CPS.engine_paused, CPS.engine_resumed]:
+            self.cp.signals.connect(self.on_engine_state_changed, signal)
+
         self.cp.procmon.signals.connect(self.on_process_stats, ProcessStatsMonitor.signal_updated)
         self.write_event("jobs:state", self.cp.jobs)
 
     def on_close(self):
         logger.debug("connection closed")
         self.cp.signals.disconnect(self.on_stats_changed, agg_stats_changed)
-        self.cp.signals.disconnect(self.on_spider_opened, CrawlerProcessSignals.spider_opened)
-        self.cp.signals.disconnect(self.on_spider_closed, CrawlerProcessSignals.spider_closed)
-        self.cp.signals.disconnect(self.on_spider_closing, CrawlerProcessSignals.spider_closing)
+        self.cp.signals.disconnect(self.on_spider_opened, CPS.spider_opened)
+        self.cp.signals.disconnect(self.on_spider_closed, CPS.spider_closed)
+        for signal in [CPS.spider_closing, CPS.engine_paused, CPS.engine_resumed]:
+            self.cp.signals.disconnect(self.on_engine_state_changed, signal)
         self.cp.procmon.signals.disconnect(self.on_process_stats, ProcessStatsMonitor.signal_updated)
 
     def on_spider_opened(self, spider):
@@ -48,7 +52,7 @@ class Monitor(BaseWSHandler):
     def on_spider_closed(self, spider, reason):
         self._send_jobs_state()
 
-    def on_spider_closing(self, crawler):
+    def on_engine_state_changed(self, crawler):
         self._send_jobs_state()
 
     def on_stats_changed(self, changes, crawler):

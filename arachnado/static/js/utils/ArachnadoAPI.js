@@ -12,3 +12,11 @@ export function startCrawl(domain, options){
 export function stopCrawl(jobId){
     $.post(window.STOP_CRAWL_URL, {job_id: jobId});
 }
+
+export function pauseCrawl(jobId){
+    $.post(window.PAUSE_CRAWL_URL, {job_id: jobId});
+}
+
+export function resumeCrawl(jobId){
+    $.post(window.RESUME_CRAWL_URL, {job_id: jobId});
+}

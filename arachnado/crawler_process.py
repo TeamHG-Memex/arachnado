@@ -17,6 +17,8 @@ logger = logging.getLogger(__name__)
 
 # monkey patch Scrapy to add an extra signal
 signals.spider_closing = object()
+signals.engine_paused = object()
+signals.engine_resumed = object()
 
 
 # a signal which is fired when stats are changed in any of the spiders
@@ -29,6 +31,8 @@ STAT_SIGNALS = {
 SCRAPY_SIGNAL_NAMES = [
     'engine_started',
     'engine_stopped',
+    'engine_paused',
+    'engine_resumed',
     'item_scraped',
     'item_dropped',
     'spider_closed',
@@ -53,6 +57,8 @@ def _get_crawler_process_signals_cls():
 
         engine_started = Signal('engine_started', True)
         engine_stopped = Signal('engine_stopped', True)
+        engine_paused = Signal('engine_paused', False)  # custom
+        engine_resumed = Signal('engine_resumed', False)  # custom
         spider_opened = Signal('spider_opened', True)
         spider_idle = Signal('spider_idle', False)
         spider_closed = Signal('spider_closed', True)
@@ -88,6 +94,16 @@ class ArachnadoExecutionEngine(ExecutionEngine):
         self.signals.send_catch_log(signals.spider_closing)
         return super(ArachnadoExecutionEngine, self).close_spider(spider, reason)
 
+    def pause(self):
+        """Pause the execution engine"""
+        super(ArachnadoExecutionEngine, self).pause()
+        self.signals.send_catch_log(signals.engine_paused)
+
+    def unpause(self):
+        """Resume the execution engine"""
+        super(ArachnadoExecutionEngine, self).unpause()
+        self.signals.send_catch_log(signals.engine_resumed)
+
 
 class ArachnadoCrawler(Crawler):
     """
@@ -110,6 +126,7 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
         self.signals = SignalManager(self)
         self.signals.connect(self.on_spider_closed, CrawlerProcessSignals.spider_closed)
         self._finished_jobs = []
+        self._paused_jobs = set()
         self.procmon = ProcessStatsMonitor()
         self.procmon.start()
         super(ArachnadoCrawlerProcess, self).__init__(settings or {})
@@ -143,9 +160,23 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
 
     def stop_job(self, crawl_id):
         """ Stop a single crawl job """
+        self.get_crawler(crawl_id).stop()
+
+    def pause_job(self, crawl_id):
+        """ Pause a crawling job """
+        self._paused_jobs.add(crawl_id)
+        self.get_crawler(crawl_id).engine.pause()
+
+    def resume_job(self, crawl_id):
+        """ Resume a crawling job """
+        self._paused_jobs.remove(crawl_id)
+        self.get_crawler(crawl_id).engine.unpause()
+
+    def get_crawler(self, crawl_id):
         for crawler in self.crawlers:
             if getattr(crawler.spider, "crawl_id") == crawl_id:
-                return crawler.stop()
+                return crawler
+        raise KeyError("Job is not known: %s" % crawl_id)
 
     def _resend_signal(self, **kwargs):
         # FIXME: this is a mess. Signal handling should be unified somehow.
@@ -177,61 +208,38 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
             'stats': spider.crawler.stats.get_stats(spider),
         })
 
-    # def on_spider_opened(self, spider):
-    #     logger.debug("on_spider_opened")
     #
-    # def on_spider_idle(self, spider):
-    #     logger.debug("on_spider_idle")
+    # FIXME: methods below are ugly
     #
-    # def on_spider_error(self, failure, response, spider):
-    #     logger.debug("on_spider_error")
-    #
-    # def on_request_scheduled(self, request, spider):
-    #     pass
-    #     # logger.debug("on_request_scheduled")
-    #
-    # def on_request_dropped(self, request, spider):
-    #     pass
-    #     # logger.debug("on_request_dropped")
-    #
-    # def on_response_received(self, response, request, spider):
-    #     logger.debug("on_response_received")
-    #
-    # def on_response_downloaded(self, response, request, spider):
-    #     logger.debug("on_response_downloaded")
-    #
-    # def on_item_scraped(self, item, response, spider):
-    #     logger.debug("on_item_scraped")
-    #
-    # def on_item_dropped(self, item, response, exception, spider):
-    #     logger.debug("on_item_dropped")
 
-    @property
-    def finished_jobs(self):
-        return self._finished_jobs
-
-    @property
-    def active_jobs(self):
+    def get_jobs(self):
         """ Return a list of active jobs """
         crawlers = [cr for cr in self.crawlers if cr.spider is not None]
         return [
             {
                 'id': cr.spider.crawl_id,
                 'seed': cr.spider.domain,
-                'status': 'crawling' if cr.crawling else 'stopping',
+                'status': self._get_crawler_status(cr),
                 'stats': cr.spider.crawler.stats.get_stats(cr.spider),
             }
             for cr in crawlers
         ]
 
+    def _get_crawler_status(self, crawler):
+        if crawler.spider is None:
+            return "unknown"
+        if not crawler.crawling:
+            return "stopping"
+        if int(crawler.spider.crawl_id) in self._paused_jobs:
+            return "suspended"
+        return "crawling"
+
     @property
     def jobs(self):
         """ Current crawl state """
-
-        # FIXME: this is ugly
         # filter out active jobs which are in fact finished
-        finished_ids = {job['id'] for job in self.finished_jobs}
-        active_jobs = [job for job in self.active_jobs
+        finished_ids = {job['id'] for job in self._finished_jobs}
+        active_jobs = [job for job in self.get_jobs()
                        if job['id'] not in finished_ids]
 
-        return active_jobs + self.finished_jobs
+        return active_jobs + self._finished_jobs

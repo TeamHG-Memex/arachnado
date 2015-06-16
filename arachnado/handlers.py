@@ -21,6 +21,8 @@ def get_application(crawler_process):
         url(r"/settings", Settings, context, name="settings"),
         url(r"/crawler/start", StartCrawler, context, name="start"),
         url(r"/crawler/stop", StopCrawler, context, name="stop"),
+        url(r"/crawler/pause", PauseCrawler, context, name="pause"),
+        url(r"/crawler/resume", ResumeCrawler, context, name="resume"),
         url(r"/ws-updates", Monitor, context, name="ws"),
     ]
     return Application(
@@ -84,17 +86,34 @@ class StartCrawler(ApiHandler, BaseRequestHandler):
             self.redirect("/")
 
 
-class StopCrawler(ApiHandler, BaseRequestHandler):
-    """ This endpoint stops a running job. """
-    def stop(self, job_id):
-        self.crawler_process.stop_job(int(job_id))
+class _ControlJobHandler(ApiHandler, BaseRequestHandler):
+    def control_job(self, job_id):
+        raise NotImplementedError
 
     def post(self):
         if self.is_json:
-            job_id = self.json_args['job_id']
-            self.stop(job_id)
+            job_id = int(self.json_args['job_id'])
+            self.control_job(job_id)
             return {"status": "ok"}
         else:
-            job_id = self.get_body_argument('job_id')
-            self.stop(job_id)
+            job_id = int(self.get_body_argument('job_id'))
+            self.control_job(job_id)
             self.redirect("/")
+
+
+class StopCrawler(_ControlJobHandler):
+    """ This endpoint stops a running job. """
+    def control_job(self, job_id):
+        self.crawler_process.stop_job(job_id)
+
+
+class PauseCrawler(_ControlJobHandler):
+    """ This endpoint pauses a job. """
+    def control_job(self, job_id):
+        self.crawler_process.pause_job(job_id)
+
+
+class ResumeCrawler(_ControlJobHandler):
+    """ This endpoint resumes a paused job. """
+    def control_job(self, job_id):
+        self.crawler_process.resume_job(job_id)

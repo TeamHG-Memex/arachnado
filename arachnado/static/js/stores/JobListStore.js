@@ -9,6 +9,8 @@ export var Actions = Reflux.createActions([
     "updateStats",
     "startCrawl",
     "stopCrawl",
+    "pauseCrawl",
+    "resumeCrawl",
 ]);
 
 
@@ -19,6 +21,8 @@ export var store = Reflux.createStore({
         this.listenTo(Actions.updateStats, this.onUpdateStats);
         this.listenTo(Actions.startCrawl, this.doStartCrawl);
         this.listenTo(Actions.stopCrawl, this.doStopCrawl);
+        this.listenTo(Actions.pauseCrawl, this.doPauseCrawl);
+        this.listenTo(Actions.resumeCrawl, this.doResumeCrawl);
     },
 
     getInitialState: function () {
@@ -43,6 +47,14 @@ export var store = Reflux.createStore({
 
     doStopCrawl: function (jobId) {
         API.stopCrawl(jobId);
+    },
+
+    doPauseCrawl: function (jobId) {
+        API.pauseCrawl(jobId);
+    },
+
+    doResumeCrawl: function (jobId) {
+        API.resumeCrawl(jobId);
     }
 });
 
