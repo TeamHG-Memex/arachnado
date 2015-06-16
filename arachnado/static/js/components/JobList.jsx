@@ -141,7 +141,7 @@ var JobListWidget = React.createClass({
                     <th>Status</th>
                     <th>Items</th>
                     <th>Todo</th>
-                    <th>Data</th>
+                    <th className="col-md-2">Data</th>
                 </tr>
             </thead>
             <tbody>
