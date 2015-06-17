@@ -14,9 +14,7 @@ export var IndexPage = React.createClass({
         return (
             <div className="row">
                 <div className="col-lg-6 col-md-7">
-                    <Panel collapsible defaultExpanded header="New Crawl" bsStyle="default">
-                        <CrawlForm action={window.START_CRAWL_URL} />
-                    </Panel>
+                    <CrawlForm action={window.START_CRAWL_URL} />
                     <Panel collapsible defaultExpanded header="Jobs" bsStyle="primary">
                         <JobList/>
                     </Panel>

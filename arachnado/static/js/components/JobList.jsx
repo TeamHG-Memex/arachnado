@@ -3,7 +3,7 @@
 var React = require("react");
 var Reflux = require("reflux");
 var filesize = require("filesize");
-var { Link } = require('react-router');
+var { Link, Navigation } = require('react-router');
 
 var { Table, Glyphicon, Button } = require("react-bootstrap");
 var JobStore = require("../stores/JobStore");
@@ -48,6 +48,7 @@ var NoJobs = React.createClass({
 
 
 var JobRow = React.createClass({
+    mixins: [Navigation],
     render: function () {
         var job = this.props.job;
         var status = simplifiedStatus(job.status);
@@ -91,20 +92,18 @@ var JobRow = React.createClass({
         }
         */
 
+        var style = {cursor: "pointer"};
+        var cb = () => { this.transitionTo("job", {id: job.id}) };
+
         return (
             <tr className={cls}>
                 <td>{icons}</td>
                 <th scope="row">{job.id}</th>
-                <td>{job.seed}</td>
-                <td>{status}</td>
-                <td>{stats['item_scraped_count'] || 0}</td>
-                <td>{todo}</td>
-                <td>{filesize(downloaded)}</td>
-                <td>
-                    <Link to="job" params={{id: job.id}}>
-                        <Glyphicon glyph="stats" />
-                    </Link>
-                </td>
+                <td style={style} onClick={cb}>{job.seed}</td>
+                <td style={style} onClick={cb}>{status}</td>
+                <td style={style} onClick={cb}>{stats['item_scraped_count'] || 0}</td>
+                <td style={style} onClick={cb}>{todo}</td>
+                <td style={style} onClick={cb}>{filesize(downloaded)}</td>
             </tr>
         );
     },
