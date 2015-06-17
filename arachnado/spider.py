@@ -10,15 +10,15 @@ from .crawler_process import ArachnadoCrawler
 
 
 DEFAULT_SETTINGS = {
-    # 'DEPTH_LIMIT': 1,
-    # 'DEPTH_STATS_VERBOSE': True,
+    'DEPTH_LIMIT': 10,
+    'DEPTH_STATS_VERBOSE': True,
     'BOT_NAME': 'arachnado',
 
     'MEMUSAGE_ENABLED': True,
     'DOWNLOAD_MAXSIZE': 1 * MB,
     # 'DOWNLOAD_WARNSIZE': 1 * MB,  # see https://github.com/scrapy/scrapy/issues/1303
 
-    'CLOSESPIDER_PAGECOUNT': 30,  # for debugging
+    # 'CLOSESPIDER_PAGECOUNT': 30,  # for debugging
     'LOG_LEVEL': 'DEBUG',
     'TELNETCONSOLE_ENABLED': False,
 
