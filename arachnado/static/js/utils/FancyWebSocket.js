@@ -11,15 +11,24 @@ export class FancyWebSocket {
 
     constructor(url) {
         this._ee = new EventEmitter();
+        this._connect(url);
+    }
+
+    _connect(url) {
         this._conn = new WebSocket(url);
         this._conn.onmessage = (evt) => {
             var json = JSON.parse(evt.data);
-            //console.log("WS data:", json);
             this._ee.emit(json.event, json.data);
         };
         this._conn.onopen = () => { this._ee.emit('open', null) };
         this._conn.onclose = (e) => { this._ee.emit('close', e) };
         this._conn.onerror = (e) => { this._ee.emit('error', e) };
+        this._url = url;
+    }
+
+    reconnect() {
+        this._conn.close();
+        this._connect(this._url);
     }
 
     /* Listen to incoming messages */

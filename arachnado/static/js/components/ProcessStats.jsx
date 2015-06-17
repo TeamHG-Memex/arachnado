@@ -7,7 +7,7 @@ var Reflux = require("reflux");
 var { Table } = require("react-bootstrap");
 
 var ProcessStatsStore = require("../stores/ProcessStatsStore");
-var ConnectionStatusStore = require("../stores/ConnectionStatusStore");
+var ConnectionStore = require("../stores/ConnectionStore");
 var { KeyValueTable } = require("./KeyValueTable");
 
 
@@ -18,7 +18,7 @@ function formatTimeMs(timeMs){
 export var HeaderProcessStats = React.createClass({
     mixins: [
         Reflux.connect(ProcessStatsStore.store, "stats"),
-        Reflux.connect(ConnectionStatusStore.store, "connectionStatus"),
+        Reflux.connect(ConnectionStore.store, "connectionStatus"),
     ],
     render: function () {
         if (this.state.connectionStatus == "offline"){

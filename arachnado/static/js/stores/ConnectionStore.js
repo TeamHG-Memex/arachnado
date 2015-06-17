@@ -5,13 +5,13 @@ var { FancyWebSocket } = require("../utils/FancyWebSocket");
 var JobStore = require("./JobStore");
 
 
-var Actions = Reflux.createActions(["update"]);
+export var Actions = Reflux.createActions(["update", "reconnect"]);
 
 
 export var store = Reflux.createStore({
     init: function () {
         this.status = "offline";
-        this.listenTo(Actions.update, this.onUpdate);
+        this.listenToMany(Actions);
         this.listenTo(JobStore.store, this.onJobListChanged);
     },
 
@@ -33,6 +33,10 @@ export var store = Reflux.createStore({
     onUpdate: function (status) {
         this.status = status;
         this.trigger(status);
+    },
+
+    onReconnect: function () {
+        socket.reconnect();
     }
 });
 
