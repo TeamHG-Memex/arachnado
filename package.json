@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "webpack",
+    "build": "webpack --optimize-minimize",
     "watch": "webpack --progress --color --watch"
   },
   "repository": {
@@ -19,17 +19,18 @@
   },
   "homepage": "https://github.com/TeamHG-Memex/arachnado#readme",
   "devDependencies": {
-    "babel-core": "^5.5.4",
+    "babel-core": "^5.5.8",
     "babel-loader": "^5.1.4",
     "node-libs-browser": "^0.5.2",
-    "webpack": "^1.9.10"
+    "webpack": "^1.9.11"
   },
   "dependencies": {
-    "eventemitter3": "^1.1.0",
+    "eventemitter3": "^1.1.1",
     "filesize": "^3.1.2",
     "ms": "^0.7.1",
     "react": "^0.13.3",
-    "react-bootstrap": "^0.23.1",
-    "reflux": "^0.2.7"
+    "react-bootstrap": "^0.23.4",
+    "react-router": "^0.13.3",
+    "reflux": "^0.2.8"
   }
 }

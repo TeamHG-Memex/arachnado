@@ -3,9 +3,12 @@
 var React = require("react");
 var Reflux = require("reflux");
 var filesize = require("filesize");
+var { Link } = require('react-router');
 
 var { Table, Glyphicon, Button } = require("react-bootstrap");
-var JobListStore = require("../stores/JobListStore");
+var JobStore = require("../stores/JobStore");
+var { JobsMixin } = require("./RefluxMixins");
+
 require("babel-core/polyfill");
 
 
@@ -97,6 +100,11 @@ var JobRow = React.createClass({
                 <td>{stats['item_scraped_count'] || 0}</td>
                 <td>{todo}</td>
                 <td>{filesize(downloaded)}</td>
+                <td>
+                    <Link to="job" params={{id: job.id}}>
+                        <Glyphicon glyph="stats" />
+                    </Link>
+                </td>
             </tr>
         );
     },
@@ -104,18 +112,18 @@ var JobRow = React.createClass({
     onStopClicked: function (jobId, ev) {
         ev.preventDefault();
         if (confirm("Stop job #" + jobId + "?")){
-            JobListStore.Actions.stopCrawl(jobId);
+            JobStore.Actions.stopCrawl(jobId);
         }
     },
 
     onPauseClicked: function (jobId, ev) {
         ev.preventDefault();
-        JobListStore.Actions.pauseCrawl(jobId);
+        JobStore.Actions.pauseCrawl(jobId);
     },
 
     onResumeClicked: function (jobId, ev) {
         ev.preventDefault();
-        JobListStore.Actions.resumeCrawl(jobId);
+        JobStore.Actions.resumeCrawl(jobId);
     }
 
     /*
@@ -153,7 +161,7 @@ var JobListWidget = React.createClass({
 
 
 export var JobList = React.createClass({
-    mixins: [Reflux.connect(JobListStore.store, "jobs")],
+    mixins: [JobsMixin],
     render: function () {
         if (!this.state.jobs.length) {
             return <NoJobs/>;

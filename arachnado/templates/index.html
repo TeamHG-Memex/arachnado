@@ -1,10 +1,10 @@
 {% extends "base.html %}
 
 {% block content %}
-    <div id="arachnado-index-page"></div>
+    <div id="arachnado-root"></div>
 {% end %}
 
-{% block js %}<script src="{{ static_url('build/index.js') }}"></script>{% end %}
+{% block js %}<script src="{{ static_url('build/main.js') }}"></script>{% end %}
 {% block initial_data %}
     window.INITIAL_DATA = JSON.parse('{% raw initial_data_json %}');
 {% end %}

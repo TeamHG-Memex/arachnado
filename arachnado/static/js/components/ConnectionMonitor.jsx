@@ -5,7 +5,7 @@ A widget which shows if a server is idle/crawling or if we're not connected.
 var React = require('react');
 var Reflux = require('reflux');
 var { Label } = require('react-bootstrap');
-var ConnectionStatusStore = require("../stores/ConnectionStatusStore.js");
+var ConnectionStatusStore = require("../stores/ConnectionStatusStore");
 
 
 var ConnectionMonitorWidget = React.createClass({

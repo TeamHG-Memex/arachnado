@@ -7,10 +7,16 @@ function _static(name){
 
 module.exports = {
     entry: {
+        'main': _static("js/main.jsx"),
         'common': _static("js/common.js"),
-        'index': _static("js/index.jsx"),
 
-        'vendor': ['react-bootstrap', 'eventemitter3', 'reflux'],
+        'vendor': [
+            'react',
+            'react-bootstrap',
+            'react-router',
+            'reflux',
+            'eventemitter3'
+        ]
     },
     output: {
         path: _static("build"),
@@ -25,11 +31,11 @@ module.exports = {
             },
         ]
     },
+    resolve: {
+        extensions: ['', '.js', '.jsx']
+    },
     plugins: [
-        new webpack.optimize.CommonsChunkPlugin("vendor", "vendor.js")
-    ],
-    externals: {
-        react: 'React'
-    }
+        new webpack.optimize.CommonsChunkPlugin("vendor", "vendor.js"),
+    ]
     //devtool: "#inline-source-map",
 };

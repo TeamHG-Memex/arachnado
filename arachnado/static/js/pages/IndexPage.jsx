@@ -1,13 +1,15 @@
+/* Main (index) page */
+
 var React = require("react");
 var { Panel } = require("react-bootstrap");
 
-var { JobList } = require("./components/JobList.jsx");
-var { AggregateJobStats } = require("./components/JobStats.jsx");
-var { ProcessStatsTable } = require("./components/ProcessStats.jsx");
-var { CrawlForm } = require("./components/CrawlForm.jsx");
+var { JobList } = require("../components/JobList");
+var { AggregateJobStats } = require("../components/JobStats");
+var { ProcessStatsTable } = require("../components/ProcessStats");
+var { CrawlForm } = require("../components/CrawlForm");
 
 
-var Index = React.createClass({
+export var IndexPage = React.createClass({
     render: function () {
         return (
             <div className="row">
@@ -36,9 +38,4 @@ var Index = React.createClass({
             </div>
         );
     }
-});
-
-
-$(window).ready(function() {
-    React.render(<Index/>, document.getElementById("arachnado-index-page"));
 });

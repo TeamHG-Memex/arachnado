@@ -17,12 +17,7 @@ export var Actions = Reflux.createActions([
 export var store = Reflux.createStore({
     init: function () {
         this.jobs = [];
-        this.listenTo(Actions.setAll, this.onSetAll);
-        this.listenTo(Actions.updateStats, this.onUpdateStats);
-        this.listenTo(Actions.startCrawl, this.doStartCrawl);
-        this.listenTo(Actions.stopCrawl, this.doStopCrawl);
-        this.listenTo(Actions.pauseCrawl, this.doPauseCrawl);
-        this.listenTo(Actions.resumeCrawl, this.doResumeCrawl);
+        this.listenToMany(Actions);
     },
 
     getInitialState: function () {
@@ -41,19 +36,19 @@ export var store = Reflux.createStore({
         this.trigger(this.jobs);
     },
 
-    doStartCrawl: function (domain, options) {
+    onStartCrawl: function (domain, options) {
         API.startCrawl(domain, options);
     },
 
-    doStopCrawl: function (jobId) {
+    onStopCrawl: function (jobId) {
         API.stopCrawl(jobId);
     },
 
-    doPauseCrawl: function (jobId) {
+    onPauseCrawl: function (jobId) {
         API.pauseCrawl(jobId);
     },
 
-    doResumeCrawl: function (jobId) {
+    onResumeCrawl: function (jobId) {
         API.resumeCrawl(jobId);
     }
 });

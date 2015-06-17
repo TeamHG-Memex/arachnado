@@ -3,9 +3,10 @@ var React = require("react");
 var Reflux = require("reflux");
 var filesize = require("filesize");
 var { Table } = require("react-bootstrap");
-var { KeyValueTable } = require("./KeyValueTable.jsx");
+var { KeyValueTable } = require("./KeyValueTable");
 
-var JobListStore = require("../stores/JobListStore");
+var JobStore = require("../stores/JobStore");
+var { JobsMixin, SingleJobMixin } = require("./RefluxMixins");
 
 var range = (top) => Array.from(new Array(top), (_,i) => i);
 
@@ -60,26 +61,31 @@ var SHORT_NAMES = {
 };
 
 
+function getJobStatRows(stats){
+    return Object.keys(stats).map(key => {
+        var value = stats[key];
+        if (value == 0){
+            return "";
+        }
+        if (/_bytes$|memusage/.test(key)){
+            value = filesize(value);
+        }
+        var shortKey = SHORT_NAMES[key] || key;
+        return (
+            <tr key={key}>
+                <td>{shortKey}</td>
+                <td>{value}</td>
+            </tr>
+        );
+    }).filter(item => item != "");
+}
+
+
 export var AggregateJobStats = React.createClass({
-    mixins: [Reflux.connect(JobListStore.store, "jobs")],
+    mixins: [JobsMixin],
     render: function () {
-        var stats = this.getAggregateStats();
-        var rows = Object.keys(stats).map(key => {
-            var value = stats[key];
-            if (value == 0){
-                return "";
-            }
-            if (/_bytes$/.test(key)){
-                value = filesize(value);
-            }
-            var shortKey = SHORT_NAMES[key] || key;
-            return (
-                <tr key={key}>
-                    <td>{shortKey}</td>
-                    <td>{value}</td>
-                </tr>
-            );
-        }).filter(item => item != "");
+        var stats = this.getAggregateStats(this.state.jobs);
+        var rows = getJobStatRows(stats);
         if (rows.length == 0){
             return (
                 <p>
@@ -91,15 +97,38 @@ export var AggregateJobStats = React.createClass({
         return <KeyValueTable noheader={this.props.fill}>{rows}</KeyValueTable>;
     },
 
-    getAggregateStats: function () {
+    getAggregateStats: function (jobs) {
         var stats = {};
         SUM_KEYS.forEach(key => {stats[key] = 0});
 
-        this.state.jobs.forEach(job => {
+        jobs.forEach(job => {
             SUM_KEYS.forEach(key => {
                 stats[key] += job.stats[key] || 0;
             });
         });
         return stats;
+    }
+});
+
+
+export var JobStats = React.createClass({
+    mixins: [SingleJobMixin],
+    render: function () {
+        if (!this.state.job){
+            return <span></span>;
+        }
+        var stats = this.state.job.stats;
+        var names = Object.keys(stats);
+        names.sort();
+
+        var sortedStats = {};
+        names.forEach(k => {
+            sortedStats[k] = stats[k];
+        });
+        var rows = getJobStatRows(sortedStats);
+        if (rows.length == 0){
+            return <p>Nothing to show yet.</p>;
+        }
+        return <KeyValueTable noheader={this.props.fill}>{rows}</KeyValueTable>;
     }
 });

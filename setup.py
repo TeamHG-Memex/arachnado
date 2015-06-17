@@ -19,6 +19,8 @@ setup(
             "static/js/*.jsx",
             "static/js/components/*.jsx",
             "static/js/components/*.js",
+            "static/js/pages/*.jsx",
+            "static/js/pages/*.js",
             "static/js/stores/*.jsx",
             "static/js/stores/*.js",
             "static/js/utils/*.jsx",

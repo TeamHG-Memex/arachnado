@@ -8,7 +8,7 @@ var { Table } = require("react-bootstrap");
 
 var ProcessStatsStore = require("../stores/ProcessStatsStore");
 var ConnectionStatusStore = require("../stores/ConnectionStatusStore");
-var { KeyValueTable } = require("./KeyValueTable.jsx");
+var { KeyValueTable } = require("./KeyValueTable");
 
 
 function formatTimeMs(timeMs){

@@ -2,7 +2,7 @@ require("babel-core/polyfill");
 
 var Reflux = require("reflux");
 var { FancyWebSocket } = require("../utils/FancyWebSocket");
-var JobListStore = require("./JobListStore.js");
+var JobStore = require("./JobStore");
 
 
 var Actions = Reflux.createActions(["update"]);
@@ -12,7 +12,7 @@ export var store = Reflux.createStore({
     init: function () {
         this.status = "offline";
         this.listenTo(Actions.update, this.onUpdate);
-        this.listenTo(JobListStore.store, this.onJobListChanged);
+        this.listenTo(JobStore.store, this.onJobListChanged);
     },
 
     getInitialState: function () {

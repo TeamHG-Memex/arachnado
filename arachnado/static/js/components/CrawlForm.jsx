@@ -3,7 +3,7 @@
 var React = require("react");
 var { Panel } = require("react-bootstrap");
 
-var JobListStore = require("../stores/JobListStore.js");
+var JobStore = require("../stores/JobStore");
 
 
 export var CrawlForm = React.createClass({
@@ -42,7 +42,7 @@ export var CrawlForm = React.createClass({
     onSubmit: function (ev) {
         ev.preventDefault();
         if (this.state.value != "") {
-            JobListStore.Actions.startCrawl(this.state.value);
+            JobStore.Actions.startCrawl(this.state.value);
             this.setState({value: ""});
         }
     }
