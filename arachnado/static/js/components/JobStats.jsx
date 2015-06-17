@@ -118,15 +118,10 @@ export var JobStats = React.createClass({
             return <span></span>;
         }
         var stats = this.state.job.stats;
-        var names = Object.keys(stats);
-        names.sort();
-
         var sortedStats = {};
-        names.forEach(k => {
-            sortedStats[k] = stats[k];
-        });
+        Object.keys(stats).sort().forEach(k => {sortedStats[k] = stats[k]});
         var rows = getJobStatRows(sortedStats);
-        if (rows.length == 0){
+        if (rows.length == 0) {
             return <p>Nothing to show yet.</p>;
         }
         return <KeyValueTable noheader={this.props.fill}>{rows}</KeyValueTable>;
