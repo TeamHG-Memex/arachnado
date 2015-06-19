@@ -29,9 +29,11 @@ then rebuild static files (we use Webpack_)::
 
     npm run build
 
-or auto-build static files on each change::
+or auto-build static files on each change during development::
 
     npm run watch
+
+.. _Webpack: https://github.com/webpack/webpack
 
 Run
 ---
