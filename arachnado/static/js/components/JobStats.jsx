@@ -52,6 +52,10 @@ var SUM_KEYS = [
     'spider_exceptions/AttributeError',
     'spider_exceptions/ValueError',
     'spider_exceptions/TypeError'
+]).concat([
+    'motor/items_stored_count',
+    'motor/store_error_count',
+    'motor/store_error_count/AutoReconnect',
 ]);
 
 

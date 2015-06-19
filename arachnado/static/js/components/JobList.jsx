@@ -92,13 +92,20 @@ var JobRow = React.createClass({
         }
         */
 
-        var style = {cursor: "pointer"};
-        var cb = () => { this.transitionTo("job", {id: job.id}) };
+        if (this.props.link){
+            var style = {cursor: "pointer"};
+            var cb = () => { this.transitionTo("job", {id: job.id}) };
+        }
+        else {
+            var style = {};
+            var cb = () => {};
+        }
 
+        var shortId = job.job_id.slice(-5);
         return (
             <tr className={cls}>
                 <td>{icons}</td>
-                <th scope="row">{job.id}</th>
+                <th scope="row">{job.id}: {shortId}</th>
                 <td style={style} onClick={cb}>{job.seed}</td>
                 <td style={style} onClick={cb}>{status}</td>
                 <td style={style} onClick={cb}>{stats['item_scraped_count'] || 0}</td>
@@ -135,11 +142,13 @@ var JobRow = React.createClass({
 });
 
 
-var JobListWidget = React.createClass({
+export var JobListWidget = React.createClass({
     render: function () {
-        var rows = this.props.jobs.map(job => {return <JobRow job={job} key={job.id}/>});
+        var rows = this.props.jobs.map(job => {
+            return <JobRow job={job} key={job.id} link={this.props.link} />;
+        });
 
-        return <Table fill hover>
+        return <Table fill hover={this.props.link}>
             <thead>
                 <tr>
                     <th></th>
@@ -162,9 +171,10 @@ var JobListWidget = React.createClass({
 export var JobList = React.createClass({
     mixins: [JobsMixin],
     render: function () {
-        if (!this.state.jobs.length) {
+        var jobs = this.state.jobs;
+        if (!jobs.length) {
             return <NoJobs/>;
         }
-        return <JobListWidget jobs={this.state.jobs}/>;
+        return <JobListWidget jobs={jobs} link={true}/>;
     }
 });

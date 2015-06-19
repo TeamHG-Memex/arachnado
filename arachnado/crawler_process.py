@@ -179,7 +179,9 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
         raise KeyError("Job is not known: %s" % crawl_id)
 
     def _resend_signal(self, **kwargs):
-        # FIXME: this is a mess. Signal handling should be unified somehow.
+        # FIXME: this is a mess. Signal handling should be unified somehow:
+        # there shouldn't be two separate code paths
+        # for CrawlerProcessSignals and STAT_SIGNALS.
         signal = kwargs['signal']
         if signal in STAT_SIGNALS:
             signal = STAT_SIGNALS[signal]
@@ -203,14 +205,15 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
         # spiders are closed not that often, insert(0,...) should be fine
         self._finished_jobs.insert(0, {
             'id': spider.crawl_id,
+            'job_id': getattr(spider, 'motor_job_id'),
             'seed': spider.domain,
             'status': reason,
             'stats': spider.crawler.stats.get_stats(spider),
         })
 
-    #
-    # FIXME: methods below are ugly
-    #
+    # FIXME: methods below are ugly for two reasons:
+    # 1. they assume spiders have certain attributes;
+    # 2. they try to get crawling status based on auxilary information.
 
     def get_jobs(self):
         """ Return a list of active jobs """
@@ -218,6 +221,7 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
         return [
             {
                 'id': cr.spider.crawl_id,
+                'job_id': getattr(cr.spider, 'motor_job_id'),
                 'seed': cr.spider.domain,
                 'status': self._get_crawler_status(cr),
                 'stats': cr.spider.crawler.stats.get_stats(cr.spider),

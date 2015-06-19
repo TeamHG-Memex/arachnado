@@ -6,8 +6,19 @@ var { Panel, Table, Button, Glyphicon, ButtonToolbar } = require("react-bootstra
 
 var { ProcessStatsTable } = require("../components/ProcessStats");
 var { JobStats } = require("../components/JobStats");
-var { SingleJobMixin } = require("../components/RefluxMixins");
+var { JobListWidget, JobList } = require("../components/JobList");
+var { SingleJobMixin, JobsMixin } = require("../components/RefluxMixins");
 
+
+var ShortJobInfo = React.createClass({
+    mixins: [SingleJobMixin],
+    render: function () {
+        var job = this.state.job;
+        if (!job){ return <p></p>; }
+        var jobs = [job];
+        return <JobListWidget jobs={jobs} link={false}/>;
+    }
+});
 
 var JobInfo = React.createClass({
     mixins: [SingleJobMixin],
@@ -25,12 +36,13 @@ var JobInfo = React.createClass({
         }
 
         var rows = kvpairs.map(p => <tr key={p[0]}><td>{p[0]}</td><td>{p[1]}</td></tr>);
-        
         return (
-            <Table>
-                <caption>General Job Information</caption>
-                <tbody>{rows}</tbody>
-            </Table>
+            <div>
+                <Table>
+                    <caption>General Job Information</caption>
+                    <tbody>{rows}</tbody>
+                </Table>
+            </div>
         );
     }
 });
@@ -42,29 +54,35 @@ export var JobPage = React.createClass({
         var header = (
             <span>
                 <Link to="index">
-                    <small>
-                        <Glyphicon glyph="menu-left"/>&nbsp;
-                        Back to Job List
-                    </small>
+                    <Glyphicon glyph="menu-left"/>&nbsp;
+                    Back to Full Job List
                 </Link>
-                <span className="pull-right">Crawling Job #{jobId}</span>
             </span>
         );
 
         return (
-            <div className="row">
-                <div className="col-lg-6">
-                    <Panel>
-                        {header}
-                    </Panel>
-                    <Panel>
-                        <JobInfo id={jobId}/>
-                    </Panel>
+            <div>
+                <div className="row">
+                    <div className="col-lg-6">
+                        <Panel>
+                            {header}
+                        </Panel>
+                    </div>
+                    <div className="col-lg-6">
+                        <ShortJobInfo id={jobId}/>
+                    </div>
                 </div>
-                <div className="col-lg-6">
-                    <Panel collapsible defaultExpanded header="Scrapy Stats">
-                        <JobStats id={jobId} />
-                    </Panel>
+                <div className="row">
+                    <div className="col-lg-6">
+                        <Panel>
+                            <JobInfo id={jobId}/>
+                        </Panel>
+                    </div>
+                    <div className="col-lg-6">
+                        <Panel collapsible defaultExpanded header="Scrapy Stats">
+                            <JobStats id={jobId} />
+                        </Panel>
+                    </div>
                 </div>
             </div>
         );

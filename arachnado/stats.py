@@ -10,7 +10,7 @@ from arachnado.signals import Signal
 from arachnado.utils import decorate_methods
 
 
-def stores_changed_value(meth):
+def store_changed_value(meth):
     @functools.wraps(meth)
     def wrapper(self, key, *args, **kwargs):
         old_value = self._stats.get(key)
@@ -21,7 +21,7 @@ def stores_changed_value(meth):
     return wrapper
 
 
-def stores_changed_stats(meth):
+def store_changed_stats(meth):
     @functools.wraps(meth)
     def wrapper(self, *args, **kwargs):
         meth(self, *args, **kwargs)
@@ -32,8 +32,8 @@ def stores_changed_stats(meth):
 stats_changed = Signal("stats_changed", False)
 
 
-@decorate_methods(["set_value", "inc_value", "max_value", "min_value"], stores_changed_value)
-@decorate_methods(["set_stats", "clear_stats"], stores_changed_stats)
+@decorate_methods(["set_value", "inc_value", "max_value", "min_value"], store_changed_value)
+@decorate_methods(["set_stats", "clear_stats"], store_changed_stats)
 class EventedStatsCollector(StatsCollector):
     """
     Stats Collector which allows to subscribe to value changes.
