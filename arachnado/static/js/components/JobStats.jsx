@@ -6,7 +6,7 @@ var { Table } = require("react-bootstrap");
 var { KeyValueTable } = require("./KeyValueTable");
 
 var JobStore = require("../stores/JobStore");
-var { JobsMixin, SingleJobMixin } = require("./RefluxMixins");
+var { JobsMixin } = require("./RefluxMixins");
 
 var range = (top) => Array.from(new Array(top), (_,i) => i);
 
@@ -116,12 +116,8 @@ export var AggregateJobStats = React.createClass({
 
 
 export var JobStats = React.createClass({
-    mixins: [SingleJobMixin],
     render: function () {
-        if (!this.state.job){
-            return <span></span>;
-        }
-        var stats = this.state.job.stats;
+        var stats = this.props.job.stats;
         var sortedStats = {};
         Object.keys(stats).sort().forEach(k => {sortedStats[k] = stats[k]});
         var rows = getJobStatRows(sortedStats);
