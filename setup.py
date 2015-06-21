@@ -48,7 +48,7 @@ setup(
         'Topic :: Software Development :: Libraries :: Python Modules',
     ],
     install_requires=[
-        'scrapy >= 1.0.0rc3',
+        'scrapy >= 1.0.0',
         'Twisted >= 12',
         'psutil >= 2.2',
         'tornado >= 4.2',
