@@ -47,6 +47,58 @@ var NoJobs = React.createClass({
 });
 
 
+var JobStopButton = React.createClass({
+    render: function () {
+        return (
+            <a href='#' title="Stop" onClick={this.onClick.bind(this)}>
+                <Glyphicon glyph="stop" />
+            </a>
+        )
+    },
+
+    onClick: function (ev) {
+        ev.preventDefault();
+        var id = this.props.job.id;
+        if (confirm("Stop job #" + id + "?")){
+            JobStore.Actions.stopCrawl(id);
+        }
+    }
+});
+
+
+var JobPauseButton = React.createClass({
+    render: function () {
+        return (
+            <a href='#' title="Pause" onClick={this.onClick.bind(this)}>
+                <Glyphicon glyph="pause" />
+            </a>
+        )
+    },
+
+    onClick: function (ev) {
+        ev.preventDefault();
+        JobStore.Actions.pauseCrawl(this.props.job.id);
+    }
+});
+
+
+var JobResumeButton = React.createClass({
+    render: function () {
+        return (
+            <a href='#' title="Resume" onClick={this.onClick.bind(this)}>
+                <Glyphicon glyph="play" />
+            </a>
+        )
+    },
+
+    onClick: function (ev) {
+        ev.preventDefault();
+        JobStore.Actions.resumeCrawl(this.props.job.id);
+    }
+});
+
+
+
 var JobRow = React.createClass({
     mixins: [Navigation],
     render: function () {
@@ -57,30 +109,22 @@ var JobRow = React.createClass({
         var downloaded = stats['downloader/response_bytes'] || 0;
         var todo = (stats['scheduler/enqueued'] || 0) - (stats['scheduler/dequeued'] || 0);
 
-        var stopButton = (
-            <a href='#' title="Stop" onClick={this.onStopClicked.bind(null, job.id)}>
-                <Glyphicon glyph="stop" />
-            </a>
-        );
-
-        var pauseButton = (
-            <a href='#' title="Pause" onClick={this.onPauseClicked.bind(null, job.id)}>
-                <Glyphicon glyph="pause" />
-            </a>
-        );
-
-        var resumeButton = (
-            <a href='#' title="Resume" onClick={this.onResumeClicked.bind(null, job.id)}>
-                <Glyphicon glyph="play" />
-            </a>
-        );
-
         var icons = "";
         if (status == "crawling") {
-            icons = (<span>{pauseButton}&nbsp;&nbsp;{stopButton}</span>);
+            icons = (
+                <span>
+                    {<JobPauseButton job={job}/>}&nbsp;&nbsp;
+                    {<JobStopButton job={job}/>}
+                </span>
+            );
         }
         else if (status == "suspended") {
-            icons = (<span>{resumeButton}&nbsp;&nbsp;{stopButton}</span>);
+            icons = (
+                <span>
+                    {<JobResumeButton job={job}/>}&nbsp;&nbsp;
+                    {<JobStopButton job={job}/>}
+                </span>
+            );
         }
 
         /*
@@ -105,7 +149,7 @@ var JobRow = React.createClass({
         return (
             <tr className={cls}>
                 <td>{icons}</td>
-                <th scope="row">{job.id}: {shortId}</th>
+                <th scope="row" style={style} onClick={cb}>{job.id}: {shortId}</th>
                 <td style={style} onClick={cb}>{job.seed}</td>
                 <td style={style} onClick={cb}>{status}</td>
                 <td style={style} onClick={cb}>{stats['item_scraped_count'] || 0}</td>
@@ -113,32 +157,7 @@ var JobRow = React.createClass({
                 <td style={style} onClick={cb}>{filesize(downloaded)}</td>
             </tr>
         );
-    },
-
-    onStopClicked: function (jobId, ev) {
-        ev.preventDefault();
-        if (confirm("Stop job #" + jobId + "?")){
-            JobStore.Actions.stopCrawl(jobId);
-        }
-    },
-
-    onPauseClicked: function (jobId, ev) {
-        ev.preventDefault();
-        JobStore.Actions.pauseCrawl(jobId);
-    },
-
-    onResumeClicked: function (jobId, ev) {
-        ev.preventDefault();
-        JobStore.Actions.resumeCrawl(jobId);
     }
-
-    /*
-    onRemoveFromListClicked: function (jobId, ev) {
-        ev.preventDefault();
-        console.log("onRemoveFromListClicked", jobId);
-    }
-    */
-
 });
 
 
