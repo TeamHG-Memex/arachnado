@@ -27,7 +27,7 @@
   "dependencies": {
     "eventemitter3": "^1.1.1",
     "filesize": "^3.1.2",
-    "ms": "^0.7.1",
+    "pretty-ms": "^1.2.0",
     "react": "^0.13.3",
     "react-bootstrap": "^0.23.4",
     "react-router": "^0.13.3",

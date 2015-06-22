@@ -8,16 +8,17 @@ var { Panel, Table, Button, Glyphicon, ButtonToolbar } = require("react-bootstra
 var JobStore = require("../stores/JobStore");
 var { ProcessStatsTable } = require("../components/ProcessStats");
 var { JobStats } = require("../components/JobStats");
-var { JobListWidget, JobList } = require("../components/JobList");
+var { JobListWidgetVerbose, JobControlButtons } = require("../components/JobList");
 
 
 var ShortJobInfo = React.createClass({
     render: function () {
         var job = this.props.job;
         var jobs = [job];
-        return <JobListWidget jobs={jobs} link={false}/>;
+        return <JobListWidgetVerbose jobs={jobs} />;
     }
 });
+
 
 var JobInfo = React.createClass({
     render: function () {
@@ -73,35 +74,20 @@ export var JobPage = React.createClass({
         if (!job){
             return <NoJobPage/>;
         }
-
-        var header = (
-            <span>
-                <Link to="index">
-                    <Glyphicon glyph="menu-left"/>&nbsp;
-                    Back to Full Job List
-                </Link>
-            </span>
-        );
-
         return (
-            <div>
+            <div className="row">
                 <div className="row">
-                    <div className="col-lg-6">
-                        <Panel>
-                            {header}
-                        </Panel>
-                    </div>
-                    <div className="col-lg-6">
+                    <div className="col-lg-12">
+                        <Link to="index" className="btn">
+                            <Glyphicon glyph="menu-left"/>&nbsp;All Jobs
+                        </Link>&nbsp;&nbsp;
+                        <JobControlButtons job={job}/>
+                        <br/><br/>
                         <ShortJobInfo job={job}/>
                     </div>
                 </div>
                 <div className="row">
-                    <div className="col-lg-6">
-                        <Panel>
-                            <JobInfo job={job}/>
-                        </Panel>
-                    </div>
-                    <div className="col-lg-6">
+                    <div className="col-lg-12">
                         <Panel collapsible defaultExpanded header="Scrapy Stats">
                             <JobStats job={job} />
                         </Panel>
@@ -111,4 +97,3 @@ export var JobPage = React.createClass({
         );
     }
 });
-

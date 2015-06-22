@@ -3,11 +3,14 @@
 var React = require("react");
 var Reflux = require("reflux");
 var filesize = require("filesize");
+var prettyMs = require('pretty-ms');
 var { Link, Navigation } = require('react-router');
 
 var { Table, Glyphicon, Button } = require("react-bootstrap");
 var JobStore = require("../stores/JobStore");
 var { JobsMixin } = require("./RefluxMixins");
+var ProcessStatsStore = require("../stores/ProcessStatsStore");
+
 
 require("babel-core/polyfill");
 
@@ -46,14 +49,22 @@ var NoJobs = React.createClass({
     }
 });
 
-
-var JobStopButton = React.createClass({
+var GlyphA = React.createClass({
     render: function () {
+        var txt = this.props.button ? " " + this.props.title : "";
         return (
-            <a href='#' title="Stop" onClick={this.onClick.bind(this)}>
-                <Glyphicon glyph="stop" />
+            <a href='#' {...this.props}>
+                <Glyphicon glyph={this.props.glyph} />{txt}
             </a>
         )
+    },
+});
+
+
+export var JobStopButton = React.createClass({
+    render: function () {
+        return <GlyphA title="Stop" glyph="stop" onClick={this.onClick}
+                       button={this.props.button} className={this.props.className} />;
     },
 
     onClick: function (ev) {
@@ -66,13 +77,10 @@ var JobStopButton = React.createClass({
 });
 
 
-var JobPauseButton = React.createClass({
+export var JobPauseButton = React.createClass({
     render: function () {
-        return (
-            <a href='#' title="Pause" onClick={this.onClick.bind(this)}>
-                <Glyphicon glyph="pause" />
-            </a>
-        )
+        return <GlyphA title="Pause" glyph="pause" onClick={this.onClick}
+                       button={this.props.button} className={this.props.className}  />;
     },
 
     onClick: function (ev) {
@@ -82,13 +90,10 @@ var JobPauseButton = React.createClass({
 });
 
 
-var JobResumeButton = React.createClass({
+export var JobResumeButton = React.createClass({
     render: function () {
-        return (
-            <a href='#' title="Resume" onClick={this.onClick.bind(this)}>
-                <Glyphicon glyph="play" />
-            </a>
-        )
+        return <GlyphA title="Resume" glyph="play" onClick={this.onClick}
+                       button={this.props.button} className={this.props.className}  />;
     },
 
     onClick: function (ev) {
@@ -97,93 +102,217 @@ var JobResumeButton = React.createClass({
     }
 });
 
+export function buttonsForStatus(status){
+    var status = simplifiedStatus(status);
+    if (status == "crawling") {
+        return {pause: true, stop: true}
+    }
+    else if (status == "suspended") {
+        return {resume: true, stop: true}
+    }
+    return {}
+}
+
+export var JobControlIcons = React.createClass({
+    render: function () {
+        var job = this.props.job;
+        var active = buttonsForStatus(job.status);
+        var props = {job: job};
+
+        var items = [];
+        if (active.pause) {
+            items.push(<span key="pause"><JobPauseButton {...props} />&nbsp;&nbsp;</span>);
+        }
+        if (active.resume) {
+            items.push(<span key="resume"><JobResumeButton {...props} />&nbsp;&nbsp;</span>);
+        }
+        if (active.stop) {
+            items.push(<JobStopButton key="stop" {...props} />);
+        }
+        return <span>{items}</span>;
+    }
+});
+
+
+export var JobControlButtons = React.createClass({
+    render: function () {
+        var job = this.props.job;
+        var active = buttonsForStatus(job.status);
+        var props = {button: true, job: job};
+
+        var items = [];
+        if (active.pause) {
+            items.push(<span key="pause"><JobPauseButton className="btn" {...props} />&nbsp;&nbsp;</span>);
+        }
+        if (active.resume) {
+            items.push(<span key="resume"><JobResumeButton className="btn" {...props} />&nbsp;&nbsp;</span>);
+        }
+        if (active.stop) {
+            items.push(<JobStopButton key="stop" className="btn" {...props} />);
+        }
+        return <span>{items}</span>;
+    }
+});
+
+
+/* Parse a date returned by Scrapy */
+var _parseDate = function (dt) {
+    var dt = dt.replace(" ", "T");
+    return new Date(dt+"Z");
+};
+
+
+function _getRowInfo(job, curTime){
+    var stats = job.stats || {};
+    var status = simplifiedStatus(job.status);
+    var downloaded = stats['downloader/response_bytes'] || 0;
+
+
+    var shortId = job.id;
+    if (job.job_id){
+        shortId = id + ": " + job.job_id.slice(-5);
+    }
+
+    var duration;
+    if (stats['start_time']) {
+        var start = _parseDate(stats['start_time']);
+        if (stats['finish_time']){
+            var end = _parseDate(stats['finish_time']);
+        }
+        else {
+            var end = curTime || new Date();
+        }
+        duration = end.getTime() - start.getTime();
+    }
+
+    var durationSec = duration / 1000;
+    var downloadSpeed = duration ? downloaded / (durationSec): 0;
+    var itemsSpeed = duration ? (stats['item_scraped_count'] || 0) / durationSec : 0;
+
+    return {
+        status: status,
+        rowClass: STATUS_CLASSES[status] || "",
+        stats: stats,
+        downloaded: downloaded,
+        downloadSpeed: downloadSpeed,
+        itemsSpeed: itemsSpeed,
+        todo: (stats['scheduler/enqueued'] || 0) - (stats['scheduler/dequeued'] || 0),
+        shortId: shortId,
+        duration: duration
+    }
+}
 
 
 var JobRow = React.createClass({
     mixins: [Navigation],
     render: function () {
         var job = this.props.job;
-        var status = simplifiedStatus(job.status);
-        var cls = STATUS_CLASSES[status] || "";
-        var stats = job.stats || {};
-        var downloaded = stats['downloader/response_bytes'] || 0;
-        var todo = (stats['scheduler/enqueued'] || 0) - (stats['scheduler/dequeued'] || 0);
+        var info = _getRowInfo(job, this.props.serverTime);
+        var style = {cursor: "pointer"};
+        var cb = () => { this.transitionTo("job", {id: job.id}) };
 
-        var icons = "";
-        if (status == "crawling") {
-            icons = (
-                <span>
-                    {<JobPauseButton job={job}/>}&nbsp;&nbsp;
-                    {<JobStopButton job={job}/>}
-                </span>
-            );
-        }
-        else if (status == "suspended") {
-            icons = (
-                <span>
-                    {<JobResumeButton job={job}/>}&nbsp;&nbsp;
-                    {<JobStopButton job={job}/>}
-                </span>
-            );
-        }
+        var columns = [
+            <td key='col-buttons'><JobControlIcons job={job}/></td>,
+            <th key='col-id' scope="row" style={style} onClick={cb}>{info.shortId}</th>
+        ];
 
-        /*
-        else if (status == "finished" || status == "closed" || status == "shutdown") {
-            icon = <a href='#' title="Remove job from list"
-                      onClick={this.onRemoveFromListClicked.bind(null, job.id)}>
-                <Glyphicon glyph="trash"/>
-            </a>;
-        }
-        */
+        var data = [
+            job.seed,
+            info.status,
+            (info.stats['item_scraped_count'] || 0),
+            filesize(info.downloaded),
+            prettyMs(info.duration),
+        ];
 
-        if (this.props.link){
-            var style = {cursor: "pointer"};
-            var cb = () => { this.transitionTo("job", {id: job.id}) };
-        }
-        else {
-            var style = {};
-            var cb = () => {};
-        }
-
-        var shortId = job.job_id.slice(-5);
-        return (
-            <tr className={cls}>
-                <td>{icons}</td>
-                <th scope="row" style={style} onClick={cb}>{job.id}: {shortId}</th>
-                <td style={style} onClick={cb}>{job.seed}</td>
-                <td style={style} onClick={cb}>{status}</td>
-                <td style={style} onClick={cb}>{stats['item_scraped_count'] || 0}</td>
-                <td style={style} onClick={cb}>{todo}</td>
-                <td style={style} onClick={cb}>{filesize(downloaded)}</td>
-            </tr>
+        columns = columns.concat(
+            data.map((v,i) => <td style={style} onClick={cb} key={i}>{v}</td>)
         );
+
+        return <tr className={info.rowClass}>{columns}</tr>;
+    }
+});
+
+
+var JobRowVerbose = React.createClass({
+    mixins: [Navigation],
+    render: function () {
+        var job = this.props.job;
+        var info = _getRowInfo(job, this.props.serverTime);
+        var columns = [
+            <th key='col-id' scope="row">{info.shortId}</th>
+        ];
+        var data = [
+            job.seed,
+            info.stats['start_time'],
+            info.status,
+            (info.stats['item_scraped_count'] || 0) + " @ " + Math.round(info.itemsSpeed * 60) + "/min",
+            info.todo,
+            filesize(info.downloaded),
+            filesize(info.downloadSpeed, {round: 1}) + "/s",
+            prettyMs(info.duration),
+        ];
+
+        columns = columns.concat(data.map((v,i) => <td key={i}>{v}</td>));
+        return <tr className={info.rowClass}>{columns}</tr>;
     }
 });
 
 
 export var JobListWidget = React.createClass({
-    render: function () {
-        var rows = this.props.jobs.map(job => {
-            return <JobRow job={job} key={job.id} link={this.props.link} />;
-        });
+    mixins: [
+        Reflux.connect(ProcessStatsStore.store, "stats"),
+    ],
 
+    render: function () {
+        var stats = this.state.stats;
+        var rows = this.props.jobs.map(job => {
+            return <JobRow job={job} key={job.id} serverTime={stats.serverTime} />;
+        });
         return <Table fill hover={this.props.link}>
             <thead>
                 <tr>
-                    <th></th>
-                    <th>ID</th>
-                    <th>Seed URL</th>
-                    <th>Status</th>
-                    <th>Items</th>
-                    <th>Todo</th>
-                    <th className="col-md-2">Data</th>
+                    <th key='col-buttons'></th>
+                    <th key='col-id'>ID</th>
+                    <th key='col-seed'>Seed URL</th>
+                    <th key='col-status'>Status</th>
+                    <th key='col-items'>Items</th>
+                    <th key='col-data' className="col-md-2">Data</th>
+                    <th key='col-runtime' className="col-md-2">Duration</th>
                 </tr>
             </thead>
-            <tbody>
-                {rows}
-            </tbody>
+            <tbody>{rows}</tbody>
         </Table>;
     }
+});
+
+
+export var JobListWidgetVerbose = React.createClass({
+    mixins: [
+        Reflux.connect(ProcessStatsStore.store, "stats"),
+    ],
+    render: function () {
+        var stats = this.state.stats;
+        var rows = this.props.jobs.map(job => {
+            return <JobRowVerbose job={job} key={job.id} serverTime={stats.serverTime} />;
+        });
+        return <Table fill>
+            <thead>
+                <tr>
+                    <th key='col-id'>ID</th>
+                    <th key='col-seed'>Seed URL</th>
+                    <th key='col-started'>Started At</th>
+                    <th key='col-status'>Status</th>
+                    <th key='col-items'>Items</th>
+                    <th key='col-queue'>Todo</th>
+                    <th key='col-data' className="col-md-1">Data</th>
+                    <th key='col-speed' className="col-md-1">↓ Speed</th>
+                    <th key='col-runtime'>Duration</th>
+                </tr>
+            </thead>
+            <tbody>{rows}</tbody>
+        </Table>;
+    }
+
 });
 
 
@@ -194,6 +323,6 @@ export var JobList = React.createClass({
         if (!jobs.length) {
             return <NoJobs/>;
         }
-        return <JobListWidget jobs={jobs} link={true}/>;
+        return <JobListWidget jobs={jobs} />;
     }
 });

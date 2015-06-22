@@ -2,6 +2,7 @@
 """ Process monitor: CPU, RAM """
 from __future__ import absolute_import
 import os
+import time
 import logging
 
 # import yappi
@@ -60,6 +61,7 @@ class ProcessStatsMonitor(object):
             'num_fds': self.process.num_fds(),
             'context_switches': self.process.num_ctx_switches(),
             'num_threads': self.process.num_threads(),
+            'server_time': int(time.time()*1000),
         }
         self._recent = stats
         self.signals.send_catch_log(self.signal_updated, stats=stats)

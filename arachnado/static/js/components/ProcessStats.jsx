@@ -1,7 +1,7 @@
 /* A widget for monitoring CPU and RAM usage of a process */
 
 var filesize = require("filesize");
-var ms = require("ms");
+var prettyMs = require("pretty-ms");
 var React = require("react");
 var Reflux = require("reflux");
 var { Table } = require("react-bootstrap");
@@ -12,7 +12,7 @@ var { KeyValueTable } = require("./KeyValueTable");
 
 
 function formatTimeMs(timeMs){
-    return ms(parseFloat((timeMs || 0).toFixed(3))*1000);
+    return prettyMs(timeMs*1000 || 0, {compact: true});
 }
 
 export var HeaderProcessStats = React.createClass({

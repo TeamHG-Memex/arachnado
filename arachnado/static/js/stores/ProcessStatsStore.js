@@ -17,7 +17,10 @@ export var store = Reflux.createStore({
 
     onUpdate: function (stats) {
         this.stats = stats;
-        this.trigger(stats);
+        if (stats.server_time) {
+            this.stats.serverTime = new Date(stats.server_time);
+        }
+        this.trigger(this.stats);
     }
 });
 
