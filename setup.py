@@ -15,8 +15,12 @@ setup(
     include_package_data=True,
     package_data={
         'arachnado': [
+            "templates/*.html",
+            "static/build/*.css",
             "static/build/*.js",
+
             "static/js/*.jsx",
+            "static/js/*.js",
             "static/js/components/*.jsx",
             "static/js/components/*.js",
             "static/js/pages/*.jsx",
@@ -25,8 +29,6 @@ setup(
             "static/js/stores/*.js",
             "static/js/utils/*.jsx",
             "static/js/utils/*.js",
-            "templates/*.html",
-            "static/build/*.css",
         ]
     },
 
@@ -52,5 +54,6 @@ setup(
         'Twisted >= 12',
         'psutil >= 2.2',
         'tornado >= 4.2',
+        'docopt >= 0.6',
     ],
 )

@@ -3,3 +3,4 @@ tornado == 4.2
 psutil == 2.2.1
 Twisted == 15.2.1
 motor == 0.4.1
+docopt == 0.6.2
