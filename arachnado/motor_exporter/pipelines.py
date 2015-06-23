@@ -64,6 +64,7 @@ class MotorPipeline(object):
                         extra={'crawler': self.crawler})
             self.connected = True
         except Exception:
+            self.job_id = None
             logger.error(
                 "Can't connect to %s. Items won't be stored.",
                 self.db_uri, exc_info=True,
@@ -72,6 +73,10 @@ class MotorPipeline(object):
 
     @tt_coroutine
     def close_spider(self, spider):
+        if self.job_id is None:
+            self.client.close()
+            return
+
         res = yield self.jobs_table.update(
             {'_id': self.job_id},
             {'$set': {
