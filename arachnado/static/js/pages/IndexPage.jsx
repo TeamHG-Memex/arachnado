@@ -13,7 +13,7 @@ export var IndexPage = React.createClass({
     render: function () {
         return (
             <div className="row">
-                <div className="col-lg-6 col-md-7">
+                <div className="col-lg-7 col-md-7">
                     <CrawlForm action={window.START_CRAWL_URL} />
                     <Panel collapsible defaultExpanded header="Jobs" bsStyle="primary">
                         <JobList/>
@@ -22,15 +22,12 @@ export var IndexPage = React.createClass({
                         <ProcessStatsTable />
                     </Panel>
                 </div>
-                <div className="col-lg-4 col-md-5">
+                <div className="col-lg-5 col-md-5">
+                    <Panel collapsible defaultExpanded header="Arachnado Stats" className="visible-lg-block">
+                        <ProcessStatsTable />
+                    </Panel>
                     <Panel collapsible defaultExpanded header="Aggregate Crawl Stats">
                         <AggregateJobStats/>
-                    </Panel>
-                </div>
-
-                <div className="col-lg-2 visible-lg-block">
-                    <Panel collapsible defaultExpanded header="Arachnado Stats">
-                        <ProcessStatsTable />
                     </Panel>
                 </div>
             </div>

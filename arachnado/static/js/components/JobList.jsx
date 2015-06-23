@@ -161,6 +161,13 @@ var _parseDate = function (dt) {
     return new Date(dt+"Z");
 };
 
+/* Return a string like 1202 @ 15/sec */
+function _formatItemSpeed(info) {
+    var count = info.stats['item_scraped_count'] || 0;
+    var speed = Math.round(info.itemsSpeed * 60);
+    return count + " @ " + speed + "/min";
+}
+
 
 function _getRowInfo(job, curTime){
     var stats = job.stats || {};
@@ -219,7 +226,7 @@ var JobRow = React.createClass({
         var data = [
             job.seed,
             info.status,
-            (info.stats['item_scraped_count'] || 0),
+            _formatItemSpeed(info),
             filesize(info.downloaded),
             prettyMs(info.duration),
         ];
@@ -245,7 +252,7 @@ var JobRowVerbose = React.createClass({
             job.seed,
             info.stats['start_time'],
             info.status,
-            (info.stats['item_scraped_count'] || 0) + " @ " + Math.round(info.itemsSpeed * 60) + "/min",
+            _formatItemSpeed(info),
             info.todo,
             filesize(info.downloaded),
             filesize(info.downloadSpeed, {round: 1}) + "/s",

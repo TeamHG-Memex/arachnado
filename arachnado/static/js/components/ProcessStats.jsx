@@ -12,7 +12,7 @@ var { KeyValueTable } = require("./KeyValueTable");
 
 
 function formatTimeMs(timeMs){
-    return prettyMs(timeMs*1000 || 0, {compact: true});
+    return prettyMs(timeMs*1000 || 0, {compact: false});
 }
 
 export var HeaderProcessStats = React.createClass({
@@ -39,13 +39,13 @@ export var ProcessStatsTable = React.createClass({
         var s = this.state.stats;
         var items = [
             ["CPU %", (s.cpu_percent || 0).toFixed(1)],
-            ["utime", formatTimeMs(s.cpu_time_user)],
-            ["stime", formatTimeMs(s.cpu_time_system)],
-            ["RAM %", (s.ram_percent || 0).toFixed(2)],
+            ["User Time", formatTimeMs(s.cpu_time_user)],
+            ["System Time", formatTimeMs(s.cpu_time_system)],
             ["RSS", filesize(s.ram_rss || 0, {round: 1})],
             ["VMS", filesize(s.ram_vms || 0)],
-            ["FDs", s.num_fds],
-            ["threads", s.num_threads],
+            ["RAM %", (s.ram_percent || 0).toFixed(2)],
+            ["File Descriptors", s.num_fds],
+            ["Threads", s.num_threads],
         ];
         var noheader = this.props.fill;
         var rows = items.map(kv => {return <tr key={kv[0]}><td>{kv[0]}</td><td>{kv[1]}</td></tr>});
