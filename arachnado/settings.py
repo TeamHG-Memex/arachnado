@@ -19,9 +19,15 @@ def load_settings(config_files=(), overrides=()):
 
     for section, option, value in overrides:
         if value is not None:
+            if isinstance(value, bool):
+                value = int(value)
             cp.set(section, option, str(value))
 
     return {
         section: dict(cp.items(section))
         for section in cp.sections()
     }
+
+
+def ensure_bool(opts, section, name):
+    opts[section][name] = bool(int(opts[section][name]))

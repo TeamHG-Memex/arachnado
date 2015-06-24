@@ -47,7 +47,7 @@ def setup_event_loop(use_twisted_reactor, debug=True):
             print("Using Tornado event loop as a Twisted reactor")
 
 
-def main(port, host, start_manhole, manhole_port, manhole_host, loglevel):
+def main(port, host, start_manhole, manhole_port, manhole_host, loglevel, opts):
     from arachnado.handlers import get_application
     from arachnado.crawler_process import ArachnadoCrawlerProcess
     from arachnado import manhole
@@ -55,7 +55,7 @@ def main(port, host, start_manhole, manhole_port, manhole_host, loglevel):
     settings = {'LOG_LEVEL': loglevel}
     crawler_process = ArachnadoCrawlerProcess(settings)
 
-    app = get_application(crawler_process)
+    app = get_application(crawler_process, opts)
     app.listen(int(port), host)
 
     if start_manhole:
@@ -65,7 +65,7 @@ def main(port, host, start_manhole, manhole_port, manhole_host, loglevel):
 
 
 def _settings(args):
-    from arachnado.settings import load_settings
+    from arachnado.settings import load_settings, ensure_bool
 
     if args['--config']:
         path = os.path.expanduser(args['--config'])
@@ -91,7 +91,11 @@ def _settings(args):
         'port': '--manhole-port',
         'host': '--manhole-host',
     })
-    return load_settings(config_files, overrides)
+    opts = load_settings(config_files, overrides)
+    ensure_bool(opts, 'arachnado', 'debug')
+    ensure_bool(opts, 'arachnado.storage', 'enabled')
+    ensure_bool(opts, 'arachnado.manhole', 'enabled')
+    return opts
 
 
 def run():
@@ -124,6 +128,7 @@ def run():
         manhole_port=int(opts['arachnado.manhole']['port']),
         manhole_host=opts['arachnado.manhole']['host'],
         loglevel=opts['arachnado']['loglevel'],
+        opts=opts,
     )
 
 

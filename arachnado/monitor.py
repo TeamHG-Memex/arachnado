@@ -19,11 +19,12 @@ class Monitor(BaseWSHandler):
     WebSocket handler which pushes CrawlerProcess events to a client.
     """
 
-    def initialize(self, crawler_process):
+    def initialize(self, crawler_process, opts):
         """
         :param ArachnadoCrawlerProcess crawler_process: crawler process
         """
         self.cp = crawler_process
+        self.opts = opts
 
     def on_open(self):
         logger.debug("new connection")

@@ -34,10 +34,7 @@ DEFAULT_SETTINGS = {
     'ITEM_PIPELINES': {
         'arachnado.motor_exporter.pipelines.MotorPipeline': 100,
     },
-    'MOTOR_PIPELINE_ENABLED': True,
     'MOTOR_PIPELINE_JOBID_KEY': '_job_id',
-    'MOTOR_PIPELINE_DB_NAME': 'arachnado',
-    # 'MOTOR_PIPELINE_URI':
 }
 
 

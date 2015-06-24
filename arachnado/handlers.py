@@ -12,8 +12,12 @@ from arachnado.handler_utils import ApiHandler, NoEtagsMixin
 at_root = lambda *args: os.path.join(os.path.dirname(__file__), *args)
 
 
-def get_application(crawler_process, debug=True):
-    context = {'crawler_process': crawler_process}
+def get_application(crawler_process, opts):
+    context = {
+        'crawler_process': crawler_process,
+        'opts': opts,
+    }
+    debug = opts['arachnado']['debug']
 
     handlers = [
         url(r"/", Index, context , name="index"),
@@ -37,11 +41,12 @@ def get_application(crawler_process, debug=True):
 
 class BaseRequestHandler(RequestHandler):
 
-    def initialize(self, crawler_process):
+    def initialize(self, crawler_process, opts):
         """
         :param arachnado.crawler_process.ArachnadoCrawlerProcess crawler_process: crawler process
         """
         self.crawler_process = crawler_process
+        self.opts = opts
 
     def render(self, *args, **kwargs):
         proc_stats = self.crawler_process.procmon.get_recent()
@@ -67,7 +72,14 @@ class StartCrawler(ApiHandler, BaseRequestHandler):
     This endpoint starts crawling for a domain.
     """
     def crawl(self, domain):
-        crawler = create_crawler()
+        storage_opts = self.opts['arachnado.storage']
+        settings = {
+            'MOTOR_PIPELINE_ENABLED': storage_opts['enabled'],
+            'MOTOR_PIPELINE_DB_NAME': storage_opts['db_name'],
+            'MOTOR_PIPELINE_DB': storage_opts['db_name'],
+            'MOTOR_PIPELINE_URI': storage_opts['uri'],
+        }
+        crawler = create_crawler(settings)
         self.crawler_process.crawl(crawler, domain=domain)
 
     def post(self):
