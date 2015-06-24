@@ -176,8 +176,8 @@ function _getRowInfo(job, curTime){
 
 
     var shortId = job.id;
-    if (job.job_id){
-        shortId = id + ": " + job.job_id.slice(-5);
+    if (job.job_id) {
+        shortId = shortId + ": " + job.job_id.slice(-5);
     }
 
     var duration;
