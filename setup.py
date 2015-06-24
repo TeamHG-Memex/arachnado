@@ -6,7 +6,7 @@ setup(
     name='arachnado',
     version='0.1',
     url='https://github.com/TeamHG-Memex/arachnado',
-    description='Scrapy-based Web Crawler',
+    description='Scrapy-based Web Crawler with an UI',
     long_description=open('README.rst').read(),
     author='Mikhail Korobov',
     author_email='kmike84@gmail.com',
@@ -15,6 +15,7 @@ setup(
     include_package_data=True,
     package_data={
         'arachnado': [
+            "settings/*.ini",
             "templates/*.html",
             "static/build/*.css",
             "static/build/*.js",

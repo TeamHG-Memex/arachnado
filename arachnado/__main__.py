@@ -3,22 +3,28 @@
 """
 Arachnado Crawling Server.
 
-Usage: arachnado [options]
+Usage:
+    arachnado [options]
+    arachnado show-settings [options]
 
 Options:
-  --port <port>             Port to use [default: 8888]
-  --host <host>             Host to bind to [default: ].
+
+  -p --port <port>          Port to use.
+  -h --host <host>          Host to bind.
+  -c --config <path>        Path to config file.
+  -L --loglevel <level>     Set log level.
   --manhole                 Start a manhole server.
-  --manhole-port <port>     Manhole server port [default: 6023]
-  --manhole-host <host>     Manhole server host [default: 127.0.0.1]
+  --manhole-port <port>     Manhole server port.
+  --manhole-host <host>     Manhole server host.
   --reactor <name>          Set base event loop. Allowed values are
-                            "twisted", "tornado" and "auto" [default: auto]
+                            "twisted", "tornado" and "auto".
   --debug                   Enable debug mode.
-  -L --loglevel <level>     Set log level [default: DEBUG]
   -h --help                 Show this help
 
 """
 from __future__ import absolute_import
+import os
+import sys
 import logging
 
 from docopt import docopt
@@ -58,29 +64,66 @@ def main(port, host, start_manhole, manhole_port, manhole_host, loglevel):
     crawler_process.start(stop_after_crawl=False)
 
 
+def _settings(args):
+    from arachnado.settings import load_settings
+
+    if args['--config']:
+        path = os.path.expanduser(args['--config'])
+        assert os.path.exists(path)
+        config_files = [path]
+    else:
+        config_files = []
+
+    def _overrides(section, mapping):
+        return [
+            [section, ini_key, args[args_key]]
+            for ini_key, args_key in mapping.items()
+        ]
+
+    overrides = _overrides('arachnado', {
+        'port': '--port',
+        'host': '--host',
+        'reactor': '--reactor',
+        'loglevel': '--loglevel',
+        'debug': '--debug',
+    }) + _overrides('arachnado.manhole', {
+        'enabled': '--manhole',
+        'port': '--manhole-port',
+        'host': '--manhole-host',
+    })
+    return load_settings(config_files, overrides)
+
+
 def run():
     args = docopt(__doc__)
+    opts = _settings(args)
 
-    if args["--reactor"] not in {'twisted', 'tornado', 'auto'}:
-        raise ValueError("Invalid --reactor value: %r" % args['--reactor'])
+    if args['show-settings']:
+        from pprint import pprint
+        pprint(opts)
+        sys.exit(1)
 
-    if args['--reactor'] == 'auto':
+    _reactor = opts['arachnado']['reactor']
+    if _reactor not in {'twisted', 'tornado', 'auto'}:
+        raise ValueError("Invalid 'reactor': %r" % _reactor)
+
+    if _reactor == 'auto':
         # manhole doesn't work well when run on tornado event loop
-        use_twisted_reactor = args['--manhole']
+        use_twisted_reactor = opts['arachnado.manhole']['enabled']
     else:
-        use_twisted_reactor = args['--reactor'] == "twisted"
+        use_twisted_reactor = _reactor == "twisted"
 
     setup_event_loop(
         use_twisted_reactor=use_twisted_reactor,
-        debug=args['--debug']
+        debug=opts['arachnado']['debug']
     )
     main(
-        port=int(args['--port']),
-        host=args['--host'],
-        start_manhole=args['--manhole'],
-        manhole_port=int(args['--manhole-port']),
-        manhole_host=args['--manhole-host'],
-        loglevel=args['--loglevel'],
+        port=int(opts['arachnado']['port']),
+        host=opts['arachnado']['host'],
+        start_manhole=opts['arachnado.manhole']['enabled'],
+        manhole_port=int(opts['arachnado.manhole']['port']),
+        manhole_host=opts['arachnado.manhole']['host'],
+        loglevel=opts['arachnado']['loglevel'],
     )
 
 
