@@ -18,7 +18,6 @@ def get_application(crawler_process, debug=True):
     handlers = [
         url(r"/", Index, context , name="index"),
         url(r"/help", Help, context, name="help"),
-        url(r"/settings", Settings, context, name="settings"),
         url(r"/crawler/start", StartCrawler, context, name="start"),
         url(r"/crawler/stop", StopCrawler, context, name="stop"),
         url(r"/crawler/pause", PauseCrawler, context, name="pause"),
@@ -61,11 +60,6 @@ class Index(NoEtagsMixin, BaseRequestHandler):
 class Help(BaseRequestHandler):
     def get(self):
         return self.render("help.html")
-
-
-class Settings(BaseRequestHandler):
-    def get(self):
-        return self.render("settings.html")
 
 
 class StartCrawler(ApiHandler, BaseRequestHandler):
