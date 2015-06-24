@@ -55,6 +55,8 @@ class MotorPipeline(object):
     @tt_coroutine
     def open_spider(self, spider):
         try:
+            yield self.items_table.ensure_index(self.job_id_key)
+
             self.job_id = yield self.jobs_table.insert({
                 'started_at': datetime.datetime.utcnow(),
             })
