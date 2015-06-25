@@ -89,6 +89,7 @@ class CrawlWebsiteSpider(scrapy.Spider):
             'status': response.status,
             'headers': response.headers,
             'body': response.body_as_unicode(),
+            'meta': response.meta,
         }
 
         for link in self.get_links(response):
