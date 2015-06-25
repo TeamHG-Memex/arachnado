@@ -18,6 +18,10 @@ class Monitor(BaseWSHandler):
     """
     WebSocket handler which pushes CrawlerProcess events to a client.
     """
+    engine_signals = [
+        CPS.spider_closing, CPS.engine_paused, CPS.engine_resumed,
+        CPS.engine_tick
+    ]
 
     def initialize(self, crawler_process, opts):
         """
@@ -32,7 +36,7 @@ class Monitor(BaseWSHandler):
         self.cp.signals.connect(self.on_spider_opened, CPS.spider_opened)
         self.cp.signals.connect(self.on_spider_closed, CPS.spider_closed)
 
-        for signal in [CPS.spider_closing, CPS.engine_paused, CPS.engine_resumed]:
+        for signal in self.engine_signals:
             self.cp.signals.connect(self.on_engine_state_changed, signal)
 
         self.cp.procmon.signals.connect(self.on_process_stats, ProcessStatsMonitor.signal_updated)
@@ -43,7 +47,7 @@ class Monitor(BaseWSHandler):
         self.cp.signals.disconnect(self.on_stats_changed, agg_stats_changed)
         self.cp.signals.disconnect(self.on_spider_opened, CPS.spider_opened)
         self.cp.signals.disconnect(self.on_spider_closed, CPS.spider_closed)
-        for signal in [CPS.spider_closing, CPS.engine_paused, CPS.engine_resumed]:
+        for signal in self.engine_signals:
             self.cp.signals.disconnect(self.on_engine_state_changed, signal)
         self.cp.procmon.signals.disconnect(self.on_process_stats, ProcessStatsMonitor.signal_updated)
 

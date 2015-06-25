@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-CrawlerProcessSignals class.
+Signals class.
 """
 from __future__ import absolute_import
 
