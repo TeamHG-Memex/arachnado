@@ -65,7 +65,7 @@ def main(port, host, start_manhole, manhole_port, manhole_host, loglevel, opts):
 
 
 def _settings(args):
-    from arachnado.settings import load_settings, ensure_bool
+    from arachnado.options import load_settings, ensure_bool
 
     if args['--config']:
         path = os.path.expanduser(args['--config'])
