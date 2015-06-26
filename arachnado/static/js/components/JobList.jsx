@@ -180,7 +180,7 @@ function _getRowInfo(job, curTime){
         shortId = shortId + ": " + job.job_id.slice(-5);
     }
 
-    var duration;
+    var duration = 0;
     if (stats['start_time']) {
         var start = _parseDate(stats['start_time']);
         if (stats['finish_time']){
