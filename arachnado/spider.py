@@ -23,10 +23,19 @@ DEFAULT_SETTINGS = {
     # 'CLOSESPIDER_PAGECOUNT': 30,  # for debugging
     'LOG_LEVEL': 'DEBUG',
     'TELNETCONSOLE_ENABLED': False,
+    # 'CONCURRENT_REQUESTS': 100,
+
+    'EXTENSIONS': {
+        'scrapy.extensions.throttle.AutoThrottle': None,
+        'arachnado.extensions.throttle.AutoThrottle': 0,
+    },
 
     'AUTOTHROTTLE_ENABLED': True,
     'AUTOTHROTTLE_DEBUG': False,
-    'AUTOTHROTTLE_START_DELAY': 3,
+    'AUTOTHROTTLE_START_DELAY': 5,
+    'AUTOTHROTTLE_TARGET_CONCURRENCY': 1.5,
+    'CONCURRENT_REQUESTS_PER_DOMAIN': 4,
+    'DOWNLOAD_DELAY': 0.3,  # min download delay
 
     'STATS_CLASS': 'arachnado.stats.EventedStatsCollector',
     'DOWNLOAD_HANDLERS': {'s3': None},  # see https://github.com/scrapy/scrapy/issues/1054
@@ -34,6 +43,7 @@ DEFAULT_SETTINGS = {
     'ITEM_PIPELINES': {
         'arachnado.motor_exporter.pipelines.MotorPipeline': 100,
     },
+
     'MOTOR_PIPELINE_JOBID_KEY': '_job_id',
 }
 

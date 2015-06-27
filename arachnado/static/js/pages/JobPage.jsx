@@ -9,6 +9,7 @@ var JobStore = require("../stores/JobStore");
 var { ProcessStatsTable } = require("../components/ProcessStats");
 var { JobStats } = require("../components/JobStats");
 var { JobListWidgetVerbose, JobControlButtons } = require("../components/JobList");
+var { ShortTermQueueWidget } = require("../components/JobTransfers.jsx");
 
 
 var ShortJobInfo = React.createClass({
@@ -87,9 +88,14 @@ export var JobPage = React.createClass({
                     </div>
                 </div>
                 <div className="row">
-                    <div className="col-lg-12">
+                    <div className="col-lg-5">
                         <Panel collapsible defaultExpanded header="Scrapy Stats">
                             <JobStats job={job} />
+                        </Panel>
+                    </div>
+                    <div className="col-lg-7">
+                        <Panel collapsible defaultExpanded header="Request Queue">
+                            <ShortTermQueueWidget job={job} />
                         </Panel>
                     </div>
                 </div>

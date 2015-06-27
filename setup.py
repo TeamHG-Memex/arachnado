@@ -17,6 +17,8 @@ setup(
         'arachnado': [
             "settings/*.ini",
             "templates/*.html",
+            "static/css/*.css",
+            
             "static/build/*.css",
             "static/build/*.js",
 

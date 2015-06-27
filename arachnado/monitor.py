@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 import logging
+from tornado.ioloop import PeriodicCallback
 
 from arachnado.crawler_process import (
     ArachnadoCrawlerProcess,
@@ -29,6 +30,7 @@ class Monitor(BaseWSHandler):
         """
         self.cp = crawler_process
         self.opts = opts
+        self._task = PeriodicCallback(self.on_tick, 0.5*1000)
 
     def on_open(self):
         logger.debug("new connection")
@@ -41,6 +43,7 @@ class Monitor(BaseWSHandler):
 
         self.cp.procmon.signals.connect(self.on_process_stats, ProcessStatsMonitor.signal_updated)
         self.write_event("jobs:state", self.cp.jobs)
+        self._task.start()
 
     def on_close(self):
         logger.debug("connection closed")
@@ -50,6 +53,7 @@ class Monitor(BaseWSHandler):
         for signal in self.engine_signals:
             self.cp.signals.disconnect(self.on_engine_state_changed, signal)
         self.cp.procmon.signals.disconnect(self.on_process_stats, ProcessStatsMonitor.signal_updated)
+        self._task.stop()
 
     def on_spider_opened(self, spider):
         self._send_jobs_state()
@@ -58,6 +62,9 @@ class Monitor(BaseWSHandler):
         self._send_jobs_state()
 
     def on_engine_state_changed(self, crawler):
+        self._send_jobs_state()
+
+    def on_tick(self):
         self._send_jobs_state()
 
     def on_stats_changed(self, changes, crawler):

@@ -256,10 +256,7 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
     def _downloader_stats(cls, crawler):
         downloader = crawler.engine.downloader
         return {
-            'active': sorted(
-                [cls._request_info(req) for req in downloader.active],
-                key=operator.itemgetter('url')
-            ),
+            'active': [cls._request_info(req) for req in downloader.active],
             'slots': sorted([
                 cls._slot_info(key, slot)
                 for key, slot in downloader.slots.items()
@@ -278,12 +275,8 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
             'delay': slot.delay,
             'lastseen': slot.lastseen,
             'len(queue)': len(slot.queue),
-            'len(active)': len(slot.active),
-            'len(transferring)': len(slot.transferring),
-            'transferring': sorted(
-                [cls._request_info(req) for req in slot.transferring],
-                key=operator.itemgetter('url')
-            )
+            'transferring': [cls._request_info(req) for req in slot.transferring],
+            'active': [cls._request_info(req) for req in slot.active],
         }
 
     def _get_crawler_status(self, crawler):

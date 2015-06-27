@@ -56,7 +56,7 @@ export var store = Reflux.createStore({
 
 var socket = FancyWebSocket.instance();
 socket.on("jobs:state", (jobs) => {
-    console.log("jobs:state", jobs);
+    //console.log("jobs:state", jobs);
     Actions.setAll(jobs);
 });
 

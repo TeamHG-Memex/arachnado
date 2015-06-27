@@ -1,0 +1,8 @@
+.transfer-enter {
+  opacity: 0.1;
+  transition: opacity .5s ease-in;
+}
+
+.transfer-enter.transfer-enter-active {
+  opacity: 1;
+}
