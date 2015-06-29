@@ -5,6 +5,7 @@ Async MongoDB item exporter using Motor_.
 .. _Motor: https://github.com/mongodb/motor
 """
 from __future__ import absolute_import
+import json
 import logging
 import datetime
 
@@ -79,11 +80,14 @@ class MotorPipeline(object):
             self.client.close()
             return
 
+        # json is to fix an issue with dots in key names
+        stats = json.dumps(self.crawler.stats.get_stats())
+
         res = yield self.jobs_table.update(
             {'_id': self.job_id},
             {'$set': {
                 'finished_at': datetime.datetime.utcnow(),
-                'stats': self.crawler.stats.get_stats(),
+                'stats': stats,
             }}
         )
         self.client.close()
