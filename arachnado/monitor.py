@@ -14,6 +14,33 @@ from arachnado.wsbase import BaseWSHandler
 
 logger = logging.getLogger(__name__)
 
+#
+# class Broker(object):
+#     """ Pub/Sub broker """
+#     def __init__(self):
+#         self.subscribers = defaultdict(set)
+#
+#     def on(self, event, callback):
+#         self.subscribers[event].add(callback)
+#
+#     def off(self, event, callback):
+#         self.subscribers[event].remove(callback)
+#
+#     def emit(self, event, message):
+#         for cb in self.subscribers[event]:
+#             cb(message)
+#
+#
+# class WSUpdatesHandler(BaseWSHandler):
+#     """ WebSocket handler which sends updates to the client """
+#
+#     def initialize(self, broker):
+#         self.broker = broker
+#
+#     def on_open(self, *args, **kwargs):
+#         pass
+#
+
 
 class Monitor(BaseWSHandler):
     """
@@ -21,7 +48,7 @@ class Monitor(BaseWSHandler):
     """
     engine_signals = [
         CPS.spider_closing, CPS.engine_paused, CPS.engine_resumed,
-        CPS.engine_tick
+        CPS.engine_tick, CPS.downloader_enqueued, CPS.downloader_dequeued
     ]
 
     def initialize(self, crawler_process, opts):
@@ -30,7 +57,6 @@ class Monitor(BaseWSHandler):
         """
         self.cp = crawler_process
         self.opts = opts
-        self._task = PeriodicCallback(self.on_tick, 0.5*1000)
 
     def on_open(self):
         logger.debug("new connection")
@@ -43,7 +69,6 @@ class Monitor(BaseWSHandler):
 
         self.cp.procmon.signals.connect(self.on_process_stats, ProcessStatsMonitor.signal_updated)
         self.write_event("jobs:state", self.cp.jobs)
-        self._task.start()
 
     def on_close(self):
         logger.debug("connection closed")
@@ -53,7 +78,6 @@ class Monitor(BaseWSHandler):
         for signal in self.engine_signals:
             self.cp.signals.disconnect(self.on_engine_state_changed, signal)
         self.cp.procmon.signals.disconnect(self.on_process_stats, ProcessStatsMonitor.signal_updated)
-        self._task.stop()
 
     def on_spider_opened(self, spider):
         self._send_jobs_state()

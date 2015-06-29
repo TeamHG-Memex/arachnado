@@ -38,6 +38,8 @@ DEFAULT_SETTINGS = {
     'DOWNLOAD_DELAY': 0.3,  # min download delay
 
     'STATS_CLASS': 'arachnado.stats.EventedStatsCollector',
+    'DOWNLOADER': 'arachnado.crawler_process.ArachnadoDownloader',
+
     'DOWNLOAD_HANDLERS': {'s3': None},  # see https://github.com/scrapy/scrapy/issues/1054
 
     'ITEM_PIPELINES': {

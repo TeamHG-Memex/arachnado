@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import logging
 import itertools
 import operator
+from scrapy.core.downloader import Downloader
 from scrapy.utils.reactor import CallLaterOnce
 import six
 
@@ -23,6 +24,8 @@ signals.spider_closing = object()
 signals.engine_paused = object()
 signals.engine_resumed = object()
 signals.engine_tick = object()
+signals.downloader_enqueued = object()
+signals.downloader_dequeued = object()
 
 
 # a signal which is fired when stats are changed in any of the spiders
@@ -49,6 +52,8 @@ SCRAPY_SIGNAL_NAMES = [
     'request_dropped',
     'response_received',
     'response_downloaded',
+    'downloader_enqueued',  # custom
+    'downloader_dequeued',  # custom
 ]
 
 
@@ -76,6 +81,8 @@ def _get_crawler_process_signals_cls():
         response_downloaded = Signal('response_downloaded', False)
         item_scraped = Signal('item_scraped', True)
         item_dropped = Signal('item_dropped', True)
+        downloader_enqueued = Signal('downloader_enqueued', False)
+        downloader_dequeued = Signal('downloader_dequeued', False)
 
     for name in SCRAPY_SIGNAL_NAMES:
         signal = getattr(signals, name)
@@ -125,11 +132,23 @@ class ArachnadoExecutionEngine(ExecutionEngine):
 
 class ArachnadoCrawler(Crawler):
     """
-    Extended Crawler.
-    It sends a signal when engine gets scheduled to stop.
+    Extended Crawler which uses ArachnadoExecutionEngine.
     """
     def _create_engine(self):
         return ArachnadoExecutionEngine(self, lambda _: self.stop())
+
+
+class ArachnadoDownloader(Downloader):
+    def _enqueue_request(self, request, spider):
+        dfd = super(ArachnadoDownloader, self)._enqueue_request(request, spider)
+        self.signals.send_catch_log(signals.downloader_enqueued)
+
+        def _send_dequeued(_):
+            self.signals.send_catch_log(signals.downloader_dequeued)
+            return _
+
+        dfd.addBoth(_send_dequeued)
+        return dfd
 
 
 class ArachnadoCrawlerProcess(CrawlerProcess):
