@@ -14,5 +14,3 @@ class Signal(object):
         return "%s(%r, supports_defer=%r)" % (
             self.__class__.__name__, self.name, self.supports_defer
         )
-
-

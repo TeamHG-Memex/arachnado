@@ -43,5 +43,3 @@ class BaseWSHandler(websocket.WebSocketHandler):
 
     def open(self, *args, **kwargs):
         self.on_open(*args, **kwargs)
-
-
