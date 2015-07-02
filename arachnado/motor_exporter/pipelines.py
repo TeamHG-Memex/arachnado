@@ -5,7 +5,6 @@ Async MongoDB item exporter using Motor_.
 .. _Motor: https://github.com/mongodb/motor
 """
 from __future__ import absolute_import
-import json
 import logging
 import datetime
 
@@ -13,7 +12,7 @@ import motor
 from tornado import gen
 from scrapy.exceptions import NotConfigured
 
-from .utils import tt_coroutine
+from .utils import tt_coroutine, json_encode
 
 
 logger = logging.getLogger(__name__)
@@ -81,7 +80,7 @@ class MotorPipeline(object):
             return
 
         # json is to fix an issue with dots in key names
-        stats = json.dumps(self.crawler.stats.get_stats())
+        stats = json_encode(self.crawler.stats.get_stats())
 
         res = yield self.jobs_table.update(
             {'_id': self.job_id},
