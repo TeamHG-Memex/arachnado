@@ -86,7 +86,11 @@ class CrawlWebsiteSpider(scrapy.Spider):
         self.crawler.stats.set_value('arachnado/start_url', self.start_url)
         self.crawler.stats.set_value('arachnado/domain', self.domain)
 
-        self.get_links = LinkExtractor(allow_domains=[self.domain]).extract_links
+        allow_domain = self.domain
+        if self.domain.startswith("www."):
+            allow_domain = allow_domain[len("www."):]
+
+        self.get_links = LinkExtractor(allow_domains=[allow_domain]).extract_links
         for elem in self.parse(response):
             yield elem
 
