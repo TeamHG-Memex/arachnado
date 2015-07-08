@@ -26,6 +26,7 @@ def get_application(crawler_process, opts):
         url(r"/crawler/stop", StopCrawler, context, name="stop"),
         url(r"/crawler/pause", PauseCrawler, context, name="pause"),
         url(r"/crawler/resume", ResumeCrawler, context, name="resume"),
+        url(r"/crawler/status", CrawlerStatus, context, name="status"),
         url(r"/ws-updates", Monitor, context, name="ws"),
     ]
     return Application(
@@ -79,14 +80,14 @@ class StartCrawler(ApiHandler, BaseRequestHandler):
             'MOTOR_PIPELINE_DB': storage_opts['db_name'],
             'MOTOR_PIPELINE_URI': storage_opts['uri'],
         }
-        crawler = create_crawler(settings)
-        self.crawler_process.crawl(crawler, domain=domain)
+        self.crawler = create_crawler(settings)
+        self.crawler_process.crawl(self.crawler, domain=domain)
 
     def post(self):
         if self.is_json:
             domain = self.json_args['domain']
             self.crawl(domain)
-            return {"status": "ok"}
+            self.write({"status": "ok", "job_id": self.crawler.spider.crawl_id})
         else:
             domain = self.get_body_argument('domain')
             self.crawl(domain)
@@ -101,7 +102,7 @@ class _ControlJobHandler(ApiHandler, BaseRequestHandler):
         if self.is_json:
             job_id = int(self.json_args['job_id'])
             self.control_job(job_id)
-            return {"status": "ok"}
+            self.write({"status": "ok"})
         else:
             job_id = int(self.get_body_argument('job_id'))
             self.control_job(job_id)
@@ -124,3 +125,18 @@ class ResumeCrawler(_ControlJobHandler):
     """ This endpoint resumes a paused job. """
     def control_job(self, job_id):
         self.crawler_process.resume_job(job_id)
+
+
+class CrawlerStatus(BaseRequestHandler):
+    """ Status for one or more jobs. """
+    def get(self):
+        crawl_ids_arg = self.get_argument('crawl_ids', '')
+
+        if crawl_ids_arg == '':
+            jobs = self.crawler_process.get_jobs()
+        else:
+            crawl_ids = set(map(int, crawl_ids_arg.split(',')))
+            jobs = [job for job in self.crawler_process.get_jobs()
+                    if job['id'] in crawl_ids]
+
+        self.write(json_encode({"jobs": jobs}))
