@@ -5,7 +5,6 @@ var filesize = require("filesize");
 var { Table } = require("react-bootstrap");
 var { KeyValueTable } = require("./KeyValueTable");
 
-var JobStore = require("../stores/JobStore");
 var { JobsMixin } = require("./RefluxMixins");
 
 var range = (top) => Array.from(new Array(top), (_,i) => i);
@@ -77,8 +76,8 @@ function getJobStatRows(stats){
         var shortKey = SHORT_NAMES[key] || key;
         return (
             <tr key={key}>
-                <td>{shortKey}</td>
-                <td>{value}</td>
+                <td style={{wordWrap: 'break-word'}}>{shortKey}</td>
+                <td style={{wordWrap: 'break-word'}}>{value}</td>
             </tr>
         );
     }).filter(item => item != "");

@@ -10,6 +10,7 @@ var { ProcessStatsTable } = require("../components/ProcessStats");
 var { JobStats } = require("../components/JobStats");
 var { JobListWidgetVerbose, JobControlButtons } = require("../components/JobList");
 var { ShortTermQueueWidget } = require("../components/JobTransfers.jsx");
+var { LoginCredentials } = require("../components/LoginCredentials.jsx");
 
 
 var ShortJobInfo = React.createClass({
@@ -75,6 +76,7 @@ export var JobPage = React.createClass({
         if (!job){
             return <NoJobPage/>;
         }
+        var isLoginVisible = job.flags.find(f => f.startsWith('login_')) && job.status == 'crawling';
         return (
             <div className="row">
                 <div className="row">
@@ -89,6 +91,11 @@ export var JobPage = React.createClass({
                 </div>
                 <div className="row">
                     <div className="col-lg-5">
+                        {isLoginVisible ?
+                        <Panel collapsible defaultExpanded header="Login credentials">
+                            <LoginCredentials job={job}/>
+                        </Panel>
+                        : null}
                         <Panel collapsible defaultExpanded header="Scrapy Stats">
                             <JobStats job={job} />
                         </Panel>

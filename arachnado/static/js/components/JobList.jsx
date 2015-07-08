@@ -102,6 +102,28 @@ export var JobResumeButton = React.createClass({
     }
 });
 
+
+export var JobFlags = React.createClass({
+    render: function () {
+        if (this.props.flags) {
+            var icons = [];
+            if (this.props.flags.indexOf('login_pending') >= 0) {
+                icons.push(<GlyphA style={{color: 'orange'}} title="Login pending" glyph="user" key="login_pending" />);
+            }
+            if (this.props.flags.indexOf('login_required') >= 0) {
+                icons.push(<GlyphA title="Login required" glyph="user" key="login_required" />);
+            }
+            if (this.props.flags.indexOf('login_failed') >= 0) {
+                icons.push(<GlyphA style={{color: 'red'}} title="Login failed" key="login_failed" glyph="user" />);
+            }
+            if (this.props.flags.indexOf('login_success') >= 0) {
+                icons.push(<GlyphA style={{color: 'green'}} title="Login success" key="login_success" glyph="user" />);
+            }
+        }
+        return <span>{icons}</span>;
+    }
+})
+
 export function buttonsForStatus(status){
     var status = simplifiedStatus(status);
     if (status == "crawling") {
@@ -230,6 +252,7 @@ var JobRow = React.createClass({
             _formatItemSpeed(info),
             filesize(info.downloaded),
             prettyMs(info.duration),
+            <JobFlags flags={job.flags}/>,
         ];
 
         columns = columns.concat(
@@ -258,6 +281,7 @@ var JobRowVerbose = React.createClass({
             filesize(info.downloaded),
             filesize(info.downloadSpeed, {round: 1}) + "/s",
             prettyMs(info.duration),
+            <JobFlags flags={job.flags}/>,
         ];
 
         columns = columns.concat(data.map((v,i) => <td key={i}>{v}</td>));
@@ -286,6 +310,7 @@ export var JobListWidget = React.createClass({
                     <th key='col-items'>Items</th>
                     <th key='col-data' className="col-md-2">Data</th>
                     <th key='col-runtime' className="col-md-2">Duration</th>
+                    <th key='col-flags'></th>
                 </tr>
             </thead>
             <tbody>{rows}</tbody>
@@ -315,6 +340,7 @@ export var JobListWidgetVerbose = React.createClass({
                     <th key='col-data' className="col-md-1">Data</th>
                     <th key='col-speed' className="col-md-1">↓ Speed</th>
                     <th key='col-runtime'>Duration</th>
+                    <th key='col-flags'></th>
                 </tr>
             </thead>
             <tbody>{rows}</tbody>

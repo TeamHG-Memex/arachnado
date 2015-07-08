@@ -241,14 +241,8 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
 
     def on_spider_closed(self, spider, reason):
         # spiders are closed not that often, insert(0,...) should be fine
-        self._finished_jobs.insert(0, {
-            'id': spider.crawl_id,
-            'job_id': getattr(spider, 'motor_job_id'),
-            'seed': spider.domain,
-            'status': reason,
-            'stats': spider.crawler.stats.get_stats(spider),
-            'downloads': self._downloader_stats(spider.crawler)
-        })
+        self._finished_jobs.insert(0, self._get_job_info(spider.crawler,
+                                                         reason))
 
     # FIXME: methods below are ugly for two reasons:
     # 1. they assume spiders have certain attributes;
@@ -258,18 +252,24 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
         """ Return a list of active jobs """
         crawlers = [crawler for crawler in self.crawlers
                     if crawler.spider is not None]
-        return [
-            {
-                'id': crawler.spider.crawl_id,
-                'job_id': getattr(crawler.spider, 'motor_job_id'),
-                'seed': crawler.spider.domain,
-                'status': self._get_crawler_status(crawler),
-                'stats': crawler.spider.crawler.stats.get_stats(crawler.spider),
-                'downloads': self._downloader_stats(crawler)
-                # 'engine_info': dict(get_engine_status(crawler.engine))
-            }
-            for crawler in crawlers
-        ]
+        return [self._get_job_info(crawler, self._get_crawler_status(crawler))
+                for crawler in crawlers]
+
+    def _get_job_info(self, crawler, status):
+        return {
+            'id': crawler.spider.crawl_id,
+            'job_id': getattr(crawler.spider, 'motor_job_id'),
+            'seed': crawler.spider.domain,
+            'status': status,
+            'stats': crawler.spider.crawler.stats.get_stats(crawler.spider),
+            'downloads': self._downloader_stats(crawler),
+            'flags': list(crawler.spider.flags),
+            'args': crawler.spider.kwargs,
+            'settings': crawler.spider.user_settings,
+            'login_url': (crawler.spider.login_form_response.url
+                          if crawler.spider.login_form_response else None)
+            # 'engine_info': dict(get_engine_status(crawler.engine))
+        }
 
     @classmethod
     def _downloader_stats(cls, crawler):

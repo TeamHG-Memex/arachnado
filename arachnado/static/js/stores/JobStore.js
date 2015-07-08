@@ -12,6 +12,7 @@ export var Actions = Reflux.createActions([
     "stopCrawl",
     "pauseCrawl",
     "resumeCrawl",
+    "login",
 ]);
 
 
@@ -52,6 +53,10 @@ export var store = Reflux.createStore({
 
     onResumeCrawl: function (jobId) {
         API.resumeCrawl(jobId);
+    },
+
+    onLogin: function (jobId, username, password) {
+        API.login(jobId, username, password);
     }
 });
 

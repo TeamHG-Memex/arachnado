@@ -11,6 +11,7 @@ from arachnado.utils import json_encode
 from arachnado.spider import create_crawler, CrawlWebsiteSpider
 from arachnado.monitor import Monitor
 from arachnado.handler_utils import ApiHandler, NoEtagsMixin
+from arachnado.extensions.login import test_login_credentials
 
 at_root = lambda *args: os.path.join(os.path.dirname(__file__), *args)
 
@@ -30,6 +31,7 @@ def get_application(crawler_process, opts):
         url(r"/crawler/pause", PauseCrawler, context, name="pause"),
         url(r"/crawler/resume", ResumeCrawler, context, name="resume"),
         url(r"/crawler/status", CrawlerStatus, context, name="status"),
+        url(r"/spider/login", TestLogin, context, name="login"),
         url(r"/ws-updates", Monitor, context, name="ws"),
     ]
     return Application(
@@ -109,33 +111,36 @@ class StartCrawler(ApiHandler, BaseRequestHandler):
     """
     This endpoint starts crawling for a domain.
     """
-    def crawl(self, domain):
+    def crawl(self, domain, args, settings):
         storage_opts = self.opts['arachnado.storage']
-        settings = {
+        settings.update({
             'MOTOR_PIPELINE_ENABLED': storage_opts['enabled'],
             'MOTOR_PIPELINE_DB_NAME': storage_opts['db_name'],
             'MOTOR_PIPELINE_DB': storage_opts['db_name'],
             'MOTOR_PIPELINE_URI': storage_opts['uri'],
-        }
+        })
         spider_cls = get_spider_cls(domain, self._get_spider_package_names())
 
         if spider_cls is not None:
             self.crawler = create_crawler(settings, spider_cls=spider_cls)
-            self.crawler_process.crawl(self.crawler, domain=domain)
+            self.crawler_process.crawl(self.crawler, domain=domain, **args)
             return True
         return False
 
     def post(self):
         if self.is_json:
             domain = self.json_args['domain']
-            if self.crawl(domain):
+            args = self.json_args.get('options', {}).get('args', {})
+            settings = self.json_args.get('options', {}).get('settings', {})
+            args['user_settings'] = settings
+            if self.crawl(domain, args, settings):
                 self.write({"status": "ok",
                             "job_id": self.crawler.spider.crawl_id})
             else:
                 self.write({"status": "error"})
         else:
             domain = self.get_body_argument('domain')
-            if self.crawl(domain):
+            if self.crawl(domain, {}, {}):
                 self.redirect("/")
             else:
                 raise HTTPError(400)
@@ -147,7 +152,7 @@ class StartCrawler(ApiHandler, BaseRequestHandler):
 
 
 class _ControlJobHandler(ApiHandler, BaseRequestHandler):
-    def control_job(self, job_id):
+    def control_job(self, job_id, **kwargs):
         raise NotImplementedError
 
     def post(self):
@@ -192,3 +197,17 @@ class CrawlerStatus(BaseRequestHandler):
                     if job['id'] in crawl_ids]
 
         self.write(json_encode({"jobs": jobs}))
+
+
+class TestLogin(ApiHandler, BaseRequestHandler):
+    """ This method changes job's username and password and restarts
+    it if needed """
+    def post(self):
+        job_id = int(self.json_args['job_id'])
+        crawler = self.crawler_process.get_crawler(job_id)
+        crawler.signals.send_catch_log(
+            test_login_credentials,
+            spider=crawler.spider,
+            username=self.json_args['username'],
+            password=self.json_args['password'],
+        )

@@ -6,6 +6,7 @@ import logging
 import scrapy
 from scrapy.linkextractors import LinkExtractor
 from scrapy.http.response.html import HtmlResponse
+from scrapy.utils.misc import load_object
 
 from .utils import MB, add_scheme_if_missing, get_netloc
 from .crawler_process import ArachnadoCrawler
@@ -16,6 +17,7 @@ DEFAULT_SETTINGS = {
     'DEPTH_PRIORITY': -1,
 
     'BOT_NAME': 'arachnado',
+    'COOKIES_DEBUG': False,
 
     'MEMUSAGE_ENABLED': True,
     'DOWNLOAD_MAXSIZE': 1 * MB,
@@ -50,11 +52,22 @@ DEFAULT_SETTINGS = {
         'arachnado.motor_exporter.pipelines.MotorPipeline': 100,
     },
 
+    'SPIDER_MIDDLEWARES': {
+        'arachnado.extensions.login.Login': 10,
+    },
+
     'MOTOR_PIPELINE_JOBID_KEY': '_job_id',
     'HTTPCACHE_ENABLED': False,
     # This storage is read-only. Responses are stored by MotorPipeline
-    'HTTPCACHE_STORAGE':
-    'arachnado.extensions.httpcache.ArachnadoCacheStorage',
+    'HTTPCACHE_STORAGE': 'arachnado.extensions.httpcache.ArachnadoCacheStorage',
+
+    'LOGIN_ENABLED': True,
+}
+
+# TODO move this somewhere
+SPIDERS = {
+    None: 'arachnado.spider.CrawlWebsiteSpider',
+    'spider://findlaw.com': 'arachnado_custom.findlaw_com.FindlawComSpider',
 }
 
 
@@ -72,9 +85,16 @@ class ArachnadoSpider(scrapy.Spider):
     crawl_id = None
     domain = None
     motor_job_id = None
+    kwargs = None
+    user_settings = None
+    flags = None
+    login_form_response = None
 
     def __init__(self, *args, **kwargs):
         super(ArachnadoSpider, self).__init__(*args, **kwargs)
+
+        self.flags = set()
+        self.kwargs = kwargs
         # don't log scraped items
         logging.getLogger("scrapy.core.scraper").setLevel(logging.INFO)
 

@@ -40,7 +40,8 @@ class MotorPipeline(object):
             raise NotConfigured
 
         self.job_id_key = opts.get('MOTOR_PIPELINE_JOBID_KEY')
-        self.db_uri = opts.get('MOTOR_PIPELINE_URI', 'mongodb://localhost:27017')
+        self.db_uri = opts.get('MOTOR_PIPELINE_URI',
+                               'mongodb://localhost:27017')
         db_name = opts.get('MOTOR_PIPELINE_DB_NAME', 'motor_exporter')
 
         self.client = motor.MotorClient(self.db_uri)
@@ -83,7 +84,7 @@ class MotorPipeline(object):
         # json is to fix an issue with dots in key names
         stats = json_encode(self.crawler.stats.get_stats())
 
-        res = yield self.jobs_table.update(
+        yield self.jobs_table.update(
             {'_id': self.job_id},
             {'$set': {
                 'finished_at': datetime.datetime.utcnow(),
@@ -108,7 +109,8 @@ class MotorPipeline(object):
             self.crawler.stats.inc_value("motor/items_stored_count")
         except Exception as e:
             self.crawler.stats.inc_value("motor/store_error_count")
-            self.crawler.stats.inc_value("motor/store_error_count/" + e.__class__.__name__)
+            self.crawler.stats.inc_value("motor/store_error_count/" +
+                                         e.__class__.__name__)
             logger.error("Error storing item", exc_info=True, extra={
                 'crawler': self.crawler
             })

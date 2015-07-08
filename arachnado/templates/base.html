@@ -41,6 +41,7 @@
         window.STOP_CRAWL_URL = JSON.parse('{% raw json_encode(reverse_url("stop")) %}');
         window.PAUSE_CRAWL_URL = JSON.parse('{% raw json_encode(reverse_url("pause")) %}');
         window.RESUME_CRAWL_URL = JSON.parse('{% raw json_encode(reverse_url("resume")) %}');
+        window.LOGIN_URL = JSON.parse('{% raw json_encode(reverse_url("login")) %}');
         window.INITIAL_PROCESS_STATS = JSON.parse('{% raw initial_process_stats_json %}');
         {% block initial_data %}{% end %}
     </script>
