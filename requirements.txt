@@ -1,4 +1,4 @@
-scrapy == 1.0.0
+scrapy == 1.0.1
 tornado == 4.2
 psutil == 2.2.1
 Twisted == 15.2.1
