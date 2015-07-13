@@ -15,7 +15,7 @@ setup(
     include_package_data=True,
     package_data={
         'arachnado': [
-            "settings/*.ini",
+            "settings/*.conf",
             "templates/*.html",
             "static/css/*.css",
             
