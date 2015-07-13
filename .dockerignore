@@ -1,0 +1,9 @@
+.git
+.tox/
+build/
+dist/
+notebooks/
+.ipynb_checkpoints/
+arachnado.egg-info/
+*.pyc
+node_modules/
