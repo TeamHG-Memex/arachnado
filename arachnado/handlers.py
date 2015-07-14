@@ -120,7 +120,7 @@ class StartCrawler(ApiHandler, BaseRequestHandler):
         spider_cls = get_spider_cls(domain, self._get_spider_package_names())
 
         if spider_cls is not None:
-            self.crawler = create_crawler(settings, spider=spider_cls)
+            self.crawler = create_crawler(settings, spider_cls=spider_cls)
             self.crawler_process.crawl(self.crawler, domain=domain)
             return True
         return False
