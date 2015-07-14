@@ -14,6 +14,8 @@ from .crawler_process import ArachnadoCrawler
 DEFAULT_SETTINGS = {
     'DEPTH_LIMIT': 10,
     'DEPTH_STATS_VERBOSE': True,
+    'DEPTH_PRIORITY': -1,
+
     'BOT_NAME': 'arachnado',
 
     'MEMUSAGE_ENABLED': True,
