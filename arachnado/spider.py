@@ -12,7 +12,6 @@ from .crawler_process import ArachnadoCrawler
 
 
 DEFAULT_SETTINGS = {
-    'DEPTH_LIMIT': 10,
     'DEPTH_STATS_VERBOSE': True,
     'DEPTH_PRIORITY': -1,
 
@@ -93,6 +92,9 @@ class CrawlWebsiteSpider(ArachnadoSpider):
     To run it, set its ``crawl_id`` and ``domain`` arguments.
     """
     name = 'crawlwebsite'
+    custom_settings = {
+        'DEPTH_LIMIT': 10,
+    }
 
     def __init__(self, *args, **kwargs):
         super(CrawlWebsiteSpider, self).__init__(*args, **kwargs)
