@@ -64,7 +64,7 @@ export var ShortTermQueueWidget = React.createClass({
                 }
             );
             var delay = prettyMs((slot.delay || 0) * 1000);
-            return <Table>
+            return <Table key={slot.key}>
                 <caption>
                     {slot.key} &nbsp;
                     <span className="pull-right">
