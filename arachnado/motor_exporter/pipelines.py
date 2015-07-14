@@ -59,6 +59,7 @@ class MotorPipeline(object):
 
             self.job_id = yield self.jobs_table.insert({
                 'started_at': datetime.datetime.utcnow(),
+                'spider': spider.name,
             })
             spider.motor_job_id = str(self.job_id)
 

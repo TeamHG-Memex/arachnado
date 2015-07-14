@@ -18,7 +18,8 @@ DEFAULT_SETTINGS = {
 
     'MEMUSAGE_ENABLED': True,
     'DOWNLOAD_MAXSIZE': 1 * MB,
-    # 'DOWNLOAD_WARNSIZE': 1 * MB,  # see https://github.com/scrapy/scrapy/issues/1303
+    # see https://github.com/scrapy/scrapy/issues/1303
+    # 'DOWNLOAD_WARNSIZE': 1 * MB,
 
     # 'CLOSESPIDER_PAGECOUNT': 30,  # for debugging
     'LOG_LEVEL': 'DEBUG',
@@ -41,7 +42,8 @@ DEFAULT_SETTINGS = {
     'STATS_CLASS': 'arachnado.stats.EventedStatsCollector',
     'DOWNLOADER': 'arachnado.crawler_process.ArachnadoDownloader',
 
-    'DOWNLOAD_HANDLERS': {'s3': None},  # see https://github.com/scrapy/scrapy/issues/1054
+    # see https://github.com/scrapy/scrapy/issues/1054
+    'DOWNLOAD_HANDLERS': {'s3': None},
 
     'ITEM_PIPELINES': {
         'arachnado.motor_exporter.pipelines.MotorPipeline': 100,
@@ -51,34 +53,54 @@ DEFAULT_SETTINGS = {
 }
 
 
-def create_crawler(settings=None):
+def create_crawler(settings=None, spider_cls=None):
     _settings = DEFAULT_SETTINGS.copy()
     _settings.update(settings or {})
-    return ArachnadoCrawler(CrawlWebsiteSpider, _settings)
+    return ArachnadoCrawler(spider_cls, _settings)
 
 
-class CrawlWebsiteSpider(scrapy.Spider):
+class ArachnadoSpider(scrapy.Spider):
+    """
+    A base spider that contains common attributes and utilities for all
+    Arachnado spiders
+    """
+    crawl_id = None
+    domain = None
+    motor_job_id = None
+
+    def __init__(self, *args, **kwargs):
+        super(ArachnadoSpider, self).__init__(*args, **kwargs)
+        # don't log scraped items
+        logging.getLogger("scrapy.core.scraper").setLevel(logging.INFO)
+
+    def get_page_item(self, response, type_='page'):
+        return {
+            'crawled_at': datetime.datetime.utcnow(),
+            'url': response.url,
+            'status': response.status,
+            'headers': response.headers,
+            'body': response.body_as_unicode(),
+            'meta': response.meta,
+            '_type': type_,
+        }
+
+
+class CrawlWebsiteSpider(ArachnadoSpider):
     """
     A spider which crawls all the website.
     To run it, set its ``crawl_id`` and ``domain`` arguments.
     """
     name = 'crawlwebsite'
 
-    crawl_id = None
-    domain = None
-    motor_job_id = None
-
     def __init__(self, *args, **kwargs):
         super(CrawlWebsiteSpider, self).__init__(*args, **kwargs)
         self.start_url = add_scheme_if_missing(self.domain)
 
-        # don't log scraped items
-        logging.getLogger("scrapy.core.scraper").setLevel(logging.INFO)
-
     def start_requests(self):
         self.logger.info("Started job %s#%d for domain %s",
                          self.motor_job_id, self.crawl_id, self.domain)
-        yield scrapy.Request(self.start_url, self.parse_first, dont_filter=True)
+        yield scrapy.Request(self.start_url, self.parse_first,
+                             dont_filter=True)
 
     def parse_first(self, response):
         # If there is a redirect in the first request, use the target domain
@@ -91,7 +113,10 @@ class CrawlWebsiteSpider(scrapy.Spider):
         if self.domain.startswith("www."):
             allow_domain = allow_domain[len("www."):]
 
-        self.get_links = LinkExtractor(allow_domains=[allow_domain]).extract_links
+        self.get_links = LinkExtractor(
+            allow_domains=[allow_domain]
+        ).extract_links
+
         for elem in self.parse(response):
             yield elem
 
@@ -100,14 +125,7 @@ class CrawlWebsiteSpider(scrapy.Spider):
             self.logger.info("non-HTML response is skipped: %s" % response.url)
             return
 
-        yield {
-            'crawled_at': datetime.datetime.utcnow(),
-            'url': response.url,
-            'status': response.status,
-            'headers': response.headers,
-            'body': response.body_as_unicode(),
-            'meta': response.meta,
-        }
+        yield self.get_page_item(response)
 
         for link in self.get_links(response):
             yield scrapy.Request(link.url, self.parse)

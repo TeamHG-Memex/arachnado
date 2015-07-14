@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 import os
+import re
 
-from tornado.web import Application, RequestHandler, url
+from scrapy.utils.misc import walk_modules
+from scrapy.utils.spider import iter_spider_classes
+from tornado.web import Application, RequestHandler, url, HTTPError
 
 from arachnado.utils import json_encode
-from arachnado.spider import create_crawler
+from arachnado.spider import create_crawler, CrawlWebsiteSpider
 from arachnado.monitor import Monitor
 from arachnado.handler_utils import ApiHandler, NoEtagsMixin
 
@@ -20,7 +23,7 @@ def get_application(crawler_process, opts):
     debug = opts['arachnado']['debug']
 
     handlers = [
-        url(r"/", Index, context , name="index"),
+        url(r"/", Index, context, name="index"),
         url(r"/help", Help, context, name="help"),
         url(r"/crawler/start", StartCrawler, context, name="start"),
         url(r"/crawler/stop", StopCrawler, context, name="stop"),
@@ -40,11 +43,45 @@ def get_application(crawler_process, opts):
     )
 
 
+def get_spider_cls(url, spider_packages,
+                   default=CrawlWebsiteSpider):
+    """
+    Return spider class based on provided url.
+
+    :param url: if it looks like `spider://spidername` it tries to load spider
+        named `spidername`, otherwise it returns default spider class
+    :param spider_packages: a list of package names that will be searched for
+        spider classes
+    :param default: the class that is returned when `url` doesn't start with
+        `spider://`
+    """
+    if url.startswith('spider://'):
+        spider_name = url[len('spider://'):]
+        return find_spider_cls(spider_name, spider_packages)
+    return default
+
+
+def find_spider_cls(spider_name, spider_packages):
+    """
+    Find spider class which name is equal to `spider_name` argument
+
+    :param spider_name: spider name to look for
+    :param spider_packages: a list of package names that will be searched for
+        spider classes
+    """
+    for package_name in spider_packages:
+        for module in walk_modules(package_name):
+            for spider_cls in iter_spider_classes(module):
+                if spider_cls.name == spider_name:
+                    return spider_cls
+
+
 class BaseRequestHandler(RequestHandler):
 
     def initialize(self, crawler_process, opts):
         """
-        :param arachnado.crawler_process.ArachnadoCrawlerProcess crawler_process: crawler process
+        :param arachnado.crawler_process.ArachnadoCrawlerProcess
+            crawler_process:
         """
         self.crawler_process = crawler_process
         self.opts = opts
@@ -80,18 +117,33 @@ class StartCrawler(ApiHandler, BaseRequestHandler):
             'MOTOR_PIPELINE_DB': storage_opts['db_name'],
             'MOTOR_PIPELINE_URI': storage_opts['uri'],
         }
-        self.crawler = create_crawler(settings)
-        self.crawler_process.crawl(self.crawler, domain=domain)
+        spider_cls = get_spider_cls(domain, self._get_spider_package_names())
+
+        if spider_cls is not None:
+            self.crawler = create_crawler(settings, spider=spider_cls)
+            self.crawler_process.crawl(self.crawler, domain=domain)
+            return True
+        return False
 
     def post(self):
         if self.is_json:
             domain = self.json_args['domain']
-            self.crawl(domain)
-            self.write({"status": "ok", "job_id": self.crawler.spider.crawl_id})
+            if self.crawl(domain):
+                self.write({"status": "ok",
+                            "job_id": self.crawler.spider.crawl_id})
+            else:
+                self.write({"status": "error"})
         else:
             domain = self.get_body_argument('domain')
-            self.crawl(domain)
-            self.redirect("/")
+            if self.crawl(domain):
+                self.redirect("/")
+            else:
+                raise HTTPError(400)
+
+    def _get_spider_package_names(self):
+        return [name for name in re.split(
+            '\s+', self.opts['arachnado.scrapy']['spider_packages']
+        ) if name]
 
 
 class _ControlJobHandler(ApiHandler, BaseRequestHandler):
