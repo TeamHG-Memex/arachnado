@@ -1,5 +1,6 @@
 require("babel-core/polyfill");
 var Reflux = require("reflux");
+var debounce = require("debounce");
 var { FancyWebSocket } = require("../utils/FancyWebSocket");
 var API = require("../utils/ArachnadoAPI");
 
@@ -18,15 +19,16 @@ export var store = Reflux.createStore({
     init: function () {
         this.jobs = [];
         this.listenToMany(Actions);
+        this.triggerDebounced = debounce(this.trigger, 200);
     },
 
     getInitialState: function () {
         return this.jobs;
     },
-    
+
     onSetAll: function (jobs) {
         this.jobs = jobs;
-        this.trigger(jobs);
+        this.triggerDebounced(jobs);
     },
 
     onUpdateStats: function (crawlId, changes) {

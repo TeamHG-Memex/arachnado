@@ -2,7 +2,7 @@
 Widgets for job downloads info.
 */
 var React = require("react/addons");
-var ReactCSSTransitionGroup = React.addons.CSSTransitionGroup;
+//var ReactCSSTransitionGroup = React.addons.CSSTransitionGroup;
 var Reflux = require("reflux");
 var filesize = require("filesize");
 var prettyMs = require("pretty-ms");
@@ -64,6 +64,13 @@ export var ShortTermQueueWidget = React.createClass({
                 }
             );
             var delay = prettyMs((slot.delay || 0) * 1000);
+
+                //<ReactCSSTransitionGroup transitionName="transfer"
+                //                         component="tbody"
+                //                         transitionLeave={false}>
+                //    {rows}
+                //</ReactCSSTransitionGroup>
+
             return <Table key={slot.key}>
                 <caption>
                     {slot.key} &nbsp;
@@ -71,11 +78,9 @@ export var ShortTermQueueWidget = React.createClass({
                         download delay: {delay}
                     </span>
                 </caption>
-                <ReactCSSTransitionGroup transitionName="transfer"
-                                         component="tbody"
-                                         transitionLeave={false}>
-                    {rows}
-                </ReactCSSTransitionGroup>
+                <tbody>
+                {rows}
+                </tbody>
             </Table>;
         };
 
