@@ -16,6 +16,9 @@ DEFAULT_SETTINGS = {
     'DEPTH_PRIORITY': -1,
 
     'BOT_NAME': 'arachnado',
+    'USER_AGENT': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_3) '
+                  'AppleWebKit/537.36 (KHTML, like Gecko) '
+                  'Chrome/39.0.2148.0 Safari/537.36',
 
     'MEMUSAGE_ENABLED': True,
     'DOWNLOAD_MAXSIZE': 1 * MB,
@@ -51,10 +54,11 @@ DEFAULT_SETTINGS = {
     },
 
     'MOTOR_PIPELINE_JOBID_KEY': '_job_id',
+
     'HTTPCACHE_ENABLED': False,
     # This storage is read-only. Responses are stored by MotorPipeline
-    'HTTPCACHE_STORAGE':
-    'arachnado.extensions.httpcache.ArachnadoCacheStorage',
+    'HTTPCACHE_STORAGE': 'arachnado.extensions.httpcache.'
+                         'ArachnadoCacheStorage',
 }
 
 
