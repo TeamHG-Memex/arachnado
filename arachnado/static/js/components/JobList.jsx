@@ -197,6 +197,7 @@ function _getRowInfo(job, curTime){
     var itemsSpeed = duration ? (stats['item_scraped_count'] || 0) / durationSec : 0;
 
     return {
+        id: job.job_id || job.id,
         status: status,
         rowClass: STATUS_CLASSES[status] || "",
         stats: stats,
@@ -246,7 +247,7 @@ var JobRowVerbose = React.createClass({
         var job = this.props.job;
         var info = _getRowInfo(job, this.props.serverTime);
         var columns = [
-            <th key='col-id' scope="row">{info.shortId}</th>
+            <th key='col-id' scope="row">{info.id}</th>
         ];
         var data = [
             job.seed,
