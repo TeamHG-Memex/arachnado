@@ -58,5 +58,6 @@ setup(
         'psutil >= 2.2',
         'tornado >= 4.2',
         'docopt >= 0.6',
+        'service_identity',
     ],
 )
