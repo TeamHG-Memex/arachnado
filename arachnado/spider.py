@@ -51,6 +51,10 @@ DEFAULT_SETTINGS = {
     },
 
     'MOTOR_PIPELINE_JOBID_KEY': '_job_id',
+    'HTTPCACHE_ENABLED': False,
+    # This storage is read-only. Responses are stored by MotorPipeline
+    'HTTPCACHE_STORAGE':
+    'arachnado.extensions.httpcache.ArachnadoCacheStorage',
 }
 
 
