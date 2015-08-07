@@ -60,4 +60,7 @@ setup(
         'docopt >= 0.6',
         'service_identity',
     ],
+    extras_requires={
+        'mongo': ['motor >= 0.4.1']
+    }
 )

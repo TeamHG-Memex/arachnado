@@ -8,7 +8,6 @@ from __future__ import absolute_import
 import logging
 import datetime
 
-import motor
 from tornado import gen
 from scrapy.exceptions import NotConfigured
 
@@ -34,6 +33,13 @@ class MotorPipeline(object):
     JOBS_COLLECTION = 'jobs'
 
     def __init__(self, crawler):
+        try:
+            import motor
+        except ImportError:
+            logger.info("MotorPipeline is disabled because motor Python package "
+                        "is not available")
+            raise NotConfigured
+
         self.crawler = crawler
         opts = self.crawler.settings
         if not opts.getbool('MOTOR_PIPELINE_ENABLED', False):
