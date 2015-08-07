@@ -1,13 +1,28 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import os
+import re
 from setuptools import setup, find_packages
+
+with open("README.rst") as f:
+    long_description = f.read()
+
+with open("CHANGES.rst") as f:
+    long_description += "\n\n" + f.read()
+
+
+def get_version():
+    fn = os.path.join(os.path.dirname(__file__), "arachnado", "__init__.py")
+    with open(fn) as f:
+        return re.findall("__version__ = '([\d\.]+)'", f.read())[0]
+
 
 setup(
     name='arachnado',
-    version='0.1',
+    version=get_version(),
     url='https://github.com/TeamHG-Memex/arachnado',
     description='Scrapy-based Web Crawler with an UI',
-    long_description=open('README.rst').read(),
+    long_description=long_description,
     author='Mikhail Korobov',
     author_email='kmike84@gmail.com',
     license='MIT',
