@@ -27,7 +27,6 @@ setup(
     author_email='kmike84@gmail.com',
     license='MIT',
     packages=find_packages(),
-    include_package_data=True,
     package_data={
         'arachnado': [
             "settings/*.conf",
