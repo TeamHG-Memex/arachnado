@@ -13,14 +13,46 @@ License is MIT.
 Install
 -------
 
-Python 2.7 is required to run server.
-To build static assets node.js + npm are required.
+Arachnado requires Python 2.7.
+To install Arachnado use pip::
 
-Install all Python requirements from `requirements.txt` using pip::
+    pip install arachnado
 
-    pip install -U -r requirements.txt
+To install Arachnado with MongoDB support use this command::
 
-Install all JavaScript requirements using npm. Run the following command
+    pip install arachnado[mongo]
+
+Run
+---
+
+To start Arachnado execute ``arachnado`` command::
+
+    arachnado
+
+and then visit http://0.0.0.0:8888 (or whatever URL is configured).
+
+To see available command-line options use
+
+    arachnado --help
+
+Arachnado can be configured using a config file. Put it to one of the common
+locations ('/etc/arachnado.conf', '~/.config/arachnado.conf'
+or '~/.arachnado.conf') or pass the file name as an argument when starting
+the server::
+
+    arachnado --config ./my-config.conf
+
+For available options check
+https://github.com/TeamHG-Memex/arachnado/blob/master/arachnado/settings/defaults.conf.
+
+Development
+-----------
+
+* Source code: https://github.com/TeamHG-Memex/arachnado
+* Issue tracker: https://github.com/TeamHG-Memex/arachnado/issues
+
+To build Arachnado static assets node.js + npm are required.
+Install all JavaScript requirements using npm - run the following command
 from the repo root::
 
     npm install
@@ -34,12 +66,3 @@ or auto-build static files on each change during development::
     npm run watch
 
 .. _Webpack: https://github.com/webpack/webpack
-
-Run
----
-
-To run Arachnado execute the following command from the repo root::
-
-    python -m arachnado
-
-Then visit http://127.0.0.1:8888/
