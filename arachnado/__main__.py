@@ -5,7 +5,7 @@ Arachnado Crawling Server.
 
 Usage:
     arachnado [options]
-    arachnado show-settings [options]
+    arachnado show-settings
 
 Options:
 
@@ -19,6 +19,7 @@ Options:
   --reactor <name>          Set base event loop. Allowed values are
                             "twisted", "tornado" and "auto".
   --debug                   Enable debug mode.
+  --version                 Show version information
   -h --help                 Show this help
 
 """
@@ -30,6 +31,8 @@ import logging
 from docopt import docopt
 from tornado.ioloop import IOLoop
 import tornado.platform.twisted
+
+from arachnado import __version__
 
 
 logger = logging.getLogger('arachnado')
@@ -57,9 +60,12 @@ def main(port, host, start_manhole, manhole_port, manhole_host, loglevel, opts):
 
     app = get_application(crawler_process, opts)
     app.listen(int(port), host)
+    logger.info("Arachnado v%s is started on %s:%s" % (__version__, host, port))
 
     if start_manhole:
         manhole.start(manhole_port, manhole_host, {'cp': crawler_process})
+        logger.info("Manhole server is started on %s:%s" % (
+            manhole_host, manhole_port))
 
     crawler_process.start(stop_after_crawl=False)
 
@@ -99,7 +105,7 @@ def _settings(args):
 
 
 def run():
-    args = docopt(__doc__)
+    args = docopt(__doc__, version=__version__)
     opts = _settings(args)
 
     if args['show-settings']:
