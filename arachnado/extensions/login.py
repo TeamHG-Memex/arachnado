@@ -141,7 +141,7 @@ class Login(object):
             'or @type="password"]'
         )
         if len(text_inputs) < 2:
-            logger.debug('Too small number of inputs: {}'
+            logger.debug('Too few number of inputs: {}'
                          .format(len(text_inputs)))
             return
         formdata = {}

@@ -251,7 +251,8 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
     def get_jobs(self):
         """ Return a list of active jobs """
         crawlers = [crawler for crawler in self.crawlers
-                    if crawler.spider is not None]
+                    if crawler.spider is not None and
+                    isinstance(crawler, ArachnadoCrawler)]
         return [self._get_job_info(crawler, self._get_crawler_status(crawler))
                 for crawler in crawlers]
 

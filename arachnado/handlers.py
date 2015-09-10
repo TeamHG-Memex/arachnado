@@ -16,9 +16,10 @@ from arachnado.extensions.login import test_login_credentials
 at_root = lambda *args: os.path.join(os.path.dirname(__file__), *args)
 
 
-def get_application(crawler_process, opts):
+def get_application(crawler_process, site_checker_crawler, opts):
     context = {
         'crawler_process': crawler_process,
+        'site_checker_crawler': site_checker_crawler,
         'opts': opts,
     }
     debug = opts['arachnado']['debug']
@@ -32,6 +33,7 @@ def get_application(crawler_process, opts):
         url(r"/crawler/resume", ResumeCrawler, context, name="resume"),
         url(r"/crawler/status", CrawlerStatus, context, name="status"),
         url(r"/spider/login", TestLogin, context, name="login"),
+        url(r"/sites(?:/(.+))?", SitesHandler, context, name="sites"),
         url(r"/ws-updates", Monitor, context, name="ws"),
     ]
     return Application(
@@ -80,12 +82,13 @@ def find_spider_cls(spider_name, spider_packages):
 
 class BaseRequestHandler(RequestHandler):
 
-    def initialize(self, crawler_process, opts):
+    def initialize(self, crawler_process, site_checker_crawler, opts):
         """
         :param arachnado.crawler_process.ArachnadoCrawlerProcess
             crawler_process:
         """
         self.crawler_process = crawler_process
+        self.site_checker_crawler = site_checker_crawler
         self.opts = opts
 
     def render(self, *args, **kwargs):
@@ -197,6 +200,26 @@ class CrawlerStatus(BaseRequestHandler):
                     if job['id'] in crawl_ids]
 
         self.write(json_encode({"jobs": jobs}))
+
+
+class _SiteHandler(BaseRequestHandler):
+    pass
+
+
+class SitesHandler(BaseRequestHandler):
+    def get(self, site_id=''):
+        if site_id:
+            return self.site_crawler.spider.sites.get(site_id)
+        return self.site_crawler.spider.sites.values()
+
+    def put(self, site_id):
+        site = self.json_args
+        self.site_crawler.spider.sites[site_id] = site
+        self.site_crawler.signals.send_catch_log(site_added, site)
+
+    @property
+    def site_crawler(self):
+        return self.crawler_process.get_crawler
 
 
 class TestLogin(ApiHandler, BaseRequestHandler):

@@ -6,7 +6,6 @@ import logging
 import scrapy
 from scrapy.linkextractors import LinkExtractor
 from scrapy.http.response.html import HtmlResponse
-from scrapy.utils.misc import load_object
 
 from .utils import MB, add_scheme_if_missing, get_netloc
 from .crawler_process import ArachnadoCrawler
@@ -54,6 +53,10 @@ DEFAULT_SETTINGS = {
 
     'SPIDER_MIDDLEWARES': {
         'arachnado.extensions.login.Login': 10,
+    },
+
+    'DOWNLOADER_MIDDLEWARES': {
+        'arachnado.extensions.proxy.ProxyMiddleware': 10,
     },
 
     'MOTOR_PIPELINE_JOBID_KEY': '_job_id',

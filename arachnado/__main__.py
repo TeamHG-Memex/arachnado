@@ -50,12 +50,15 @@ def setup_event_loop(use_twisted_reactor, debug=True):
 def main(port, host, start_manhole, manhole_port, manhole_host, loglevel, opts):
     from arachnado.handlers import get_application
     from arachnado.crawler_process import ArachnadoCrawlerProcess
+    from arachnado.sitechecker import get_site_checker_crawler
     from arachnado import manhole
 
     settings = {'LOG_LEVEL': loglevel}
     crawler_process = ArachnadoCrawlerProcess(settings)
+    site_checker_crawler = get_site_checker_crawler()
+    crawler_process.crawl(site_checker_crawler)
 
-    app = get_application(crawler_process, opts)
+    app = get_application(crawler_process, site_checker_crawler, opts)
     app.listen(int(port), host)
 
     if start_manhole:
