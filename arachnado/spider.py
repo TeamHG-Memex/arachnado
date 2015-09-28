@@ -7,8 +7,7 @@ import scrapy
 from scrapy.linkextractors import LinkExtractor
 from scrapy.http.response.html import HtmlResponse
 
-from .utils import MB, add_scheme_if_missing, get_netloc
-from .crawler_process import ArachnadoCrawler
+from arachnado.utils.misc import MB, add_scheme_if_missing, get_netloc
 
 
 DEFAULT_SETTINGS = {
@@ -62,7 +61,8 @@ DEFAULT_SETTINGS = {
     'MOTOR_PIPELINE_JOBID_KEY': '_job_id',
     'HTTPCACHE_ENABLED': False,
     # This storage is read-only. Responses are stored by MotorPipeline
-    'HTTPCACHE_STORAGE': 'arachnado.extensions.httpcache.ArachnadoCacheStorage',
+    'HTTPCACHE_STORAGE':
+    'arachnado.extensions.httpcache.ArachnadoCacheStorage',
 
     'LOGIN_ENABLED': True,
 }
@@ -72,12 +72,6 @@ SPIDERS = {
     None: 'arachnado.spider.CrawlWebsiteSpider',
     'spider://findlaw.com': 'arachnado_custom.findlaw_com.FindlawComSpider',
 }
-
-
-def create_crawler(settings=None, spider_cls=None):
-    _settings = DEFAULT_SETTINGS.copy()
-    _settings.update(settings or {})
-    return ArachnadoCrawler(spider_cls, _settings)
 
 
 class ArachnadoSpider(scrapy.Spider):

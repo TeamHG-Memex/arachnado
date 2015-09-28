@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
+import re
 import logging
 import itertools
 import operator
@@ -16,6 +17,10 @@ from scrapy.core.engine import ExecutionEngine
 from arachnado.signals import Signal
 from arachnado import stats
 from arachnado.process_stats import ProcessStatsMonitor
+from arachnado.utils.spiders import get_spider_cls
+from arachnado.spider import (
+    ArachnadoSpider, CrawlWebsiteSpider, DEFAULT_SETTINGS
+)
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +114,8 @@ class ArachnadoExecutionEngine(ExecutionEngine):
             return self.slot.closing
         self.crawler.crawling = False
         self.signals.send_catch_log(signals.spider_closing)
-        return super(ArachnadoExecutionEngine, self).close_spider(spider, reason)
+        return super(ArachnadoExecutionEngine, self).close_spider(spider,
+                                                                  reason)
 
     def pause(self):
         """Pause the execution engine"""
@@ -140,7 +146,8 @@ class ArachnadoCrawler(Crawler):
 
 class ArachnadoDownloader(Downloader):
     def _enqueue_request(self, request, spider):
-        dfd = super(ArachnadoDownloader, self)._enqueue_request(request, spider)
+        dfd = super(ArachnadoDownloader, self)._enqueue_request(request,
+                                                                spider)
         self.signals.send_catch_log(signals.downloader_enqueued)
 
         def _send_dequeued(_):
@@ -159,9 +166,11 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
     """
     crawl_ids = itertools.count(start=1)
 
-    def __init__(self, settings=None):
+    def __init__(self, settings=None, opts=None):
+        self.opts = opts or {}
         self.signals = SignalManager(self)
-        self.signals.connect(self.on_spider_closed, CrawlerProcessSignals.spider_closed)
+        self.signals.connect(self.on_spider_closed,
+                             CrawlerProcessSignals.spider_closed)
         self._finished_jobs = []
         self._paused_jobs = set()
         self.procmon = ProcessStatsMonitor()
@@ -171,27 +180,66 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
 
         # don't log DepthMiddleware messages
         # see https://github.com/scrapy/scrapy/issues/1308
-        logging.getLogger("scrapy.spidermiddlewares.depth").setLevel(logging.INFO)
+        logger = logging.getLogger("scrapy.spidermiddlewares.depth")
+        logger.setLevel(logging.INFO)
+
+    def start_crawl(self, domain, settings, args):
+        storage_opts = self.opts['arachnado.storage']
+        settings.update({
+            'MOTOR_PIPELINE_ENABLED': storage_opts['enabled'],
+            'MOTOR_PIPELINE_DB_NAME': storage_opts['db_name'],
+            'MOTOR_PIPELINE_DB': storage_opts['db_name'],
+            'MOTOR_PIPELINE_URI': storage_opts['uri'],
+        })
+        spider_cls = get_spider_cls(domain, self._get_spider_package_names(),
+                                    CrawlWebsiteSpider)
+
+        if spider_cls is not None:
+            crawler = self.create_crawler(settings, spider_cls=spider_cls)
+            self.crawl(crawler, domain=domain, **args)
+            return crawler
+        return False
+
+    def _get_spider_package_names(self):
+        return [name for name in re.split(
+            '\s+', self.opts['arachnado.scrapy']['spider_packages']
+        ) if name]
+
+    def create_crawler(self, settings=None, spider_cls=None):
+        _settings = DEFAULT_SETTINGS.copy()
+        _settings.update(settings or {})
+        spider_cls = self.enchance_spider_cls(spider_cls)
+        return ArachnadoCrawler(spider_cls, _settings)
+
+    def enchance_spider_cls(self, spider_cls):
+        if not isinstance(spider_cls, ArachnadoSpider):
+            return type(spider_cls.__name__, (spider_cls, ArachnadoSpider), {})
+        return spider_cls
 
     def crawl(self, crawler_or_spidercls, *args, **kwargs):
         kwargs['crawl_id'] = next(self.crawl_ids)
 
         crawler = crawler_or_spidercls
         if not isinstance(crawler_or_spidercls, Crawler):
-            crawler = self._create_crawler(crawler_or_spidercls)
+            crawler = self._create_crawler_from_spidercls(crawler_or_spidercls)
 
         # aggregate all crawler signals
         for name in SCRAPY_SIGNAL_NAMES:
-            crawler.signals.connect(self._resend_signal, getattr(signals, name))
+            crawler.signals.connect(self._resend_signal,
+                                    getattr(signals, name))
 
         # aggregate signals from crawler EventedStatsCollectors
         if hasattr(crawler.stats, "signals"):
-            crawler.stats.signals.connect(self._resend_signal, stats.stats_changed)
+            crawler.stats.signals.connect(
+                self._resend_signal, stats.stats_changed
+            )
 
-        d = super(ArachnadoCrawlerProcess, self).crawl(crawler_or_spidercls, *args, **kwargs)
+        d = super(ArachnadoCrawlerProcess, self).crawl(
+            crawler_or_spidercls, *args, **kwargs
+        )
         return d
 
-    def _create_crawler(self, spidercls):
+    def _create_crawler_from_spidercls(self, spidercls):
         if isinstance(spidercls, six.string_types):
             spidercls = self.spider_loader.load(spidercls)
         return ArachnadoCrawler(spidercls, self.settings)
@@ -241,8 +289,9 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
 
     def on_spider_closed(self, spider, reason):
         # spiders are closed not that often, insert(0,...) should be fine
-        self._finished_jobs.insert(0, self._get_job_info(spider.crawler,
-                                                         reason))
+        if isinstance(spider.crawler, ArachnadoCrawler):
+            self._finished_jobs.insert(0, self._get_job_info(spider.crawler,
+                                                             reason))
 
     # FIXME: methods below are ugly for two reasons:
     # 1. they assume spiders have certain attributes;
@@ -264,7 +313,7 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
             'status': status,
             'stats': crawler.spider.crawler.stats.get_stats(crawler.spider),
             'downloads': self._downloader_stats(crawler),
-            'flags': list(crawler.spider.flags),
+            'flags': list(getattr(crawler.spider, 'flags', [])),
             'args': crawler.spider.kwargs,
             'settings': crawler.spider.user_settings,
             'login_url': (crawler.spider.login_form_response.url
@@ -295,7 +344,8 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
             'delay': slot.delay,
             'lastseen': slot.lastseen,
             'len(queue)': len(slot.queue),
-            'transferring': [cls._request_info(req) for req in slot.transferring],
+            'transferring': [cls._request_info(req)
+                             for req in slot.transferring],
             'active': [cls._request_info(req) for req in slot.active],
         }
 

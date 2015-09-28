@@ -1,17 +1,17 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 import os
-import re
 
-from scrapy.utils.misc import walk_modules
-from scrapy.utils.spider import iter_spider_classes
 from tornado.web import Application, RequestHandler, url, HTTPError
+from tornado.escape import json_decode
 
-from arachnado.utils import json_encode
-from arachnado.spider import create_crawler, CrawlWebsiteSpider
+from arachnado.utils.misc import json_encode
 from arachnado.monitor import Monitor
 from arachnado.handler_utils import ApiHandler, NoEtagsMixin
 from arachnado.extensions.login import test_login_credentials
+from arachnado.sitechecker import WSHandler as SiteCheckerWSHandler
+from arachnado.rpc import MainRpcHttpHandler, MainRpcWebsocketHandler
+
 
 at_root = lambda *args: os.path.join(os.path.dirname(__file__), *args)
 
@@ -33,8 +33,11 @@ def get_application(crawler_process, site_checker_crawler, opts):
         url(r"/crawler/resume", ResumeCrawler, context, name="resume"),
         url(r"/crawler/status", CrawlerStatus, context, name="status"),
         url(r"/spider/login", TestLogin, context, name="login"),
-        url(r"/sites(?:/(.+))?", SitesHandler, context, name="sites"),
-        url(r"/ws-updates", Monitor, context, name="ws"),
+        url(r"/sites", SitesHandler, context, name="sites"),
+        url(r"/ws-updates", Monitor, context, name="ws-updates"),
+        url(r"/ws-sites", SiteCheckerWSHandler, context, name="ws-sites"),
+        url(r"/ws-rpc", MainRpcWebsocketHandler, context, name="ws-rpc"),
+        url(r"/rpc", MainRpcHttpHandler, context, name="rpc"),
     ]
     return Application(
         handlers=handlers,
@@ -45,39 +48,6 @@ def get_application(crawler_process, site_checker_crawler, opts):
         # no_keep_alive=True,
         compress_response=True,
     )
-
-
-def get_spider_cls(url, spider_packages,
-                   default=CrawlWebsiteSpider):
-    """
-    Return spider class based on provided url.
-
-    :param url: if it looks like `spider://spidername` it tries to load spider
-        named `spidername`, otherwise it returns default spider class
-    :param spider_packages: a list of package names that will be searched for
-        spider classes
-    :param default: the class that is returned when `url` doesn't start with
-        `spider://`
-    """
-    if url.startswith('spider://'):
-        spider_name = url[len('spider://'):]
-        return find_spider_cls(spider_name, spider_packages)
-    return default
-
-
-def find_spider_cls(spider_name, spider_packages):
-    """
-    Find spider class which name is equal to `spider_name` argument
-
-    :param spider_name: spider name to look for
-    :param spider_packages: a list of package names that will be searched for
-        spider classes
-    """
-    for package_name in spider_packages:
-        for module in walk_modules(package_name):
-            for spider_cls in iter_spider_classes(module):
-                if spider_cls.name == spider_name:
-                    return spider_cls
 
 
 class BaseRequestHandler(RequestHandler):
@@ -115,20 +85,8 @@ class StartCrawler(ApiHandler, BaseRequestHandler):
     This endpoint starts crawling for a domain.
     """
     def crawl(self, domain, args, settings):
-        storage_opts = self.opts['arachnado.storage']
-        settings.update({
-            'MOTOR_PIPELINE_ENABLED': storage_opts['enabled'],
-            'MOTOR_PIPELINE_DB_NAME': storage_opts['db_name'],
-            'MOTOR_PIPELINE_DB': storage_opts['db_name'],
-            'MOTOR_PIPELINE_URI': storage_opts['uri'],
-        })
-        spider_cls = get_spider_cls(domain, self._get_spider_package_names())
-
-        if spider_cls is not None:
-            self.crawler = create_crawler(settings, spider_cls=spider_cls)
-            self.crawler_process.crawl(self.crawler, domain=domain, **args)
-            return True
-        return False
+        self.crawler = self.crawler_process.start_crawl(domain, args, settings)
+        return bool(self.crawler)
 
     def post(self):
         if self.is_json:
@@ -147,11 +105,6 @@ class StartCrawler(ApiHandler, BaseRequestHandler):
                 self.redirect("/")
             else:
                 raise HTTPError(400)
-
-    def _get_spider_package_names(self):
-        return [name for name in re.split(
-            '\s+', self.opts['arachnado.scrapy']['spider_packages']
-        ) if name]
 
 
 class _ControlJobHandler(ApiHandler, BaseRequestHandler):
@@ -202,20 +155,19 @@ class CrawlerStatus(BaseRequestHandler):
         self.write(json_encode({"jobs": jobs}))
 
 
-class _SiteHandler(BaseRequestHandler):
-    pass
-
-
 class SitesHandler(BaseRequestHandler):
-    def get(self, site_id=''):
-        if site_id:
-            return self.site_crawler.spider.sites.get(site_id)
-        return self.site_crawler.spider.sites.values()
 
-    def put(self, site_id):
-        site = self.json_args
-        self.site_crawler.spider.sites[site_id] = site
-        self.site_crawler.signals.send_catch_log(site_added, site)
+    def post(self, *args, **kwargs):
+        site = json_decode(self.request.body)
+        self.site_checker_crawler.storage.create(site)
+
+    def patch(self, *args, **kwargs):
+        site = json_decode(self.request.body)
+        self.site_checker_crawler.storage.update(site)
+
+    def delete(self, *args, **kwargs):
+        site = json_decode(self.request.body)
+        self.site_checker_crawler.storage.delete(site)
 
     @property
     def site_crawler(self):

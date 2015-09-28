@@ -24,6 +24,7 @@
                 <ul class="nav navbar-nav">
                     <li><a id="arachnado-connection-monitor"></a></li>
                     <li id="arachnado-process-stats"></li>
+                    <li><a href="#/sites">Known sites</a></li>
                 </ul>
                 <ul class="nav navbar-nav navbar-right">
                     {% block nav-help %}<li><a href="{{ reverse_url('help') }}">Help</a></li>{% end %}
@@ -36,13 +37,16 @@
     </div>
 
     <script>
-        window.WS_SERVER_ADDRESS = JSON.parse('{% raw json_encode(reverse_url("ws")) %}');
+        window.WS_SERVER_ADDRESS = JSON.parse('{% raw json_encode(reverse_url("ws-updates")) %}');
+        window.WS_RPC_ADDRESS = JSON.parse('{% raw json_encode(reverse_url("ws-rpc")) %}');
+        window.WS_SITES_SERVER_ADDRESS = JSON.parse('{% raw json_encode(reverse_url("ws-sites")) %}');
         window.START_CRAWL_URL = JSON.parse('{% raw json_encode(reverse_url("start")) %}');
         window.STOP_CRAWL_URL = JSON.parse('{% raw json_encode(reverse_url("stop")) %}');
         window.PAUSE_CRAWL_URL = JSON.parse('{% raw json_encode(reverse_url("pause")) %}');
         window.RESUME_CRAWL_URL = JSON.parse('{% raw json_encode(reverse_url("resume")) %}');
         window.LOGIN_URL = JSON.parse('{% raw json_encode(reverse_url("login")) %}');
         window.INITIAL_PROCESS_STATS = JSON.parse('{% raw initial_process_stats_json %}');
+        window.SITES_URL = JSON.parse('{% raw json_encode(reverse_url("sites")) %}');
         {% block initial_data %}{% end %}
     </script>
 

@@ -12,7 +12,8 @@ import motor
 from tornado import gen
 from scrapy.exceptions import NotConfigured
 
-from .utils import tt_coroutine, json_encode
+from arachnado.utils.twistedtornado import tt_coroutine
+from arachnado.utils.misc import json_encode
 
 
 logger = logging.getLogger(__name__)

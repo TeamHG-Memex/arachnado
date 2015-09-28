@@ -51,7 +51,7 @@ class Monitor(BaseWSHandler):
         CPS.engine_tick, CPS.downloader_enqueued, CPS.downloader_dequeued
     ]
 
-    def initialize(self, crawler_process, opts):
+    def initialize(self, crawler_process, opts, **kwargs):
         """
         :param ArachnadoCrawlerProcess crawler_process: crawler process
         """

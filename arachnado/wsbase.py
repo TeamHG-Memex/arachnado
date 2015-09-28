@@ -5,7 +5,7 @@ import logging
 
 from tornado import websocket
 
-from arachnado.utils import json_encode
+from arachnado.utils.misc import json_encode
 
 
 logger = logging.getLogger(__name__)

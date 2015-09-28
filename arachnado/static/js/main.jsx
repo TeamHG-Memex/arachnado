@@ -34,7 +34,6 @@ var routes = (
         <DefaultRoute handler={IndexPage} name="index" />
         <Route path="job/:id" handler={JobPage} name="job" />
         <Route path="sites" handler={SitesPage} name="sites" />
-        <Route path="sites/:id" handler={SitePage} name="site" />
         <NotFoundRoute handler={NotFound} />
     </Route>
 );

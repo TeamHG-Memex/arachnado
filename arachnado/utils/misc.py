@@ -1,12 +1,28 @@
-# -*- coding: utf-8 -*-
 from __future__ import absolute_import
 import urlparse
+
 from scrapy.utils.serialize import ScrapyJSONEncoder
+from bson.objectid import ObjectId
 
-MB = 1024*1024
+MB = 1024 * 1024
+
+# XXX: this is copy-pasted to make motor_exporter independent
 
 
-_encoder = ScrapyJSONEncoder(ensure_ascii=False)
+class JSONEncoder(ScrapyJSONEncoder):
+
+    def __init__(self, *args, **kwargs):
+        kwargs['ensure_ascii'] = False
+        super(JSONEncoder, self).__init__(*args, **kwargs)
+
+    def default(self, o):
+        if isinstance(o, ObjectId):
+            return str(o)
+        return super(JSONEncoder, self).default(o)
+
+_encoder = JSONEncoder()
+
+
 def json_encode(obj):
     """
     Encode a Python object to JSON.

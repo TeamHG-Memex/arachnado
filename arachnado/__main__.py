@@ -47,15 +47,19 @@ def setup_event_loop(use_twisted_reactor, debug=True):
             print("Using Tornado event loop as a Twisted reactor")
 
 
-def main(port, host, start_manhole, manhole_port, manhole_host, loglevel, opts):
+def main(port, host, start_manhole, manhole_port, manhole_host, loglevel,
+         opts):
     from arachnado.handlers import get_application
     from arachnado.crawler_process import ArachnadoCrawlerProcess
     from arachnado.sitechecker import get_site_checker_crawler
+    from arachnado.cron import Cron
     from arachnado import manhole
 
     settings = {'LOG_LEVEL': loglevel}
-    crawler_process = ArachnadoCrawlerProcess(settings)
+    crawler_process = ArachnadoCrawlerProcess(settings, opts)
     site_checker_crawler = get_site_checker_crawler()
+    cron = Cron(crawler_process, site_checker_crawler)
+    cron.start()
     crawler_process.crawl(site_checker_crawler)
 
     app = get_application(crawler_process, site_checker_crawler, opts)

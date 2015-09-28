@@ -41,7 +41,7 @@ export var store = Reflux.createStore({
 });
 
 
-var socket = FancyWebSocket.instance();
+var socket = FancyWebSocket.instance(window.WS_SERVER_ADDRESS);
 socket.on("open", () => { Actions.update('online') });
 socket.on("close", () => { Actions.update('offline') });
 
