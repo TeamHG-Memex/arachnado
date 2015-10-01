@@ -21,14 +21,15 @@ RUN curl -sL https://deb.nodesource.com/setup_0.12 | bash -
 RUN apt-get install -y --no-install-recommends nodejs
 
 ADD . /app
-RUN pip install -U -r app/requirements.txt
-RUN pip install /app
-RUN cd /app; npm install
-RUN cd /app; npm build
+WORKDIR /app
+RUN pip install -U -r requirements.txt
+RUN pip install .
+RUN npm install
+RUN npm run build
 
 EXPOSE 8888
 
-ENTRYPOINT [ \
+CMD [ \
     "/usr/bin/python", \
     "-m",  "arachnado" \
 ]
