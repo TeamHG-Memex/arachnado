@@ -19,7 +19,6 @@ class SitesRpc(object):
         self.site_checker_crawler.storage.delete(site)
 
     def on_open(self):
-        print 'ON OPEN'
         self.site_checker_crawler.site_signals.connect(self.on_site_created, site_created)
         self.site_checker_crawler.site_signals.connect(self.on_site_updated, site_updated)
         self.site_checker_crawler.site_signals.connect(self.on_site_deleted, site_deleted)
@@ -27,7 +26,6 @@ class SitesRpc(object):
         #self.write_event("sites:set", self.crawler.sites.values())
 
     def on_close(self):
-        print 'ON CLOSE'
         self.site_checker_crawler.site_signals.disconnect(self.on_site_created, site_created)
         self.site_checker_crawler.site_signals.disconnect(self.on_site_updated, site_updated)
         self.site_checker_crawler.site_signals.disconnect(self.on_site_deleted, site_deleted)

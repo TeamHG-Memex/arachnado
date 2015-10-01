@@ -3,7 +3,7 @@ from scrapy.http import Headers
 from scrapy.responsetypes import responsetypes
 
 
-class ArachnadoCacheStorage(object):
+class MongoCacheStorage(object):
     """A read-only cache storage that uses Arachnado MongoDB for retrieving
     responses"""
 

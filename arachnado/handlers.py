@@ -8,7 +8,7 @@ from tornado.escape import json_decode
 from arachnado.utils.misc import json_encode
 from arachnado.monitor import Monitor
 from arachnado.handler_utils import ApiHandler, NoEtagsMixin
-from arachnado.extensions.login import test_login_credentials
+from arachnado.spidermiddlewares.login import test_login_credentials
 from arachnado.sitechecker import WSHandler as SiteCheckerWSHandler
 from arachnado.rpc import MainRpcHttpHandler, MainRpcWebsocketHandler
 

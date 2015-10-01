@@ -19,7 +19,7 @@ from arachnado.utils.misc import json_encode
 logger = logging.getLogger(__name__)
 
 
-class MotorPipeline(object):
+class MongoExportPipeline(object):
     """
     This pipeline exports tems to MongoDB using async mongo
     driver (motor). Interaction with MongoDB doesn't block
@@ -37,13 +37,13 @@ class MotorPipeline(object):
     def __init__(self, crawler):
         self.crawler = crawler
         opts = self.crawler.settings
-        if not opts.getbool('MOTOR_PIPELINE_ENABLED', False):
+        if not opts.getbool('MONGO_EXPORT_ENABLED', False):
             raise NotConfigured
 
-        self.job_id_key = opts.get('MOTOR_PIPELINE_JOBID_KEY')
-        self.db_uri = opts.get('MOTOR_PIPELINE_URI',
+        self.job_id_key = opts.get('MONGO_EXPORT_JOBID_KEY')
+        self.db_uri = opts.get('MONGO_EXPORT_URI',
                                'mongodb://localhost:27017')
-        db_name = opts.get('MOTOR_PIPELINE_DB_NAME', 'motor_exporter')
+        db_name = opts.get('MONGO_EXPORT_DB_NAME', 'arachnado')
 
         self.client = motor.MotorClient(self.db_uri)
         self.items_table = self.client[db_name][self.ITEMS_COLLECTION]
@@ -107,10 +107,10 @@ class MotorPipeline(object):
 
         try:
             yield self.items_table.insert(mongo_item)
-            self.crawler.stats.inc_value("motor/items_stored_count")
+            self.crawler.stats.inc_value("mongo_export/items_stored_count")
         except Exception as e:
-            self.crawler.stats.inc_value("motor/store_error_count")
-            self.crawler.stats.inc_value("motor/store_error_count/" +
+            self.crawler.stats.inc_value("mongo_export/store_error_count")
+            self.crawler.stats.inc_value("mongo_export/store_error_count/" +
                                          e.__class__.__name__)
             logger.error("Error storing item", exc_info=True, extra={
                 'crawler': self.crawler

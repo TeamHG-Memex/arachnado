@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
-import datetime
 import logging
 
 import scrapy
@@ -46,31 +45,24 @@ DEFAULT_SETTINGS = {
     # see https://github.com/scrapy/scrapy/issues/1054
     'DOWNLOAD_HANDLERS': {'s3': None},
 
-    'ITEM_PIPELINES': {
-        'arachnado.motor_exporter.pipelines.MotorPipeline': 100,
-    },
-
     'SPIDER_MIDDLEWARES': {
-        'arachnado.extensions.login.Login': 10,
+        'arachnado.spidermiddlewares.pageitems.PageItemsMiddleware': 100,
+        'arachnado.spidermiddlewares.login.Login': 10,
     },
-
     'DOWNLOADER_MIDDLEWARES': {
-        'arachnado.extensions.proxy.ProxyMiddleware': 10,
+        'arachnado.downloadermiddlewares.proxyfromsettings'
+        '.ProxyFromSettingsMiddleware': 10,
     },
-
-    'MOTOR_PIPELINE_JOBID_KEY': '_job_id',
+    'ITEM_PIPELINES': {
+        'arachnado.pipelines.mongoexport.MongoExportPipeline': 10,
+    },
+    'PAGEEXPORT_MONGO_JOBID_KEY': '_job_id',
     'HTTPCACHE_ENABLED': False,
-    # This storage is read-only. Responses are stored by MotorPipeline
+    # This storage is read-only. Responses are stored by PageExport middleware
     'HTTPCACHE_STORAGE':
-    'arachnado.extensions.httpcache.ArachnadoCacheStorage',
+    'arachnado.pagecache.mongo.MongoCacheStorage',
 
     'LOGIN_ENABLED': True,
-}
-
-# TODO move this somewhere
-SPIDERS = {
-    None: 'arachnado.spider.CrawlWebsiteSpider',
-    'spider://findlaw.com': 'arachnado_custom.findlaw_com.FindlawComSpider',
 }
 
 
@@ -94,17 +86,6 @@ class ArachnadoSpider(scrapy.Spider):
         self.kwargs = kwargs
         # don't log scraped items
         logging.getLogger("scrapy.core.scraper").setLevel(logging.INFO)
-
-    def get_page_item(self, response, type_='page'):
-        return {
-            'crawled_at': datetime.datetime.utcnow(),
-            'url': response.url,
-            'status': response.status,
-            'headers': response.headers,
-            'body': response.body_as_unicode(),
-            'meta': response.meta,
-            '_type': type_,
-        }
 
 
 class CrawlWebsiteSpider(ArachnadoSpider):
@@ -137,7 +118,6 @@ class CrawlWebsiteSpider(ArachnadoSpider):
         allow_domain = self.domain
         if self.domain.startswith("www."):
             allow_domain = allow_domain[len("www."):]
-
         self.get_links = LinkExtractor(
             allow_domains=[allow_domain]
         ).extract_links
@@ -149,8 +129,5 @@ class CrawlWebsiteSpider(ArachnadoSpider):
         if not isinstance(response, HtmlResponse):
             self.logger.info("non-HTML response is skipped: %s" % response.url)
             return
-
-        yield self.get_page_item(response)
-
         for link in self.get_links(response):
             yield scrapy.Request(link.url, self.parse)

@@ -2,7 +2,7 @@ from scrapy.contrib.downloadermiddleware.httpproxy import HttpProxyMiddleware
 from scrapy.exceptions import NotConfigured
 
 
-class ProxyMiddleware(HttpProxyMiddleware):
+class ProxyFromSettingsMiddleware(HttpProxyMiddleware):
     """A middleware that sets proxy from settings file"""
 
     @classmethod
