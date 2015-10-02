@@ -14,7 +14,8 @@ RUN apt-get install -y --no-install-recommends \
         libxml2-dev \
         libxslt1-dev \
         zlib1g-dev \
-        libssl-dev
+        libssl-dev \
+        python-joblib
 
 RUN pip install -U pip
 RUN curl -sL https://deb.nodesource.com/setup_0.12 | bash -
