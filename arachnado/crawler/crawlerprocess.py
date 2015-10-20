@@ -1,161 +1,24 @@
-# -*- coding: utf-8 -*-
 from __future__ import absolute_import
 import re
 import logging
 import itertools
 import operator
-from scrapy.core.downloader import Downloader
-from scrapy.utils.reactor import CallLaterOnce
-import six
+from os import getenv
 
+import six
 from scrapy import signals
 from scrapy.signalmanager import SignalManager
 from scrapy.crawler import CrawlerProcess, Crawler
-from scrapy.core.engine import ExecutionEngine
-# from scrapy.utils.engine import get_engine_status
 
-from arachnado.signals import Signal
-from arachnado import stats
 from arachnado.process_stats import ProcessStatsMonitor
 from arachnado.utils.spiders import get_spider_cls
 from arachnado.spider import (
     ArachnadoSpider, CrawlWebsiteSpider, DEFAULT_SETTINGS
 )
+from arachnado.crawler.signals import SIGNALS
+from arachnado.crawler.crawler import ArachnadoCrawler
 
 logger = logging.getLogger(__name__)
-
-# monkey patch Scrapy to add an extra signal
-signals.spider_closing = object()
-signals.engine_paused = object()
-signals.engine_resumed = object()
-signals.engine_tick = object()
-signals.downloader_enqueued = object()
-signals.downloader_dequeued = object()
-
-
-# a signal which is fired when stats are changed in any of the spiders
-agg_stats_changed = Signal("agg_stats_changed", False)
-STAT_SIGNALS = {
-    stats.stats_changed: agg_stats_changed,
-}
-
-
-SCRAPY_SIGNAL_NAMES = [
-    'engine_started',
-    'engine_stopped',
-    'engine_paused',  # custom
-    'engine_resumed',  # custom
-    'engine_tick',  # custom
-    'item_scraped',
-    'item_dropped',
-    'spider_closed',
-    'spider_closing',  # custom
-    'spider_opened',
-    'spider_idle',
-    'spider_error',
-    'request_scheduled',
-    'request_dropped',
-    'response_received',
-    'response_downloaded',
-    'downloader_enqueued',  # custom
-    'downloader_dequeued',  # custom
-]
-
-
-def _get_crawler_process_signals_cls():
-    spider_to_cp = {}
-
-    class CrawlerProcessSignals(object):
-        @classmethod
-        def signal(cls, spider_signal):
-            return spider_to_cp[spider_signal]
-
-        engine_started = Signal('engine_started', True)
-        engine_stopped = Signal('engine_stopped', True)
-        engine_paused = Signal('engine_paused', False)  # custom
-        engine_resumed = Signal('engine_resumed', False)  # custom
-        engine_tick = Signal('engine_tick', False)  # custom
-        spider_opened = Signal('spider_opened', True)
-        spider_idle = Signal('spider_idle', False)
-        spider_closed = Signal('spider_closed', True)
-        spider_closing = Signal('spider_closing', False)  # custom
-        spider_error = Signal('spider_error', False)
-        request_scheduled = Signal('request_scheduled', False)
-        request_dropped = Signal('request_dropped', False)
-        response_received = Signal('response_received', False)
-        response_downloaded = Signal('response_downloaded', False)
-        item_scraped = Signal('item_scraped', True)
-        item_dropped = Signal('item_dropped', True)
-        downloader_enqueued = Signal('downloader_enqueued', False)
-        downloader_dequeued = Signal('downloader_dequeued', False)
-
-    for name in SCRAPY_SIGNAL_NAMES:
-        signal = getattr(signals, name)
-        cp_signal = getattr(CrawlerProcessSignals, name)
-        spider_to_cp[signal] = cp_signal
-
-    return CrawlerProcessSignals
-
-
-CrawlerProcessSignals = _get_crawler_process_signals_cls()
-
-
-class ArachnadoExecutionEngine(ExecutionEngine):
-    """
-    Extended ExecutionEngine.
-    It sends a signal when engine gets scheduled to stop.
-    """
-    def __init__(self, *args, **kwargs):
-        super(ArachnadoExecutionEngine, self).__init__(*args, **kwargs)
-        self.send_tick = CallLaterOnce(self._send_tick_signal)
-
-    def close_spider(self, spider, reason='cancelled'):
-        if self.slot.closing:
-            return self.slot.closing
-        self.crawler.crawling = False
-        self.signals.send_catch_log(signals.spider_closing)
-        return super(ArachnadoExecutionEngine, self).close_spider(spider,
-                                                                  reason)
-
-    def pause(self):
-        """Pause the execution engine"""
-        super(ArachnadoExecutionEngine, self).pause()
-        self.signals.send_catch_log(signals.engine_paused)
-
-    def unpause(self):
-        """Resume the execution engine"""
-        super(ArachnadoExecutionEngine, self).unpause()
-        self.signals.send_catch_log(signals.engine_resumed)
-
-    def _next_request(self, spider):
-        res = super(ArachnadoExecutionEngine, self)._next_request(spider)
-        self.send_tick.schedule(0.1)  # avoid sending the signal too often
-        return res
-
-    def _send_tick_signal(self):
-        self.signals.send_catch_log_deferred(signals.engine_tick)
-
-
-class ArachnadoCrawler(Crawler):
-    """
-    Extended Crawler which uses ArachnadoExecutionEngine.
-    """
-    def _create_engine(self):
-        return ArachnadoExecutionEngine(self, lambda _: self.stop())
-
-
-class ArachnadoDownloader(Downloader):
-    def _enqueue_request(self, request, spider):
-        dfd = super(ArachnadoDownloader, self)._enqueue_request(request,
-                                                                spider)
-        self.signals.send_catch_log(signals.downloader_enqueued)
-
-        def _send_dequeued(_):
-            self.signals.send_catch_log(signals.downloader_dequeued)
-            return _
-
-        dfd.addBoth(_send_dequeued)
-        return dfd
 
 
 class ArachnadoCrawlerProcess(CrawlerProcess):
@@ -170,7 +33,7 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
         self.opts = opts or {}
         self.signals = SignalManager(self)
         self.signals.connect(self.on_spider_closed,
-                             CrawlerProcessSignals.spider_closed)
+                             SIGNALS['spider_closed'])
         self._finished_jobs = []
         self._paused_jobs = set()
         self.procmon = ProcessStatsMonitor()
@@ -180,16 +43,22 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
 
         # don't log DepthMiddleware messages
         # see https://github.com/scrapy/scrapy/issues/1308
-        logger = logging.getLogger("scrapy.spidermiddlewares.depth")
-        logger.setLevel(logging.INFO)
+        depth_logger = logging.getLogger("scrapy.spidermiddlewares.depth")
+        depth_logger.setLevel(logging.INFO)
 
-    def start_crawl(self, domain, settings, args):
-        storage_opts = self.opts['arachnado.storage']
+    def start_crawl(self, domain, args, settings):
+        """
+        Create, start and return crawler for given domain
+        """
+        storage_opts = self.opts['arachnado.mongo_export']
         settings.update({
-            'MOTOR_PIPELINE_ENABLED': storage_opts['enabled'],
-            'MOTOR_PIPELINE_DB_NAME': storage_opts['db_name'],
-            'MOTOR_PIPELINE_DB': storage_opts['db_name'],
-            'MOTOR_PIPELINE_URI': storage_opts['uri'],
+            'MONGO_EXPORT_ENABLED': storage_opts['enabled'],
+            'MONGO_EXPORT_JOBS_URI':
+                getenv(storage_opts['jobs_mongo_uri_env']) or
+                storage_opts['jobs_mongo_uri'],
+            'MONGO_EXPORT_ITEMS_URI':
+                getenv(storage_opts['items_mongo_uri_env']) or
+                storage_opts['items_mongo_uri'],
         })
         spider_cls = get_spider_cls(domain, self._get_spider_package_names(),
                                     CrawlWebsiteSpider)
@@ -198,7 +67,6 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
             crawler = self.create_crawler(settings, spider_cls=spider_cls)
             self.crawl(crawler, domain=domain, **args)
             return crawler
-        return False
 
     def _get_spider_package_names(self):
         return [name for name in re.split(
@@ -208,10 +76,14 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
     def create_crawler(self, settings=None, spider_cls=None):
         _settings = DEFAULT_SETTINGS.copy()
         _settings.update(settings or {})
-        spider_cls = self.enchance_spider_cls(spider_cls)
+        spider_cls = self._arachnadoize_spider_cls(spider_cls)
         return ArachnadoCrawler(spider_cls, _settings)
 
-    def enchance_spider_cls(self, spider_cls):
+    def _arachnadoize_spider_cls(self, spider_cls):
+        """
+        Ensure that spider is inherited from ArachnadoSpider
+        to receive its features
+        """
         if not isinstance(spider_cls, ArachnadoSpider):
             return type(spider_cls.__name__, (spider_cls, ArachnadoSpider), {})
         return spider_cls
@@ -223,16 +95,16 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
         if not isinstance(crawler_or_spidercls, Crawler):
             crawler = self._create_crawler_from_spidercls(crawler_or_spidercls)
 
-        # aggregate all crawler signals
-        for name in SCRAPY_SIGNAL_NAMES:
-            crawler.signals.connect(self._resend_signal,
-                                    getattr(signals, name))
+        # Forward crawler signals to self.signals
+        for name, signal in SIGNALS.iteritems():
+            scrapy_signal = getattr(signals, name, None)
 
-        # aggregate signals from crawler EventedStatsCollectors
-        if hasattr(crawler.stats, "signals"):
-            crawler.stats.signals.connect(
-                self._resend_signal, stats.stats_changed
-            )
+            if scrapy_signal:
+                crawler.signals.connect(
+                    lambda **kwargs: self._forward_signal(signal),
+                    scrapy_signal,
+                    weak=False,
+                )
 
         d = super(ArachnadoCrawlerProcess, self).crawl(
             crawler_or_spidercls, *args, **kwargs
@@ -264,19 +136,8 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
                 return crawler
         raise KeyError("Job is not known: %s" % crawl_id)
 
-    def _resend_signal(self, **kwargs):
-        # FIXME: this is a mess. Signal handling should be unified somehow:
-        # there shouldn't be two separate code paths
-        # for CrawlerProcessSignals and STAT_SIGNALS.
-        signal = kwargs['signal']
-        if signal in STAT_SIGNALS:
-            signal = STAT_SIGNALS[signal]
-            kwargs['crawler'] = kwargs.pop('sender').crawler
-        else:
-            signal = CrawlerProcessSignals.signal(signal)
-            kwargs['crawler'] = kwargs.pop('sender')
-
-        kwargs['signal'] = signal
+    def _forward_signal(self, signal, **kwargs):
+        """Forward signal from ArachnadoCrawler to ArachnadoCrawlerProcess"""
         if signal.supports_defer:
             return self.signals.send_catch_log_deferred(**kwargs)
         else:

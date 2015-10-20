@@ -5,18 +5,34 @@ Async MongoDB item exporter using Motor_.
 .. _Motor: https://github.com/mongodb/motor
 """
 from __future__ import absolute_import
+import json
 import logging
 import datetime
 
-import motor
+import scrapy
 from tornado import gen
 from scrapy.exceptions import NotConfigured
 
 from arachnado.utils.twistedtornado import tt_coroutine
 from arachnado.utils.misc import json_encode
+from arachnado.utils.mongo import motor_from_uri
 
 
 logger = logging.getLogger(__name__)
+
+
+def scrapy_item_to_dict(son):
+    """Recursively convert scrapy.Item to dict"""
+    for key, value in son.items():
+        if isinstance(value, (scrapy.Item, dict)):
+            son[key] = scrapy_item_to_dict(
+                son.pop(key)
+            )
+        elif isinstance(value, list):
+            for i, item in enumerate(value):
+                if isinstance(item, (scrapy.Item, dict)):
+                    value[i] = scrapy_item_to_dict(item)
+    return dict(son)
 
 
 class MongoExportPipeline(object):
@@ -28,27 +44,23 @@ class MongoExportPipeline(object):
     On start it creates object in 'jobs' collection and sets
     spider.motor_job_id to the ID of this job.
 
-    If MOTOR_PIPELINE_JOBID_KEY option is set, job id is added to
+    If MONGO_EXPORT_JOBID_KEY option is set, job id is added to
     each stored item under the specified key name.
     """
-    ITEMS_COLLECTION = 'items'
-    JOBS_COLLECTION = 'jobs'
 
     def __init__(self, crawler):
         self.crawler = crawler
-        opts = self.crawler.settings
-        if not opts.getbool('MONGO_EXPORT_ENABLED', False):
+        settings = self.crawler.settings
+        if not settings.getbool('MONGO_EXPORT_ENABLED', False):
             raise NotConfigured
 
-        self.job_id_key = opts.get('MONGO_EXPORT_JOBID_KEY')
-        self.db_uri = opts.get('MONGO_EXPORT_URI',
-                               'mongodb://localhost:27017')
-        db_name = opts.get('MONGO_EXPORT_DB_NAME', 'arachnado')
-
-        self.client = motor.MotorClient(self.db_uri)
-        self.items_table = self.client[db_name][self.ITEMS_COLLECTION]
-        self.jobs_table = self.client[db_name][self.JOBS_COLLECTION]
-        self.connected = False
+        self.job_id_key = settings.get('MONGO_EXPORT_JOBID_KEY')
+        self.items_uri = settings.get('MONGO_EXPORT_ITEMS_URI')
+        self.jobs_uri = settings.get('MONGO_EXPORT_JOBS_URI')
+        self.items_client, _, _, _, self.items_col = \
+            motor_from_uri(self.items_uri)
+        self.jobs_client, _, _, _, self.jobs_col = \
+            motor_from_uri(self.jobs_uri)
 
     @classmethod
     def from_crawler(cls, crawler):
@@ -57,9 +69,9 @@ class MongoExportPipeline(object):
     @tt_coroutine
     def open_spider(self, spider):
         try:
-            yield self.items_table.ensure_index(self.job_id_key)
+            yield self.items_col.ensure_index(self.job_id_key)
 
-            self.job_id = yield self.jobs_table.insert({
+            self.job_id = yield self.jobs_col.insert({
                 'started_at': datetime.datetime.utcnow(),
                 'spider': spider.name,
             })
@@ -67,46 +79,43 @@ class MongoExportPipeline(object):
 
             logger.info("Crawl job generated id: %s", self.job_id,
                         extra={'crawler': self.crawler})
-            self.connected = True
         except Exception:
             self.job_id = None
             logger.error(
                 "Can't connect to %s. Items won't be stored.",
-                self.db_uri, exc_info=True,
+                self.items_uri, exc_info=True,
                 extra={'crawler': self.crawler},
             )
 
     @tt_coroutine
     def close_spider(self, spider):
         if self.job_id is None:
-            self.client.close()
+            self.jobs_client.close()
+            self.items_client.close()
             return
 
         # json is to fix an issue with dots in key names
         stats = json_encode(self.crawler.stats.get_stats())
 
-        yield self.jobs_table.update(
+        yield self.jobs_col.update(
             {'_id': self.job_id},
             {'$set': {
                 'finished_at': datetime.datetime.utcnow(),
                 'stats': stats,
             }}
         )
-        self.client.close()
+        self.jobs_client.close()
+        self.items_client.close()
         logger.info("Job info %s is saved", self.job_id,
                     extra={'crawler': self.crawler})
 
     @tt_coroutine
     def process_item(self, item, spider):
-        if not self.connected:
-            raise gen.Return(item)
-
-        mongo_item = dict(item)
+        mongo_item = scrapy_item_to_dict(item)
         if self.job_id_key:
             mongo_item[self.job_id_key] = self.job_id
-
         try:
-            yield self.items_table.insert(mongo_item)
+            yield self.items_col.insert(mongo_item)
             self.crawler.stats.inc_value("mongo_export/items_stored_count")
         except Exception as e:
             self.crawler.stats.inc_value("mongo_export/store_error_count")

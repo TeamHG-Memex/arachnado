@@ -2,12 +2,12 @@
 from __future__ import absolute_import
 import functools
 
-from tornado.ioloop import PeriodicCallback
 from scrapy.statscollectors import StatsCollector
-from scrapy.signalmanager import SignalManager
+from tornado.ioloop import PeriodicCallback
 
 from arachnado.signals import Signal
 from arachnado.utils.misc import decorate_methods
+from arachnado.crawler.signals import SIGNALS
 
 
 def store_changed_value(meth):
@@ -32,9 +32,10 @@ def store_changed_stats(meth):
 stats_changed = Signal("stats_changed", False)
 
 
-@decorate_methods(["set_value", "inc_value", "max_value", "min_value"], store_changed_value)
+@decorate_methods(["set_value", "inc_value", "max_value", "min_value"],
+                  store_changed_value)
 @decorate_methods(["set_stats", "clear_stats"], store_changed_stats)
-class EventedStatsCollector(StatsCollector):
+class ArachnadoStatsCollector(StatsCollector):
     """
     Stats Collector which allows to subscribe to value changes.
     Update notifications are throttled: interval between updates is no shorter
@@ -45,24 +46,23 @@ class EventedStatsCollector(StatsCollector):
     accumulate_time = 0.1  # value is in seconds
 
     def __init__(self, crawler):
-        super(EventedStatsCollector, self).__init__(crawler)
-        self.signals = SignalManager(self)
+        super(ArachnadoStatsCollector, self).__init__(crawler)
+        self.crawler = crawler
         self._changes = {}
-        self._task = PeriodicCallback(self.emit_changes, self.accumulate_time*1000)
+        self._task = PeriodicCallback(self.emit_changes,
+                                      self.accumulate_time * 1000)
         self._task.start()
-
-        # FIXME: this is ugly
-        self.crawler = crawler  # used by ArachnadoCrawlerProcess
 
     def emit_changes(self):
         if self._changes:
             changes, self._changes = self._changes, {}
-            self.signals.send_catch_log(stats_changed, changes=changes)
+            self.crawler.signals.send_catch_log(SIGNALS['stats_changed'],
+                                                changes=changes)
 
     def open_spider(self, spider):
-        super(EventedStatsCollector, self).open_spider(spider)
+        super(ArachnadoStatsCollector, self).open_spider(spider)
         self._task.start()
 
     def close_spider(self, spider, reason):
-        super(EventedStatsCollector, self).close_spider(spider, reason)
+        super(ArachnadoStatsCollector, self).close_spider(spider, reason)
         self._task.stop()

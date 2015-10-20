@@ -6,8 +6,6 @@ from bson.objectid import ObjectId
 
 MB = 1024 * 1024
 
-# XXX: this is copy-pasted to make motor_exporter independent
-
 
 class JSONEncoder(ScrapyJSONEncoder):
 
@@ -23,7 +21,7 @@ class JSONEncoder(ScrapyJSONEncoder):
 _encoder = JSONEncoder()
 
 
-def json_encode(obj):
+def json_encode(obj, encoding=None):
     """
     Encode a Python object to JSON.
     Unlike standard json.dumps, datetime.datetime objects are supported.

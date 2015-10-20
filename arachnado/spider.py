@@ -39,7 +39,7 @@ DEFAULT_SETTINGS = {
     'CONCURRENT_REQUESTS_PER_DOMAIN': 4,
     'DOWNLOAD_DELAY': 0.3,  # min download delay
 
-    'STATS_CLASS': 'arachnado.stats.EventedStatsCollector',
+    'STATS_CLASS': 'arachnado.crawler.stats.ArachnadoStatsCollector',
     'DOWNLOADER': 'arachnado.crawler_process.ArachnadoDownloader',
 
     # see https://github.com/scrapy/scrapy/issues/1054
@@ -47,7 +47,7 @@ DEFAULT_SETTINGS = {
 
     'SPIDER_MIDDLEWARES': {
         'arachnado.spidermiddlewares.pageitems.PageItemsMiddleware': 100,
-        'arachnado.spidermiddlewares.login.Login': 10,
+        #'arachnado.spidermiddlewares.login.Login': 10,
     },
     'DOWNLOADER_MIDDLEWARES': {
         'arachnado.downloadermiddlewares.proxyfromsettings'
@@ -56,7 +56,8 @@ DEFAULT_SETTINGS = {
     'ITEM_PIPELINES': {
         'arachnado.pipelines.mongoexport.MongoExportPipeline': 10,
     },
-    'PAGEEXPORT_MONGO_JOBID_KEY': '_job_id',
+    'MONGO_EXPORT_ENABLED': True,
+    'MONGO_EXPORT_JOBID_KEY': '_job_id',
     'HTTPCACHE_ENABLED': False,
     # This storage is read-only. Responses are stored by PageExport middleware
     'HTTPCACHE_STORAGE':

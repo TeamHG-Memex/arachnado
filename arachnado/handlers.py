@@ -3,23 +3,23 @@ from __future__ import absolute_import
 import os
 
 from tornado.web import Application, RequestHandler, url, HTTPError
-from tornado.escape import json_decode
+# from tornado.escape import json_decode
 
 from arachnado.utils.misc import json_encode
 from arachnado.monitor import Monitor
 from arachnado.handler_utils import ApiHandler, NoEtagsMixin
 from arachnado.spidermiddlewares.login import test_login_credentials
-from arachnado.sitechecker import WSHandler as SiteCheckerWSHandler
 from arachnado.rpc import MainRpcHttpHandler, MainRpcWebsocketHandler
 
 
 at_root = lambda *args: os.path.join(os.path.dirname(__file__), *args)
 
 
-def get_application(crawler_process, site_checker_crawler, opts):
+def get_application(crawler_process, site_storage, page_storage, opts):
     context = {
         'crawler_process': crawler_process,
-        'site_checker_crawler': site_checker_crawler,
+        'site_storage': site_storage,
+        'page_storage': page_storage,
         'opts': opts,
     }
     debug = opts['arachnado']['debug']
@@ -33,9 +33,7 @@ def get_application(crawler_process, site_checker_crawler, opts):
         url(r"/crawler/resume", ResumeCrawler, context, name="resume"),
         url(r"/crawler/status", CrawlerStatus, context, name="status"),
         url(r"/spider/login", TestLogin, context, name="login"),
-        url(r"/sites", SitesHandler, context, name="sites"),
         url(r"/ws-updates", Monitor, context, name="ws-updates"),
-        url(r"/ws-sites", SiteCheckerWSHandler, context, name="ws-sites"),
         url(r"/ws-rpc", MainRpcWebsocketHandler, context, name="ws-rpc"),
         url(r"/rpc", MainRpcHttpHandler, context, name="rpc"),
     ]
@@ -52,13 +50,13 @@ def get_application(crawler_process, site_checker_crawler, opts):
 
 class BaseRequestHandler(RequestHandler):
 
-    def initialize(self, crawler_process, site_checker_crawler, opts):
+    def initialize(self, crawler_process, site_storage, opts, **kwargs):
         """
         :param arachnado.crawler_process.ArachnadoCrawlerProcess
             crawler_process:
         """
         self.crawler_process = crawler_process
-        self.site_checker_crawler = site_checker_crawler
+        self.site_storage = site_storage
         self.opts = opts
 
     def render(self, *args, **kwargs):
@@ -153,25 +151,6 @@ class CrawlerStatus(BaseRequestHandler):
                     if job['id'] in crawl_ids]
 
         self.write(json_encode({"jobs": jobs}))
-
-
-class SitesHandler(BaseRequestHandler):
-
-    def post(self, *args, **kwargs):
-        site = json_decode(self.request.body)
-        self.site_checker_crawler.storage.create(site)
-
-    def patch(self, *args, **kwargs):
-        site = json_decode(self.request.body)
-        self.site_checker_crawler.storage.update(site)
-
-    def delete(self, *args, **kwargs):
-        site = json_decode(self.request.body)
-        self.site_checker_crawler.storage.delete(site)
-
-    @property
-    def site_crawler(self):
-        return self.crawler_process.get_crawler
 
 
 class TestLogin(ApiHandler, BaseRequestHandler):
