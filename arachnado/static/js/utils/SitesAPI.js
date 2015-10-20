@@ -18,3 +18,13 @@ export function deleteSite(siteId) {
 export function updateSite(site) {
     return jsonAjax(window.SITES_URL, site, 'patch');
 }
+
+export function keyValueListToDict(list) {
+    var dict = {};
+    if(list) {
+        list.forEach(function(row) {
+            dict[row.key] = row.value;
+        });
+    }
+    return dict;
+}

@@ -24,13 +24,15 @@ RUN pip install -U pip
 RUN curl -sL https://deb.nodesource.com/setup_0.12 | bash -
 RUN apt-get install -y --no-install-recommends nodejs
 
+# To use forum spiders with Arachnado, clone repos and uncomment lines
+
 # git clone git@github.com:TeamHG-Memex/bot_engines.git
-ADD bot_engines /app/bot_engines
-RUN pip install -e /app/bot_engines
+# ADD bot_engines /app/bot_engines
+# RUN pip install -e /app/bot_engines
 
 # git clone git@github.com:TeamHG-Memex/bot_spiders.git
-ADD bot_spiders /app/bot_spiders
-RUN pip install -e /app/bot_spiders
+# ADD bot_spiders /app/bot_spiders
+# RUN pip install -e /app/bot_spiders
 
 
 WORKDIR /app

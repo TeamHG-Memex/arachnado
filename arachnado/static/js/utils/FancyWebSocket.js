@@ -48,7 +48,8 @@ export class FancyWebSocket {
             return endpointSockets[endpoint];
         }
         var loc = document.location;
-        var url = "ws://" + loc.hostname + ":" + loc.port + endpoint;
+        var protocol = loc.protocol == "https:" ? "wss:" : "ws:";
+        var url = protocol + "//" + loc.hostname + ":" + loc.port + endpoint;
         var socket = new FancyWebSocket(url);
         endpointSockets[endpoint] = socket;
         return socket;

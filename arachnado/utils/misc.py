@@ -23,7 +23,7 @@ class JSONEncoder(ScrapyJSONEncoder):
 _encoder = JSONEncoder()
 
 
-def json_encode(obj):
+def json_encode(obj, encoding=None):
     """
     Encode a Python object to JSON.
     Unlike standard json.dumps, datetime.datetime objects are supported.

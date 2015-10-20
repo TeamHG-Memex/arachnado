@@ -247,7 +247,7 @@ var JobRow = React.createClass({
         ];
 
         var data = [
-            job.seed,
+            this.formatSeed(),
             info.status,
             _formatItemSpeed(info),
             filesize(info.downloaded),
@@ -260,7 +260,15 @@ var JobRow = React.createClass({
         );
 
         return <tr className={info.rowClass}>{columns}</tr>;
-    }
+    },
+    formatSeed: function() {
+        if(this.props.job.seed.startsWith('spider://')) {
+            var url = this.props.job.args.start_urls[0];
+            var engine = this.props.job.seed.substring('spider://'.length);
+            return `${url} (${engine})`;
+        }
+        return this.props.job.seed;
+    },
 });
 
 

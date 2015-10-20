@@ -2,10 +2,8 @@ import json
 import logging
 
 import jsonrpclib
-from jsonrpclib.jsonrpc import Fault
-from tornadorpc.json import JSONRPCHandler, JSONRPCParser
 from tornado import websocket
-from tornado.concurrent import Future
+from tornado.web import RequestHandler
 
 from arachnado.utils.misc import json_encode
 
@@ -32,22 +30,33 @@ class JsonRpcWebsocketHandler(websocket.WebSocketHandler):
     def on_event(self, data):
         self._RPC_.run(self, json_encode(data))
 
-    def result(self, result):
-        if isinstance(result, Future):
-            result.add_done_callback(self._result)
-        else:
-            self._result(result)
-
     def _result(self, result):
-        if isinstance(result, Future):
-            result = result.result()
-        self._results.append(result)
+        """A little hacky way to not close WS stream"""
         self._RPC_finished = False
-        self._RPC_.response(self)
+        super(JsonRpcWebsocketHandler, self)._result(result)
 
     def on_result(self, data):
         return self.write_event('rpc:response', data)
 
+    def open(self):
+        """Forward open event to resource objects"""
+        for resource_name, resource in self.__dict__.iteritems():
+            if hasattr(RequestHandler, resource_name):
+                continue
+            if hasattr(resource, '_on_open'):
+                resource._on_open()
+
+    def on_close(self):
+        """Forward on_close event to resource objects"""
+        self._RPC_finished = True
+        for resource_name, resource in self.__dict__.iteritems():
+            if hasattr(RequestHandler, resource_name):
+                continue
+            if hasattr(resource, '_on_close'):
+                resource._on_close()
+
     def write_event(self, event, data):
-        message = json_encode({'event': event, 'data': json.loads(data)})
+        if isinstance(data, basestring):
+            data = json.loads(data)
+        message = json_encode({'event': event, 'data': data})
         self.write_message(message)

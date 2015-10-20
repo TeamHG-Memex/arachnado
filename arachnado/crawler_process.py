@@ -4,10 +4,11 @@ import re
 import logging
 import itertools
 import operator
+from os import getenv
+
+import six
 from scrapy.core.downloader import Downloader
 from scrapy.utils.reactor import CallLaterOnce
-import six
-
 from scrapy import signals
 from scrapy.signalmanager import SignalManager
 from scrapy.crawler import CrawlerProcess, Crawler
@@ -180,16 +181,22 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
 
         # don't log DepthMiddleware messages
         # see https://github.com/scrapy/scrapy/issues/1308
-        logger = logging.getLogger("scrapy.spidermiddlewares.depth")
-        logger.setLevel(logging.INFO)
+        logger_ = logging.getLogger("scrapy.spidermiddlewares.depth")
+        logger_.setLevel(logging.INFO)
 
-    def start_crawl(self, domain, settings, args):
-        storage_opts = self.opts['arachnado.storage']
+    def start_crawl(self, domain, args, settings):
+        """
+        Create, start and return crawler for given domain
+        """
+        storage_opts = self.opts['arachnado.mongo_export']
         settings.update({
-            'MOTOR_PIPELINE_ENABLED': storage_opts['enabled'],
-            'MOTOR_PIPELINE_DB_NAME': storage_opts['db_name'],
-            'MOTOR_PIPELINE_DB': storage_opts['db_name'],
-            'MOTOR_PIPELINE_URI': storage_opts['uri'],
+            'MONGO_EXPORT_ENABLED': storage_opts['enabled'],
+            'MONGO_EXPORT_JOBS_URI':
+                getenv(storage_opts['jobs_mongo_uri_env']) or
+                storage_opts['jobs_mongo_uri'],
+            'MONGO_EXPORT_ITEMS_URI':
+                getenv(storage_opts['items_mongo_uri_env']) or
+                storage_opts['items_mongo_uri'],
         })
         spider_cls = get_spider_cls(domain, self._get_spider_package_names(),
                                     CrawlWebsiteSpider)
@@ -198,7 +205,6 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
             crawler = self.create_crawler(settings, spider_cls=spider_cls)
             self.crawl(crawler, domain=domain, **args)
             return crawler
-        return False
 
     def _get_spider_package_names(self):
         return [name for name in re.split(
@@ -208,10 +214,14 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
     def create_crawler(self, settings=None, spider_cls=None):
         _settings = DEFAULT_SETTINGS.copy()
         _settings.update(settings or {})
-        spider_cls = self.enchance_spider_cls(spider_cls)
+        spider_cls = self._arachnadoize_spider_cls(spider_cls)
         return ArachnadoCrawler(spider_cls, _settings)
 
-    def enchance_spider_cls(self, spider_cls):
+    def _arachnadoize_spider_cls(self, spider_cls):
+        """
+        Ensure that spider is inherited from ArachnadoSpider
+        to receive its features
+        """
         if not isinstance(spider_cls, ArachnadoSpider):
             return type(spider_cls.__name__, (spider_cls, ArachnadoSpider), {})
         return spider_cls

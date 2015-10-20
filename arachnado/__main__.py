@@ -26,6 +26,7 @@ from __future__ import absolute_import
 import os
 import sys
 import logging
+from os import getenv
 
 from docopt import docopt
 from tornado.ioloop import IOLoop
@@ -51,18 +52,31 @@ def main(port, host, start_manhole, manhole_port, manhole_host, loglevel,
          opts):
     from arachnado.handlers import get_application
     from arachnado.crawler_process import ArachnadoCrawlerProcess
-    from arachnado.sitechecker import get_site_checker_crawler
+    from arachnado.site_checker import get_site_checker_crawler
+    from arachnado.storages.mongo import MongoStorage
+    from arachnado.storages.mongotail import MongoTailStorage
     from arachnado.cron import Cron
     from arachnado import manhole
 
     settings = {'LOG_LEVEL': loglevel}
     crawler_process = ArachnadoCrawlerProcess(settings, opts)
-    site_checker_crawler = get_site_checker_crawler()
-    cron = Cron(crawler_process, site_checker_crawler)
-    cron.start()
+
+    site_storage = MongoStorage(
+        getenv(opts['arachnado.sites']['mongo_uri_env']) or
+        opts['arachnado.sites']['mongo_uri'],
+        cache=True,
+    )
+    page_storage = MongoTailStorage(
+        getenv(opts['arachnado.mongo_export']['items_mongo_uri_env']) or
+        opts['arachnado.mongo_export']['items_mongo_uri'],
+    )
+    site_checker_crawler = get_site_checker_crawler(site_storage)
     crawler_process.crawl(site_checker_crawler)
 
-    app = get_application(crawler_process, site_checker_crawler, opts)
+    cron = Cron(crawler_process, site_storage)
+    cron.start()
+
+    app = get_application(crawler_process, site_storage, page_storage, opts)
     app.listen(int(port), host)
 
     if start_manhole:
@@ -100,7 +114,7 @@ def _settings(args):
     })
     opts = load_settings(config_files, overrides)
     ensure_bool(opts, 'arachnado', 'debug')
-    ensure_bool(opts, 'arachnado.storage', 'enabled')
+    ensure_bool(opts, 'arachnado.mongo_export', 'enabled')
     ensure_bool(opts, 'arachnado.manhole', 'enabled')
     return opts
 

@@ -15,6 +15,10 @@ export var Actions = Reflux.createActions([
     "serverDelete",
 ]);
 
+// Show failed sites last
+var siteCmp = function(site1, site2) {
+    return site1.url < site2.url ? -1 : 1;
+}
 
 export var store = Reflux.createStore({
     init: function () {
@@ -28,11 +32,13 @@ export var store = Reflux.createStore({
 
     onSetAll: function (sites) {
         this.sites = sites;
-        this.trigger(sites);
+        this.sites.sort(siteCmp);
+        this.trigger(this.sites);
     },
 
     onServerCreate: function (site) {
         this.sites.push(site);
+        this.sites.sort(siteCmp);
         this.trigger(this.sites);
     },
 
@@ -42,6 +48,7 @@ export var store = Reflux.createStore({
         });
         if(siteIndex !== -1) {
             Object.assign(this.sites[siteIndex], site);
+            this.sites.sort(siteCmp);
             this.trigger(this.sites);
         }
     },
@@ -57,43 +64,34 @@ export var store = Reflux.createStore({
     },
 
     onCreate: function(url) {
-        API.createSite(url);
-        //Rpc.call('sites.post', {site: {url: url}});
+        Rpc.call('sites.post', {site: {url: url}});
     },
 
     onUpdate: function(site) {
-        API.updateSite(site);
-        //Rpc.call('sites.patch', {site: site});
+        Rpc.call('sites.patch', {site: site});
     },
 
     onDelete: function(siteId) {
-        API.deleteSite(siteId);
-        //Rpc.call('sites.delete', {site: {_id: siteId}});
+        Rpc.call('sites.delete', {site: {_id: siteId}});
     }
 });
 
-// Rpc.socket.on("open", () => {
-//     Rpc.call("sites.list").then(function(sites) {
-//         Actions.setAll(sites);
-//     })
-// });
-
-
-var socket = FancyWebSocket.instance(window.WS_SITES_SERVER_ADDRESS);
-
-socket.on("sites:set", (sites) => {
-    Actions.setAll(sites);
+Rpc.socket.on("open", () => {
+    Rpc.call("sites.list").then(function(sites) {
+        Actions.setAll(sites);
+        Rpc.call('sites.subscribe');
+    });
 });
 
-socket.on("sites:created", (site) => {
+Rpc.socket.on("sites.created", (site) => {
     Actions.serverCreate(site);
 });
 
-socket.on("sites:updated", (site) => {
+Rpc.socket.on("sites.updated", (site) => {
     Actions.serverUpdate(site);
 });
 
-socket.on("sites:deleted", (site) => {
+Rpc.socket.on("sites.deleted", (site) => {
     Actions.serverDelete(site);
 });
 

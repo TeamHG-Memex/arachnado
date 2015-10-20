@@ -56,7 +56,8 @@ DEFAULT_SETTINGS = {
     'ITEM_PIPELINES': {
         'arachnado.pipelines.mongoexport.MongoExportPipeline': 10,
     },
-    'PAGEEXPORT_MONGO_JOBID_KEY': '_job_id',
+    'MONGO_EXPORT_ENABLED': True,
+    'MONGO_EXPORT_JOBID_KEY': '_job_id',
     'HTTPCACHE_ENABLED': False,
     # This storage is read-only. Responses are stored by PageExport middleware
     'HTTPCACHE_STORAGE':
