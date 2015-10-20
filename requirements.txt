@@ -5,5 +5,8 @@ Twisted == 15.2.1
 motor == 0.4.1
 docopt == 0.6.2
 service_identity
+scikit-learn == 0.15.2
+tornadorpc == 0.1.1
+croniter == 0.3.8
 -e git+https://github.com/TeamHG-Memex/Formasaurus.git#egg=formasaurus
 -e git+https://github.com/TeamHG-Memex/bot_detector.git#egg=bot_detector
