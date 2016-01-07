@@ -12,3 +12,7 @@ arachnado.egg-info/
 build/
 dist/
 .tox/
+error.log
+bot_engines/
+bot_spiders/
+

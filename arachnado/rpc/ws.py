@@ -4,6 +4,7 @@ import logging
 import jsonrpclib
 from tornado import websocket
 from tornado.web import RequestHandler
+from tornado.websocket import WebSocketClosedError
 
 from arachnado.utils.misc import json_encode
 
@@ -59,4 +60,7 @@ class JsonRpcWebsocketHandler(websocket.WebSocketHandler):
         if isinstance(data, basestring):
             data = json.loads(data)
         message = json_encode({'event': event, 'data': data})
-        self.write_message(message)
+        try:
+            self.write_message(message)
+        except WebSocketClosedError:
+            pass
