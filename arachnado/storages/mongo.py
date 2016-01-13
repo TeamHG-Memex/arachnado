@@ -64,12 +64,15 @@ class MongoStorage(object):
         if not isinstance(subscriptions, list):
             subscriptions = [subscriptions]
         for subscription in subscriptions:
-            self.signal_manager.disconnect(
-                self.subscription_callbacks[subscription],
-                self.signals[subscription],
-                weak=False
-            )
-            self.subscription_callbacks.pop(subscription, None)
+            try:
+                self.signal_manager.disconnect(
+                    self.subscription_callbacks[subscription],
+                    self.signals[subscription],
+                    weak=False
+                )
+                self.subscription_callbacks.pop(subscription, None)
+            except KeyError:
+                pass
 
     @property
     def available_subscriptions(self):
@@ -84,12 +87,13 @@ class MongoStorage(object):
         cursor = self.col.find()
         while (yield cursor.fetch_next):
             doc = cursor.next_object()
-            if self.cache is not None:
-                self.cache[str(doc['_id'])] = doc
-                if str(doc['_id']) not in self.cache:
-                    self.signal_manager.send_catch_log(
-                        self.signals['created'], data=doc
-                    )
+            docs.append(doc)
+            #if self.cache is not None:
+            #    self.cache[str(doc['_id'])] = doc
+            #    if str(doc['_id']) not in self.cache:
+            #        self.signal_manager.send_catch_log(
+            #            self.signals['created'], data=doc
+            #        )
         self.fetching = False
         raise Return(docs)
 

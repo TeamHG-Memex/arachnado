@@ -15,9 +15,10 @@ from arachnado.rpc import MainRpcHttpHandler, MainRpcWebsocketHandler
 at_root = lambda *args: os.path.join(os.path.dirname(__file__), *args)
 
 
-def get_application(crawler_process, site_storage, page_storage, opts):
+def get_application(crawler_process, site_storage, page_storage, job_storage, opts):
     context = {
         'crawler_process': crawler_process,
+        'job_storage': job_storage,
         'site_storage': site_storage,
         'page_storage': page_storage,
         'opts': opts,

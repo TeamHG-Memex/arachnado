@@ -60,7 +60,11 @@ def main(port, host, start_manhole, manhole_port, manhole_host, loglevel,
 
     settings = {'LOG_LEVEL': loglevel}
     crawler_process = ArachnadoCrawlerProcess(settings, opts)
-
+    job_storage = MongoStorage(
+        getenv(opts['arachnado.jobs']['mongo_uri_env']) or
+        opts['arachnado.jobs']['mongo_uri'],
+        cache=True,
+    )
     site_storage = MongoStorage(
         getenv(opts['arachnado.sites']['mongo_uri_env']) or
         opts['arachnado.sites']['mongo_uri'],
@@ -76,7 +80,7 @@ def main(port, host, start_manhole, manhole_port, manhole_host, loglevel,
     cron = Cron(crawler_process, site_storage)
     cron.start()
 
-    app = get_application(crawler_process, site_storage, page_storage, opts)
+    app = get_application(crawler_process, site_storage, page_storage, job_storage, opts)
     app.listen(int(port), host)
 
     if start_manhole:

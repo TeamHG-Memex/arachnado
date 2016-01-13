@@ -8,5 +8,5 @@ service_identity
 scikit-learn == 0.15.2
 tornadorpc == 0.1.1
 croniter == 0.3.8
--e git+https://github.com/TeamHG-Memex/Formasaurus.git#egg=formasaurus
+formasaurus == 0.2
 -e git+https://github.com/TeamHG-Memex/bot_detector.git#egg=bot_detector
