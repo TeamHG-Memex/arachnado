@@ -60,7 +60,7 @@ def main(port, host, start_manhole, manhole_port, manhole_host, loglevel,
 
     settings = {'LOG_LEVEL': loglevel}
     crawler_process = ArachnadoCrawlerProcess(settings, opts)
-    job_storage = MongoStorage(
+    job_storage = MongoTailStorage(
         getenv(opts['arachnado.jobs']['mongo_uri_env']) or
         opts['arachnado.jobs']['mongo_uri'],
         cache=True,

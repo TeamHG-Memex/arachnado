@@ -1,8 +1,9 @@
 import logging
 
-from tornadorpc import async
+from arachnado.storages.mongotail import MongoTailStorage
 
-class JobsRpc(object):
+
+class JobsRpc(MongoTailStorage):
 
     logger = logging.getLogger(__name__)
 
@@ -10,22 +11,13 @@ class JobsRpc(object):
         self.handler = handler
         self.storage = job_storage
 
-    @async
-    def list(self):
-        def _list(future):
-            self.handler.result(future.result())
-        self.storage.fetch().add_done_callback(_list)
-
-    def subscribe(self):
-        for subscription in self.storage.available_subscriptions:
-            self.storage.subscribe(
-                subscription,
-                lambda data, subscription=subscription:
-                self._publish(data, subscription)
-            )
+    def subscribe(self, last_id=0, query=None, fields=None):
+        self.storage.subscribe('tailed', self._publish, last_id=last_id,
+                               query=query, fields=fields)
 
     def _on_close(self):
-        self.storage.unsubscribe(self.storage.available_subscriptions)
+        self.unsubscribe()
 
-    def _publish(self, data, subscription):
-        self.handler.write_event('jobs.{}'.format(subscription), data)
+    def _publish(self, data):
+        if self.storage.tailing:
+            self.handler.write_event('jobs.tailed', data)
