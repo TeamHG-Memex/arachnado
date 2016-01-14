@@ -1,9 +1,7 @@
 import logging
 
-from arachnado.storages.mongotail import MongoTailStorage
 
-
-class JobsRpc(MongoTailStorage):
+class JobsRpc(object):
 
     logger = logging.getLogger(__name__)
 
@@ -16,7 +14,7 @@ class JobsRpc(MongoTailStorage):
                                query=query, fields=fields)
 
     def _on_close(self):
-        self.unsubscribe()
+        self.storage.unsubscribe('tailed')
 
     def _publish(self, data):
         if self.storage.tailing:

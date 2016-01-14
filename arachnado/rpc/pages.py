@@ -1,7 +1,4 @@
-from arachnado.storages.mongotail import MongoTailStorage
-
-
-class PagesRpc(MongoTailStorage):
+class PagesRpc(object):
 
     def __init__(self, handler, page_storage, **kwargs):
         self.handler = handler
@@ -11,11 +8,8 @@ class PagesRpc(MongoTailStorage):
         self.storage.subscribe('tailed', self._publish, last_id=last_id,
                                query=query, fields=fields)
 
-    def unsubscribe(self):
-        self.storage.unsubscribe('tailed')
-
     def _on_close(self):
-        self.unsubscribe()
+        self.storage.unsubscribe('tailed')
 
     def _publish(self, data):
         if self.storage.tailing:
