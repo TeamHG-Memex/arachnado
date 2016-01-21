@@ -26,12 +26,6 @@ def replace_dots(son):
 
 class MongoStorage(object):
 
-    signals = {
-        'created': object(),
-        'updated': object(),
-        'deleted': object(),
-    }
-
     def __init__(self, mongo_uri, cache=False):
         _, _, _, _, self.col = motor_from_uri(mongo_uri)
         self.signal_manager = SignalManager()
@@ -43,6 +37,11 @@ class MongoStorage(object):
         else:
             self.cache = None
         self.fetching = False
+        self.signals = {
+            'created': object(),
+            'updated': object(),
+            'deleted': object(),
+        }
 
     def subscribe(self, subscriptions=None, callback=None):
         if subscriptions is None:

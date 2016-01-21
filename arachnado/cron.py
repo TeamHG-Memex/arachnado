@@ -26,7 +26,7 @@ class Cron(object):
 
     def stop(self):
         self.running = False
-        self._cancel_all()
+        self.cancel_all()
 
     def rerun(self):
         if not self.running:
@@ -80,7 +80,7 @@ class Cron(object):
 
     def cancel_all(self):
         for id_ in self.waiting_calls:
-            self.cancel[id_]
+            self.cancel(id_)
 
     def start_crawl(self, id_):
         self.cancel(id_)
