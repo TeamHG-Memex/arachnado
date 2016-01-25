@@ -3,6 +3,7 @@ import logging
 
 import jsonrpclib
 from tornado import websocket
+import tornado.ioloop
 from tornado.web import RequestHandler
 from tornado.websocket import WebSocketClosedError
 
@@ -47,6 +48,12 @@ class JsonRpcWebsocketHandler(websocket.WebSocketHandler):
             if hasattr(resource, '_on_open'):
                 resource._on_open()
 
+        self.__pinger = tornado.ioloop.PeriodicCallback(
+            lambda: self.ping('PING'),
+            1000 * 15
+        )
+        self.__pinger.start()
+
     def on_close(self):
         """Forward on_close event to resource objects"""
         self._RPC_finished = True
@@ -55,6 +62,8 @@ class JsonRpcWebsocketHandler(websocket.WebSocketHandler):
                 continue
             if hasattr(resource, '_on_close'):
                 resource._on_close()
+
+        self.__pinger.stop()
 
     def write_event(self, event, data):
         if isinstance(data, basestring):
