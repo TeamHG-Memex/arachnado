@@ -22,9 +22,10 @@ RUN apt-get install -y --no-install-recommends nodejs
 
 ADD . /app
 RUN pip install -U -r app/requirements.txt
-RUN pip install /app
-RUN cd /app; npm install
-RUN cd /app; npm build
+#RUN pip install /app
+#RUN cd /app; npm install
+#RUN cd /app; npm build
+RUN pip install arachnado[mongo]
 
 EXPOSE 8888
 
