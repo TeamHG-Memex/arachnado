@@ -1,8 +1,12 @@
+from arachnado.storages.mongotail import MongoTailStorage
+
+
 class PagesRpc(object):
 
     def __init__(self, handler, page_storage, **kwargs):
         self.handler = handler
-        self.storage = page_storage
+        self.storage = MongoTailStorage(page_storage.mongo_uri,
+                                        page_storage.cache_flag)
 
     def subscribe(self, last_id=0, query=None, fields=None):
         self.storage.subscribe('tailed', self._publish, last_id=last_id,

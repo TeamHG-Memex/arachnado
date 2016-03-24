@@ -27,6 +27,8 @@ def replace_dots(son):
 class MongoStorage(object):
 
     def __init__(self, mongo_uri, cache=False):
+        self.mongo_uri = mongo_uri
+        self.cache_flag = cache
         _, _, _, _, self.col = motor_from_uri(mongo_uri)
         self.signal_manager = SignalManager()
         # Used for unsubscribe
