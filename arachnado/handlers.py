@@ -76,6 +76,19 @@ def find_spider_cls(spider_name, spider_packages):
                     return spider_cls
 
 
+def set_spider_class_args(spider_cls, **kwargs):
+    """ Creates new spider class based on given spider class to keep the
+    original spider class consistent.
+
+    :param spider_cls: Original spider class
+    :param kwargs: Custom spider attributed to be set for this particular crawl
+    """
+    if kwargs:
+        return type(
+            '{}Customized'.format(spider_cls.__name__), (spider_cls,), kwargs)
+    return spider_cls
+
+
 class BaseRequestHandler(RequestHandler):
 
     def initialize(self, crawler_process, opts):
@@ -90,6 +103,25 @@ class BaseRequestHandler(RequestHandler):
         proc_stats = self.crawler_process.procmon.get_recent()
         kwargs['initial_process_stats_json'] = json_encode(proc_stats)
         return super(BaseRequestHandler, self).render(*args, **kwargs)
+
+    def get_custom_spider_arguments(self, ignore=None):
+        """ Returns custom spider arguments embedded in request
+
+        :param ignore: List of arguments to be ignored. Defaults to 'domain'.
+        """
+        ignore = ignore or ['domain']
+        if self.json_args:
+            args = self.json_args
+            getter = self.json_args.get
+        else:
+            content_type = self.request.headers.get('Content-Type', '').lower()
+            if 'x-www-form-urlencoded' in content_type:
+                args = self.request.body_arguments
+                getter = self.get_body_argument
+            else:
+                args = self.request.query_arguments
+                getter = self.get_query_argument
+        return {arg: getter(arg) for arg in args if arg not in ignore}
 
 
 class Index(NoEtagsMixin, BaseRequestHandler):
@@ -109,7 +141,7 @@ class StartCrawler(ApiHandler, BaseRequestHandler):
     """
     This endpoint starts crawling for a domain.
     """
-    def crawl(self, domain):
+    def crawl(self, domain, **kwargs):
         storage_opts = self.opts['arachnado.storage']
         settings = {
             'MOTOR_PIPELINE_ENABLED': storage_opts['enabled'],
@@ -120,22 +152,24 @@ class StartCrawler(ApiHandler, BaseRequestHandler):
         spider_cls = get_spider_cls(domain, self._get_spider_package_names())
 
         if spider_cls is not None:
+            spider_cls = set_spider_class_args(spider_cls, **kwargs)
             self.crawler = create_crawler(settings, spider_cls=spider_cls)
             self.crawler_process.crawl(self.crawler, domain=domain)
             return True
         return False
 
     def post(self):
+        spider_args = self.get_custom_spider_arguments()
         if self.is_json:
             domain = self.json_args['domain']
-            if self.crawl(domain):
+            if self.crawl(domain, **spider_args):
                 self.write({"status": "ok",
                             "job_id": self.crawler.spider.crawl_id})
             else:
                 self.write({"status": "error"})
         else:
             domain = self.get_body_argument('domain')
-            if self.crawl(domain):
+            if self.crawl(domain, **spider_args):
                 self.redirect("/")
             else:
                 raise HTTPError(400)
