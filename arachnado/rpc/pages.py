@@ -8,7 +8,9 @@ class PagesRpc(object):
         self.storage = MongoTailStorage(page_storage.mongo_uri,
                                         page_storage.cache_flag)
 
-    def subscribe(self, last_id=0, query=None, fields=None):
+    def subscribe(self, last_id=0, query=None, fields=None, fetch_delay=None):
+        if fetch_delay:
+            self.storage.fetch_delay = fetch_delay
         self.storage.subscribe('tailed', self._publish, last_id=last_id,
                                query=query, fields=fields)
 

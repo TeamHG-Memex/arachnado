@@ -6,6 +6,7 @@ from arachnado.storages.mongo import MongoStorage
 
 
 class MongoTailStorage(MongoStorage):
+    fetch_delay = 0
 
     def __init__(self, *args, **kwargs):
         super(MongoTailStorage, self).__init__(*args, **kwargs)
@@ -54,6 +55,8 @@ class MongoTailStorage(MongoStorage):
                     self.signals['tailed'], data=doc
                 )
                 last_object_id = doc['_id']
+                if self.fetch_delay:
+                    yield sleep(self.fetch_delay)
             else:
                 yield sleep(1)
                 cursor = self.col.find(tail_query(), fields)
