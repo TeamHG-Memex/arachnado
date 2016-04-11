@@ -2,7 +2,7 @@ import json
 import logging
 
 import jsonrpclib
-from tornado import websocket
+from tornado import websocket, gen
 import tornado.ioloop
 from tornado.web import RequestHandler
 from tornado.websocket import WebSocketClosedError
@@ -65,11 +65,12 @@ class JsonRpcWebsocketHandler(websocket.WebSocketHandler):
 
         self.__pinger.stop()
 
+    @gen.coroutine
     def write_event(self, event, data):
         if isinstance(data, basestring):
             data = json.loads(data)
         message = json_encode({'event': event, 'data': data})
         try:
-            self.write_message(message)
+            yield self.write_message(message)
         except WebSocketClosedError:
             pass
