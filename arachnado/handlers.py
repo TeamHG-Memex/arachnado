@@ -82,7 +82,7 @@ class StartCrawler(ApiHandler, BaseRequestHandler):
     This endpoint starts crawling for a domain.
     """
     def crawl(self, domain, args, settings):
-        self.crawler = self.crawler_process.start_crawl(domain, args, settings)
+        self.crawler = self.crawler_process.crawl_domain(domain, args, settings)
         return bool(self.crawler)
 
     def post(self):

@@ -52,7 +52,7 @@ class Cron(object):
             return
         try:
             cron = croniter(site['schedule'])
-        except:
+        except Exception:
             if site.get('schedule_valid', True) is True:
                 self.site_storage.update(
                     {'_id': id_, 'schedule_valid': False}
@@ -96,7 +96,7 @@ class Cron(object):
         else:
             url = 'spider://' + site['engine']
             args = {'post_days': '-1'}  # TODO: change in bot_engines
-        crawler = self.crawler_process.start_crawl(
+        crawler = self.crawler_process.crawl_domain(
             url, {}, args
         )
         if crawler:

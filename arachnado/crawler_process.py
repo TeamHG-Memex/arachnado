@@ -184,7 +184,7 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
         logger_ = logging.getLogger("scrapy.spidermiddlewares.depth")
         logger_.setLevel(logging.INFO)
 
-    def start_crawl(self, domain, args, settings):
+    def crawl_domain(self, domain, args, settings):
         """
         Create, start and return crawler for given domain
         """
@@ -228,10 +228,7 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
 
     def crawl(self, crawler_or_spidercls, *args, **kwargs):
         kwargs['crawl_id'] = next(self.crawl_ids)
-
-        crawler = crawler_or_spidercls
-        if not isinstance(crawler_or_spidercls, Crawler):
-            crawler = self._create_crawler_from_spidercls(crawler_or_spidercls)
+        crawler = self.create_crawler(crawler_or_spidercls)
 
         # aggregate all crawler signals
         for name in SCRAPY_SIGNAL_NAMES:
@@ -244,12 +241,11 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
                 self._resend_signal, stats.stats_changed
             )
 
-        d = super(ArachnadoCrawlerProcess, self).crawl(
-            crawler_or_spidercls, *args, **kwargs
-        )
+        d = super(ArachnadoCrawlerProcess, self).crawl(crawler, *args, **kwargs)
         return d
 
-    def _create_crawler_from_spidercls(self, spidercls):
+    def _create_crawler(self, spidercls):
+        # this is overridden to create ArachnadoCrawler instead of Crawler
         if isinstance(spidercls, six.string_types):
             spidercls = self.spider_loader.load(spidercls)
         return ArachnadoCrawler(spidercls, self.settings)
