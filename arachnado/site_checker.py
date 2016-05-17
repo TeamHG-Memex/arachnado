@@ -12,7 +12,6 @@ from twisted.internet.error import (
     ConnectionRefusedError, ConnectionDone, ConnectError,
     ConnectionLost, TCPTimedOutError
 )
-from bot_detector.detector import Detector
 
 from arachnado.utils.twistedtornado import tt_coroutine
 
@@ -73,7 +72,11 @@ class SiteCheckerSpider(scrapy.Spider):
 
     def __init__(self, *args, **kwargs):
         super(SiteCheckerSpider, self).__init__(*args, **kwargs)
-        self.detector = Detector()
+        try:
+            from bot_detector.detector import Detector
+            self.detector = Detector()
+        except ImportError:
+            self.detector = None
         logging.getLogger("scrapy.core.scraper").setLevel(logging.INFO)
 
     def start_requests(self):
@@ -151,7 +154,7 @@ class SiteCheckerSpider(scrapy.Spider):
         reactor.callLater(check_interval, self.run_check, site)
 
     def detect_engine(self, body):
-        result = self.detector.detect(body)
+        result = self.detector.detect(body) if self.detector else None
         if result is None:
             return 'generic', {}
         return result
