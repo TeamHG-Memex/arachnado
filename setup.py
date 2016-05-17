@@ -70,11 +70,12 @@ setup(
         'scrapy >= 1.1.0',
         'Twisted >= 16',
         'psutil >= 2.2',
-        'tornado >= 4.3',
+        'tornado >= 4.2, < 4.3',
         'docopt >= 0.6',
         'service_identity',
+        'motor >= 0.6.2'
     ],
     extras_requires={
-        'mongo': ['motor >= 0.4.1']
+        'mongo': [],   # backwards compatibility
     }
 )
