@@ -53,10 +53,10 @@ setup(
         'Topic :: Software Development :: Libraries :: Python Modules',
     ],
     install_requires=[
-        'scrapy >= 1.0.0',
-        'Twisted >= 12',
+        'scrapy >= 1.1.0',
+        'Twisted >= 16',
         'psutil >= 2.2',
-        'tornado >= 4.2',
+        'tornado >= 4.3',
         'docopt >= 0.6',
         'service_identity',
     ],

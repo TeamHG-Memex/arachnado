@@ -26,11 +26,6 @@ DEFAULT_SETTINGS = {
     'TELNETCONSOLE_ENABLED': False,
     # 'CONCURRENT_REQUESTS': 100,
 
-    'EXTENSIONS': {
-        'scrapy.extensions.throttle.AutoThrottle': None,
-        'arachnado.extensions.throttle.AutoThrottle': 0,
-    },
-
     'AUTOTHROTTLE_ENABLED': True,
     'AUTOTHROTTLE_DEBUG': False,
     'AUTOTHROTTLE_START_DELAY': 5,
@@ -41,9 +36,6 @@ DEFAULT_SETTINGS = {
 
     'STATS_CLASS': 'arachnado.stats.EventedStatsCollector',
     'DOWNLOADER': 'arachnado.crawler_process.ArachnadoDownloader',
-
-    # see https://github.com/scrapy/scrapy/issues/1054
-    'DOWNLOAD_HANDLERS': {'s3': None},
 
     'SPIDER_MIDDLEWARES': {
         'arachnado.spidermiddlewares.pageitems.PageItemsMiddleware': 100,

@@ -202,7 +202,7 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
                                     CrawlWebsiteSpider)
 
         if spider_cls is not None:
-            crawler = self.create_crawler(settings, spider_cls=spider_cls)
+            crawler = self.create_crawler2(settings, spider_cls=spider_cls)
             self.crawl(crawler, domain=domain, **args)
             return crawler
 
@@ -211,7 +211,7 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
             '\s+', self.opts['arachnado.scrapy']['spider_packages']
         ) if name]
 
-    def create_crawler(self, settings=None, spider_cls=None):
+    def create_crawler2(self, settings=None, spider_cls=None):
         _settings = DEFAULT_SETTINGS.copy()
         _settings.update(settings or {})
         spider_cls = self._arachnadoize_spider_cls(spider_cls)
