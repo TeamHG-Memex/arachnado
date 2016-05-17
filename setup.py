@@ -29,7 +29,7 @@ setup(
     packages=find_packages(),
     package_data={
         'arachnado': [
-            "settings/*.conf",
+            "config/*.conf",
             "templates/*.html",
             "static/css/*.css",
             

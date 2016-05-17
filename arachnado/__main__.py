@@ -95,8 +95,9 @@ def main(port, host, start_manhole, manhole_port, manhole_host, loglevel,
     crawler_process.start(stop_after_crawl=False)
 
 
-def _settings(args):
-    from arachnado.options import load_settings, ensure_bool
+def _get_opts(args):
+    """ Combine options from config files and command-line arguments """
+    from arachnado.config import load_config, ensure_bool
 
     if args['--config']:
         path = os.path.expanduser(args['--config'])
@@ -122,7 +123,7 @@ def _settings(args):
         'port': '--manhole-port',
         'host': '--manhole-host',
     })
-    opts = load_settings(config_files, overrides)
+    opts = load_config(config_files, overrides)
     ensure_bool(opts, 'arachnado', 'debug')
     ensure_bool(opts, 'arachnado.mongo_export', 'enabled')
     ensure_bool(opts, 'arachnado.manhole', 'enabled')
@@ -131,7 +132,7 @@ def _settings(args):
 
 def run():
     args = docopt(__doc__, version=__version__)
-    opts = _settings(args)
+    opts = _get_opts(args)
 
     if args['show-settings']:
         from pprint import pprint

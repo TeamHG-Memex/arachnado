@@ -6,14 +6,14 @@ from ConfigParser import SafeConfigParser
 _ROOT = os.path.abspath(os.path.dirname(__file__))
 
 FILENAMES = [
-    os.path.join(_ROOT, 'settings', 'defaults.conf'),
+    os.path.join(_ROOT, 'config', 'defaults.conf'),
     '/etc/arachnado.conf',
     os.path.expanduser('~/.config/arachnado.conf'),
     os.path.expanduser('~/.arachnado.conf'),
 ]
 
 
-def load_settings(config_files=(), overrides=()):
+def load_config(config_files=(), overrides=()):
     cp = SafeConfigParser()
     cp.read(FILENAMES + config_files)
 

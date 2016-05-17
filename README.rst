@@ -39,7 +39,7 @@ the server::
     arachnado --config ./my-config.conf
 
 For available options check
-https://github.com/TeamHG-Memex/arachnado/blob/master/arachnado/settings/defaults.conf.
+https://github.com/TeamHG-Memex/arachnado/blob/master/arachnado/config/defaults.conf.
 
 Development
 -----------
