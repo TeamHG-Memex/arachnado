@@ -18,7 +18,8 @@ from arachnado.utils.twistedtornado import tt_coroutine
 
 
 DEFAULT_SETTINGS = {
-    'DOWNLOAD_TIMEOUT': 60
+    'DOWNLOAD_TIMEOUT': 60,
+    'DOWNLOAD_HANDLERS': {'s3': None},
 }
 
 
