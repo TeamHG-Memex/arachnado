@@ -15,6 +15,9 @@ DEFAULT_SETTINGS = {
 
     'BOT_NAME': 'arachnado',
     'COOKIES_DEBUG': False,
+    'USER_AGENT': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_3) '
+                  'AppleWebKit/537.36 (KHTML, like Gecko) '
+                  'Chrome/39.0.2148.0 Safari/537.36',
 
     'MEMUSAGE_ENABLED': True,
     'DOWNLOAD_MAXSIZE': 1 * MB,

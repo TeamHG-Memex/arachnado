@@ -48,7 +48,7 @@ RUN npm run build
 
 ADD . /app
 
-RUN pip install .
+RUN pip install .[mongo]
 
 EXPOSE 8888
 
