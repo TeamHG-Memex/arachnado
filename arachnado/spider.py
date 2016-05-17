@@ -47,7 +47,6 @@ DEFAULT_SETTINGS = {
 
     'SPIDER_MIDDLEWARES': {
         'arachnado.spidermiddlewares.pageitems.PageItemsMiddleware': 100,
-        'arachnado.spidermiddlewares.login.Login': 10,
     },
     'DOWNLOADER_MIDDLEWARES': {
         'arachnado.downloadermiddlewares.proxyfromsettings'
@@ -60,10 +59,7 @@ DEFAULT_SETTINGS = {
     'MONGO_EXPORT_JOBID_KEY': '_job_id',
     'HTTPCACHE_ENABLED': False,
     # This storage is read-only. Responses are stored by PageExport middleware
-    'HTTPCACHE_STORAGE':
-    'arachnado.pagecache.mongo.MongoCacheStorage',
-
-    'LOGIN_ENABLED': True,
+    'HTTPCACHE_STORAGE': 'arachnado.pagecache.mongo.MongoCacheStorage',
 }
 
 
@@ -78,7 +74,6 @@ class ArachnadoSpider(scrapy.Spider):
     kwargs = None
     user_settings = None
     flags = None
-    login_form_response = None
 
     def __init__(self, *args, **kwargs):
         super(ArachnadoSpider, self).__init__(*args, **kwargs)

@@ -8,7 +8,6 @@ from tornado.web import Application, RequestHandler, url, HTTPError
 from arachnado.utils.misc import json_encode
 from arachnado.monitor import Monitor
 from arachnado.handler_utils import ApiHandler, NoEtagsMixin
-from arachnado.spidermiddlewares.login import test_login_credentials
 from arachnado.rpc import MainRpcHttpHandler, MainRpcWebsocketHandler
 
 
@@ -33,7 +32,6 @@ def get_application(crawler_process, site_storage, page_storage, job_storage, op
         url(r"/crawler/pause", PauseCrawler, context, name="pause"),
         url(r"/crawler/resume", ResumeCrawler, context, name="resume"),
         url(r"/crawler/status", CrawlerStatus, context, name="status"),
-        url(r"/spider/login", TestLogin, context, name="login"),
         url(r"/ws-updates", Monitor, context, name="ws-updates"),
         url(r"/ws-rpc", MainRpcWebsocketHandler, context, name="ws-rpc"),
         url(r"/rpc", MainRpcHttpHandler, context, name="rpc"),
@@ -152,17 +150,3 @@ class CrawlerStatus(BaseRequestHandler):
                     if job['id'] in crawl_ids]
 
         self.write(json_encode({"jobs": jobs}))
-
-
-class TestLogin(ApiHandler, BaseRequestHandler):
-    """ This method changes job's username and password and restarts
-    it if needed """
-    def post(self):
-        job_id = int(self.json_args['job_id'])
-        crawler = self.crawler_process.get_crawler(job_id)
-        crawler.signals.send_catch_log(
-            test_login_credentials,
-            spider=crawler.spider,
-            username=self.json_args['username'],
-            password=self.json_args['password'],
-        )

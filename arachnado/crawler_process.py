@@ -326,8 +326,6 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
             'flags': list(getattr(crawler.spider, 'flags', [])),
             'args': crawler.spider.kwargs,
             'settings': crawler.spider.user_settings,
-            'login_url': (crawler.spider.login_form_response.url
-                          if crawler.spider.login_form_response else None)
             # 'engine_info': dict(get_engine_status(crawler.engine))
         }
 

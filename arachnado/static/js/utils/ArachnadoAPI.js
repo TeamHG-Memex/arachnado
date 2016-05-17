@@ -23,11 +23,3 @@ export function pauseCrawl(jobId){
 export function resumeCrawl(jobId){
     return jsonAjax(window.RESUME_CRAWL_URL, {job_id: jobId});
 }
-
-export function login(jobId, username, password){
-    return jsonAjax(window.LOGIN_URL, {
-        job_id: jobId,
-        username: username,
-        password: password
-    });
-}
