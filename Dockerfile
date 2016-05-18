@@ -46,5 +46,14 @@ RUN npm run build
 COPY . /app
 RUN pip install .
 
+# use e.g. -v /path/to/my/arachnado/config.conf:/etc/arachnado.conf
+# docker run option to override arachnado parameters
+VOLUME /etc/arachnado.conf
+
+# this folder is added to PYTHONPATH, so modules from there are available
+# for spider_packages Arachnado option
+VOLUME /python-packages
+ENV PYTHONPATH $PYTHONPATH:/python-packages
+
 EXPOSE 8888
 ENTRYPOINT ["arachnado"]
