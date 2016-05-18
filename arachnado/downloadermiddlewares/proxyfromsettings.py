@@ -1,4 +1,4 @@
-from scrapy.contrib.downloadermiddleware.httpproxy import HttpProxyMiddleware
+from scrapy.downloadermiddlewares.httpproxy import HttpProxyMiddleware
 from scrapy.exceptions import NotConfigured
 
 
