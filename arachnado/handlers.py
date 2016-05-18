@@ -15,13 +15,13 @@ at_root = lambda *args: os.path.join(os.path.dirname(__file__), *args)
 
 
 def get_application(crawler_process, domain_crawlers,
-                    site_storage, page_storage, job_storage, opts):
+                    site_storage, item_storage, job_storage, opts):
     context = {
         'crawler_process': crawler_process,
         'domain_crawlers': domain_crawlers,
         'job_storage': job_storage,
         'site_storage': site_storage,
-        'page_storage': page_storage,
+        'item_storage': item_storage,
         'opts': opts,
     }
     debug = opts['arachnado']['debug']

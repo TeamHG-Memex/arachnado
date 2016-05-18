@@ -8,8 +8,8 @@ from arachnado.storages.mongo import MongoStorage
 class MongoTailStorage(MongoStorage):
     fetch_delay = 0
 
-    def __init__(self, *args, **kwargs):
-        super(MongoTailStorage, self).__init__(*args, **kwargs)
+    def __init__(self, mongo_uri, *args, **kwargs):
+        super(MongoTailStorage, self).__init__(mongo_uri, *args, **kwargs)
         self.tailing = False
         self.signals['tailed'] = object()
 

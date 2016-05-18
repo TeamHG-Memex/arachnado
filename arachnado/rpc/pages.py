@@ -3,10 +3,10 @@ from arachnado.storages.mongotail import MongoTailStorage
 
 class PagesRpc(object):
 
-    def __init__(self, handler, page_storage, **kwargs):
+    def __init__(self, handler, item_storage, **kwargs):
         self.handler = handler
-        self.storage = MongoTailStorage(page_storage.mongo_uri,
-                                        page_storage.cache_flag)
+        self.storage = MongoTailStorage(item_storage.mongo_uri,
+                                        item_storage.cache_flag)
 
     def subscribe(self, last_id=0, query=None, fields=None, fetch_delay=None):
         if fetch_delay:

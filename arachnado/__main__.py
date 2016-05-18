@@ -66,31 +66,22 @@ def main(port, host, start_manhole, manhole_port, manhole_host, loglevel, opts):
     }
 
     # mongo export options
-    storage_opts = opts['arachnado.mongo_export']
+    storage_opts = opts['arachnado.storage']
+    assert storage_opts['enabled'], "Storage can't be turned off"
+
+    items_uri = _getval(storage_opts, 'items_uri_env', 'items_uri')
+    jobs_uri = _getval(storage_opts, 'jobs_uri_env', 'jobs_uri')
+    sites_uri = _getval(storage_opts, 'sites_uri_env', 'sites_uri')
+
     settings.update({
         'MONGO_EXPORT_ENABLED': storage_opts['enabled'],
-        'MONGO_EXPORT_JOBS_URI':
-            getenv(storage_opts['jobs_mongo_uri_env']) or
-            storage_opts['jobs_mongo_uri'],
-        'MONGO_EXPORT_ITEMS_URI':
-            getenv(storage_opts['items_mongo_uri_env']) or
-            storage_opts['items_mongo_uri'],
+        'MONGO_EXPORT_JOBS_URI': jobs_uri,
+        'MONGO_EXPORT_ITEMS_URI': items_uri,
     })
 
-    job_storage = MongoTailStorage(
-        getenv(opts['arachnado.jobs']['mongo_uri_env']) or
-        opts['arachnado.jobs']['mongo_uri'],
-        cache=True,
-    )
-    site_storage = MongoStorage(
-        getenv(opts['arachnado.sites']['mongo_uri_env']) or
-        opts['arachnado.sites']['mongo_uri'],
-        cache=True,
-    )
-    page_storage = MongoTailStorage(
-        getenv(opts['arachnado.mongo_export']['items_mongo_uri_env']) or
-        opts['arachnado.mongo_export']['items_mongo_uri'],
-    )
+    job_storage = MongoTailStorage(jobs_uri, cache=True)
+    site_storage = MongoStorage(sites_uri, cache=True)
+    item_storage = MongoTailStorage(items_uri)
 
     site_checker_crawler = get_site_checker_crawler(site_storage)
 
@@ -104,7 +95,7 @@ def main(port, host, start_manhole, manhole_port, manhole_host, loglevel, opts):
     cron.start()
 
     app = get_application(crawler_process, domain_crawlers,
-                          site_storage, page_storage, job_storage, opts)
+                          site_storage, item_storage, job_storage, opts)
     app.listen(int(port), host)
     logger.info("Arachnado v%s is started on %s:%s" % (__version__, host, port))
 
@@ -114,6 +105,10 @@ def main(port, host, start_manhole, manhole_port, manhole_host, loglevel, opts):
             manhole_host, manhole_port))
 
     crawler_process.start(stop_after_crawl=False)
+
+
+def _getval(opts, env_key, key):
+    return getenv(opts[env_key]) or opts[key]
 
 
 def _get_opts(args):
@@ -146,7 +141,7 @@ def _get_opts(args):
     })
     opts = load_config(config_files, overrides)
     ensure_bool(opts, 'arachnado', 'debug')
-    ensure_bool(opts, 'arachnado.mongo_export', 'enabled')
+    ensure_bool(opts, 'arachnado.storage', 'enabled')
     ensure_bool(opts, 'arachnado.manhole', 'enabled')
     return opts
 
