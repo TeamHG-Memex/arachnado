@@ -11,11 +11,11 @@ logger = logging.getLogger(__name__)
 
 class Cron(object):
 
-    def __init__(self, crawler_process, site_storage):
+    def __init__(self, domain_crawlers, site_storage):
         self.ioloop = IOLoop.instance()
         self.running = False
         self.waiting_calls = {}
-        self.crawler_process = crawler_process
+        self.domain_crawlers = domain_crawlers
         self.site_storage = site_storage
         self.site_storage.subscribe(self.site_storage.available_subscriptions,
                                     self.rerun)
@@ -96,8 +96,7 @@ class Cron(object):
         else:
             url = 'spider://' + site['engine']
             args = {'post_days': '-1'}  # TODO: change in bot_engines
-        crawler = self.crawler_process.crawl_domain(
-            url, {}, args
-        )
+
+        crawler = self.domain_crawlers.crawl_domain(url, {}, args)
         if crawler:
             self.schedule(id_)

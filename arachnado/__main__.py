@@ -51,18 +51,32 @@ def setup_event_loop(use_twisted_reactor, debug=True):
             print("Using Tornado event loop as a Twisted reactor")
 
 
-def main(port, host, start_manhole, manhole_port, manhole_host, loglevel,
-         opts):
+def main(port, host, start_manhole, manhole_port, manhole_host, loglevel, opts):
     from arachnado.handlers import get_application
     from arachnado.crawler_process import ArachnadoCrawlerProcess
     from arachnado.site_checker import get_site_checker_crawler
     from arachnado.storages.mongo import MongoStorage
     from arachnado.storages.mongotail import MongoTailStorage
+    from arachnado.spider import DomainCrawlers
     from arachnado.cron import Cron
     from arachnado import manhole
 
-    settings = {'LOG_LEVEL': loglevel}
-    crawler_process = ArachnadoCrawlerProcess(settings, opts)
+    settings = {
+        'LOG_LEVEL': loglevel,
+    }
+
+    # mongo export options
+    storage_opts = opts['arachnado.mongo_export']
+    settings.update({
+        'MONGO_EXPORT_ENABLED': storage_opts['enabled'],
+        'MONGO_EXPORT_JOBS_URI':
+            getenv(storage_opts['jobs_mongo_uri_env']) or
+            storage_opts['jobs_mongo_uri'],
+        'MONGO_EXPORT_ITEMS_URI':
+            getenv(storage_opts['items_mongo_uri_env']) or
+            storage_opts['items_mongo_uri'],
+    })
+
     job_storage = MongoTailStorage(
         getenv(opts['arachnado.jobs']['mongo_uri_env']) or
         opts['arachnado.jobs']['mongo_uri'],
@@ -77,13 +91,20 @@ def main(port, host, start_manhole, manhole_port, manhole_host, loglevel,
         getenv(opts['arachnado.mongo_export']['items_mongo_uri_env']) or
         opts['arachnado.mongo_export']['items_mongo_uri'],
     )
+
     site_checker_crawler = get_site_checker_crawler(site_storage)
+
+    crawler_process = ArachnadoCrawlerProcess(settings)
     crawler_process.crawl(site_checker_crawler)
 
-    cron = Cron(crawler_process, site_storage)
+    spider_packages = opts['arachnado.scrapy']['spider_packages']
+    domain_crawlers = DomainCrawlers(crawler_process, spider_packages, settings)
+
+    cron = Cron(domain_crawlers, site_storage)
     cron.start()
 
-    app = get_application(crawler_process, site_storage, page_storage, job_storage, opts)
+    app = get_application(crawler_process, domain_crawlers,
+                          site_storage, page_storage, job_storage, opts)
     app.listen(int(port), host)
     logger.info("Arachnado v%s is started on %s:%s" % (__version__, host, port))
 

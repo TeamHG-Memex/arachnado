@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
-import re
 import logging
 import itertools
 import operator
-from os import getenv
 
 import six
 from scrapy.core.downloader import Downloader
@@ -18,10 +16,6 @@ from scrapy.core.engine import ExecutionEngine
 from arachnado.signals import Signal
 from arachnado import stats
 from arachnado.process_stats import ProcessStatsMonitor
-from arachnado.utils.spiders import get_spider_cls
-from arachnado.spider import (
-    ArachnadoSpider, CrawlWebsiteSpider, DEFAULT_SETTINGS
-)
 
 logger = logging.getLogger(__name__)
 
@@ -167,8 +161,7 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
     """
     crawl_ids = itertools.count(start=1)
 
-    def __init__(self, settings=None, opts=None):
-        self.opts = opts or {}
+    def __init__(self, settings=None):
         self.signals = SignalManager(self)
         self.signals.connect(self.on_spider_closed,
                              CrawlerProcessSignals.spider_closed)
@@ -177,54 +170,12 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
         self.procmon = ProcessStatsMonitor()
         self.procmon.start()
 
-        super(ArachnadoCrawlerProcess, self).__init__(settings or {})
+        super(ArachnadoCrawlerProcess, self).__init__(settings)
 
         # don't log DepthMiddleware messages
         # see https://github.com/scrapy/scrapy/issues/1308
         logger_ = logging.getLogger("scrapy.spidermiddlewares.depth")
         logger_.setLevel(logging.INFO)
-
-    def crawl_domain(self, domain, args, settings):
-        """
-        Create, start and return crawler for given domain
-        """
-        storage_opts = self.opts['arachnado.mongo_export']
-        settings.update({
-            'MONGO_EXPORT_ENABLED': storage_opts['enabled'],
-            'MONGO_EXPORT_JOBS_URI':
-                getenv(storage_opts['jobs_mongo_uri_env']) or
-                storage_opts['jobs_mongo_uri'],
-            'MONGO_EXPORT_ITEMS_URI':
-                getenv(storage_opts['items_mongo_uri_env']) or
-                storage_opts['items_mongo_uri'],
-        })
-        spider_cls = get_spider_cls(domain, self._get_spider_package_names(),
-                                    CrawlWebsiteSpider)
-
-        if spider_cls is not None:
-            crawler = self.create_crawler2(settings, spider_cls=spider_cls)
-            self.crawl(crawler, domain=domain, **args)
-            return crawler
-
-    def _get_spider_package_names(self):
-        return [name for name in re.split(
-            '\s+', self.opts['arachnado.scrapy']['spider_packages']
-        ) if name]
-
-    def create_crawler2(self, settings=None, spider_cls=None):
-        _settings = DEFAULT_SETTINGS.copy()
-        _settings.update(settings or {})
-        spider_cls = self._arachnadoize_spider_cls(spider_cls)
-        return ArachnadoCrawler(spider_cls, _settings)
-
-    def _arachnadoize_spider_cls(self, spider_cls):
-        """
-        Ensure that spider is inherited from ArachnadoSpider
-        to receive its features
-        """
-        if not isinstance(spider_cls, ArachnadoSpider):
-            return type(spider_cls.__name__, (spider_cls, ArachnadoSpider), {})
-        return spider_cls
 
     def crawl(self, crawler_or_spidercls, *args, **kwargs):
         kwargs['crawl_id'] = next(self.crawl_ids)

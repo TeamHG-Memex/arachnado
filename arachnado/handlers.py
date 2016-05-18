@@ -14,9 +14,11 @@ from arachnado.rpc import MainRpcHttpHandler, MainRpcWebsocketHandler
 at_root = lambda *args: os.path.join(os.path.dirname(__file__), *args)
 
 
-def get_application(crawler_process, site_storage, page_storage, job_storage, opts):
+def get_application(crawler_process, domain_crawlers,
+                    site_storage, page_storage, job_storage, opts):
     context = {
         'crawler_process': crawler_process,
+        'domain_crawlers': domain_crawlers,
         'job_storage': job_storage,
         'site_storage': site_storage,
         'page_storage': page_storage,
@@ -49,12 +51,14 @@ def get_application(crawler_process, site_storage, page_storage, job_storage, op
 
 class BaseRequestHandler(RequestHandler):
 
-    def initialize(self, crawler_process, site_storage, opts, **kwargs):
+    def initialize(self, crawler_process, domain_crawlers,
+                   site_storage, opts, **kwargs):
         """
         :param arachnado.crawler_process.ArachnadoCrawlerProcess
             crawler_process:
         """
         self.crawler_process = crawler_process
+        self.domain_crawlers = domain_crawlers
         self.site_storage = site_storage
         self.opts = opts
 
@@ -82,7 +86,7 @@ class StartCrawler(ApiHandler, BaseRequestHandler):
     This endpoint starts crawling for a domain.
     """
     def crawl(self, domain, args, settings):
-        self.crawler = self.crawler_process.crawl_domain(domain, args, settings)
+        self.crawler = self.domain_crawlers.crawl_domain(domain, args, settings)
         return bool(self.crawler)
 
     def post(self):

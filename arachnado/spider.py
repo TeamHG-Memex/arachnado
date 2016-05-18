@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 import logging
+import re
 
 import scrapy
+from arachnado.crawler_process import ArachnadoCrawler
+from arachnado.utils.spiders import get_spider_cls
 from scrapy.linkextractors import LinkExtractor
 from scrapy.http.response.html import HtmlResponse
 
@@ -122,3 +125,47 @@ class CrawlWebsiteSpider(ArachnadoSpider):
             return
         for link in self.get_links(response):
             yield scrapy.Request(link.url, self.parse)
+
+
+class DomainCrawlers(object):
+    """
+    Helper class to create and start crawlers for given domains.
+    """
+    def __init__(self, crawler_process, spider_packages, settings):
+        self.crawler_process = crawler_process
+        self.spider_packages = _parse_spider_packages(spider_packages)
+        self.settings = settings
+
+    def crawl_domain(self, domain, args, settings):
+        """ Create, start and return a crawler for a given domain. """
+        spider_cls = get_spider_cls(domain, self.spider_packages,
+                                    CrawlWebsiteSpider)
+        if spider_cls is not None:
+            crawler = self._get_crawler(spider_cls, settings)
+            self.crawler_process.crawl(crawler, domain=domain, **args)
+            return crawler
+
+    def _get_crawler(self, spider_cls=None, settings=None):
+        _settings = DEFAULT_SETTINGS.copy()
+        _settings.update(self.settings)
+        _settings.update(settings or {})
+        spider_cls = _arachnadoize_spider_cls(spider_cls)
+        return ArachnadoCrawler(spider_cls, _settings)
+
+
+def _arachnadoize_spider_cls(spider_cls):
+    """
+    Ensure that spider is inherited from ArachnadoSpider
+    to receive its features. HackHackHack.
+    """
+    if not isinstance(spider_cls, ArachnadoSpider):
+        return type(spider_cls.__name__, (spider_cls, ArachnadoSpider), {})
+    return spider_cls
+
+
+def _parse_spider_packages(spider_packages):
+    """
+    >>> _parse_spider_packages("mypackage.spiders package2  package3  ")
+    ['mypackage.spiders', 'package2', 'package3']
+    """
+    return [name for name in re.split('\s+', spider_packages) if name]
