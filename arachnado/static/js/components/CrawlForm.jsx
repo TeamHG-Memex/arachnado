@@ -13,7 +13,9 @@ var noPadding = {
     paddingLeft: 0, paddingRight: 0, marginLeft: 0, marginRight: 0
 };
 
-
+var tinyPadding = {
+    paddingLeft: 0, paddingRight: 1, marginLeft: 0, marginRight: 0
+};
 
 export var CrawlForm = React.createClass({
     getInitialState: function () {
@@ -21,7 +23,7 @@ export var CrawlForm = React.createClass({
     },
 
     render: function () {
-        var toggleOptionsClass = 'form-control btn' + (this.state.isOptionsVisible ? ' active btn-success' : '');
+        var toggleOptionsClass = 'form-control btn btn-info' + (this.state.isOptionsVisible ? ' active' : '');
         return (
             <div>
                 <form method="post" className="container-fluid" style={noPadding}
@@ -30,7 +32,7 @@ export var CrawlForm = React.createClass({
                         <div className="col-xs-2"  style={noPadding}>
                             <button type="submit" className="btn btn-success" style={{width:"100%"}}>Crawl</button>
                         </div>
-                        <div className="col-xs-9" style={noPadding}>
+                        <div className="col-xs-9" style={tinyPadding}>
                             <input type="text" className="form-control" name="domain"
                                    ref="domainInput" value={this.state.value}
                                    onChange={this.onChange}

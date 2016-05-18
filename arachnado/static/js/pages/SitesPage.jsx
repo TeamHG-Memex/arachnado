@@ -42,7 +42,7 @@ var NoRows = React.createClass({
             <td colSpan="8">No sites to show. Feel free to add one using button above</td>
         </tr>);
     }
-})
+});
 
 var SiteRow = React.createClass({
     getInitialState() {
