@@ -54,6 +54,11 @@ export var KeyValueList = React.createClass({
 });
 
 
+var smallPadding = {
+    paddingLeft: 8, paddingRight: 8, marginLeft: 0, marginRight: 0
+};
+
+
 var KeyValueRow = React.createClass({
     getInitialState: function() {
         return {
@@ -63,17 +68,17 @@ var KeyValueRow = React.createClass({
     },
     render: function() {
         return (
-            <div>
-                <div className="col-xs-5">
+            <div class="row" style={{marginLeft: -8, paddingBottom:32}}>
+                <div className="col-xs-5" style={smallPadding}>
                     <input type="text" placeholder={this.props.keyPlaceholder}
                         style={{width: '100%'}} value={this.state.key} onChange={this.onKeyChange}/>
                 </div>
-                <div className="col-xs-6">
+                <div className="col-xs-6" style={smallPadding}>
                     <input type="text" placeholder={this.props.valuePlaceholder}
                         style={{width: '100%'}} value={this.state.value} onChange={this.onValueChange}/>
                 </div>
-                <div className="col-xs-1">
-                    <button className="btn btn-danger btn-xs pull-right" onClick={this.props.onDelete}>
+                <div className="col-xs-1" style={smallPadding}>
+                    <button className="btn btn-warning btn-xs" onClick={this.props.onDelete}>
                         <Glyphicon glyph="minus" />
                     </button>
                 </div>
