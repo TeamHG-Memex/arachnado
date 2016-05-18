@@ -19,13 +19,13 @@ export var KeyValueList = React.createClass({
                 onChange={this.onChange}/>
         );
         return (
-            <div>
+            <div className="clearfix">
                 <h5>
-                    {this.props.title}
-                    &nbsp;&nbsp;
                     <button className="btn btn-success btn-xs" onClick={this.onCreate}>
-                        <Glyphicon glyph="plus" />
+                        <Glyphicon glyph="plus" /> Add
                     </button>
+                    &nbsp;&nbsp;
+                    {this.props.title}
                 </h5>
                 {rows}
             </div>
