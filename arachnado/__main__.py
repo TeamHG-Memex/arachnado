@@ -20,7 +20,7 @@ Options:
                             "twisted", "tornado" and "auto".
   --debug                   Enable debug mode.
   --version                 Show version information
-  -h --help                 Show this help
+  --help                    Show this help
 
 """
 from __future__ import absolute_import
