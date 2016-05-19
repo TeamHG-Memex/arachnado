@@ -16,6 +16,9 @@ from twisted.internet.error import (
 from arachnado.utils.twistedtornado import tt_coroutine
 
 
+logger = logging.getLogger(__name__)
+
+
 DEFAULT_SETTINGS = {
     'DOWNLOAD_TIMEOUT': 60,
 }
@@ -44,7 +47,14 @@ class SiteCheckerCrawler(Crawler):
 
     @tt_coroutine
     def open_spider(self, spider, *args, **kwargs):
-        yield self.storage.fetch()
+        try:
+            yield self.storage.fetch()
+        except Exception:
+            logger.error(
+                "Can't connect to %s. SiteChecked won't work.",
+                self.storage.mongo_uri, exc_info=True,
+            )
+            raise
 
     def item_scraped(self, item):
         self.storage.update(dict(item))
