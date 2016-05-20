@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
+
+import contextlib
 import logging
 import re
 
@@ -11,11 +13,13 @@ from arachnado.crawler_process import ArachnadoCrawler
 from arachnado.utils.spiders import get_spider_cls
 from arachnado.utils.misc import MB, add_scheme_if_missing, get_netloc
 
+
 DEFAULT_SETTINGS = {
     'DEPTH_STATS_VERBOSE': True,
     'DEPTH_PRIORITY': 1,
     'SCHEDULER_DISK_QUEUE': 'scrapy.squeues.PickleFifoDiskQueue',
     'SCHEDULER_MEMORY_QUEUE': 'scrapy.squeues.FifoMemoryQueue',
+    'PREFER_PAGINATION': False,
 
     'BOT_NAME': 'arachnado',
     'COOKIES_DEBUG': False,
@@ -110,9 +114,12 @@ class CrawlWebsiteSpider(ArachnadoSpider):
         allow_domain = self.domain
         if self.domain.startswith("www."):
             allow_domain = allow_domain[len("www."):]
-        self.get_links = LinkExtractor(
-            allow_domains=[allow_domain]
-        ).extract_links
+
+        self.link_extractor = LinkExtractor(
+            allow_domains=[allow_domain],
+            canonicalize=False,
+        )
+        self.get_links = self.link_extractor.extract_links
 
         for elem in self.parse(response):
             yield elem
@@ -122,8 +129,31 @@ class CrawlWebsiteSpider(ArachnadoSpider):
             self.logger.info("non-HTML response is skipped: %s" % response.url)
             return
 
+        if self.settings.getbool('PREFER_PAGINATION'):
+            # Follow pagination links; pagination is not a subject of
+            # a max depth limit. This also prioritizes pagination links because
+            # depth is not increased for them.
+            with _dont_increase_depth(response):
+                for url in self._pagination_urls(response):
+                    yield scrapy.Request(url, meta={'is_page': True})
+
         for link in self.get_links(response):
             yield scrapy.Request(link.url, self.parse)
+
+    def _pagination_urls(self, response):
+        import autopager
+        return [url for url in autopager.urls(response)
+                if self.link_extractor.matches(url)]
+
+
+@contextlib.contextmanager
+def _dont_increase_depth(response):
+    # XXX: a hack to keep the same depth for outgoing requests
+    response.meta['depth'] -= 1
+    try:
+        yield
+    finally:
+        response.meta['depth'] += 1
 
 
 class DomainCrawlers(object):

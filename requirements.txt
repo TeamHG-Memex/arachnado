@@ -8,3 +8,4 @@ docopt == 0.6.2
 service_identity
 tornadorpc == 0.1.1
 croniter == 0.3.8
+autopager == 0.2

@@ -77,5 +77,6 @@ setup(
     ],
     extras_requires={
         'mongo': [],   # backwards compatibility
+        'extras': ['autopager >= 0.2'],
     }
 )
