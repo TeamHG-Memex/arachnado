@@ -4,17 +4,18 @@ import logging
 import re
 
 import scrapy
-from arachnado.crawler_process import ArachnadoCrawler
-from arachnado.utils.spiders import get_spider_cls
 from scrapy.linkextractors import LinkExtractor
 from scrapy.http.response.html import HtmlResponse
 
+from arachnado.crawler_process import ArachnadoCrawler
+from arachnado.utils.spiders import get_spider_cls
 from arachnado.utils.misc import MB, add_scheme_if_missing, get_netloc
-
 
 DEFAULT_SETTINGS = {
     'DEPTH_STATS_VERBOSE': True,
-    'DEPTH_PRIORITY': -1,
+    'DEPTH_PRIORITY': 1,
+    'SCHEDULER_DISK_QUEUE': 'scrapy.squeues.PickleFifoDiskQueue',
+    'SCHEDULER_MEMORY_QUEUE': 'scrapy.squeues.FifoMemoryQueue',
 
     'BOT_NAME': 'arachnado',
     'COOKIES_DEBUG': False,
@@ -24,8 +25,6 @@ DEFAULT_SETTINGS = {
 
     'MEMUSAGE_ENABLED': True,
     'DOWNLOAD_MAXSIZE': 1 * MB,
-    # see https://github.com/scrapy/scrapy/issues/1303
-    # 'DOWNLOAD_WARNSIZE': 1 * MB,
 
     # 'CLOSESPIDER_PAGECOUNT': 30,  # for debugging
     'LOG_LEVEL': 'DEBUG',
@@ -47,8 +46,7 @@ DEFAULT_SETTINGS = {
         'arachnado.spidermiddlewares.pageitems.PageItemsMiddleware': 100,
     },
     'DOWNLOADER_MIDDLEWARES': {
-        'arachnado.downloadermiddlewares.proxyfromsettings'
-        '.ProxyFromSettingsMiddleware': 10,
+        'arachnado.downloadermiddlewares.proxyfromsettings.ProxyFromSettingsMiddleware': 10,
     },
     'ITEM_PIPELINES': {
         'arachnado.pipelines.mongoexport.MongoExportPipeline': 10,
@@ -123,6 +121,7 @@ class CrawlWebsiteSpider(ArachnadoSpider):
         if not isinstance(response, HtmlResponse):
             self.logger.info("non-HTML response is skipped: %s" % response.url)
             return
+
         for link in self.get_links(response):
             yield scrapy.Request(link.url, self.parse)
 
