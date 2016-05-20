@@ -22,9 +22,9 @@ class BaseWSHandler(websocket.WebSocketHandler):
 
     def write_event(self, event, data):
         """ Send a message to the client """
-        if event != "process:stats":
-            print("-----------------================")
-            print("write_event {} {}".format(event, data))
+        # if event != "process:stats":
+        #     print("-----------------================")
+        #     print("write_event {} {}".format(event, data))
         message = None
         try:
             message = json_encode({'event': event, 'data': data})
@@ -39,8 +39,8 @@ class BaseWSHandler(websocket.WebSocketHandler):
                 logger.warn("Error while sending message {}".format(e))
 
     def on_message(self, message):
-        print("-----------------================")
-        print("on message {}".format(message))
+        # print("-----------------================")
+        # print("on message {}".format(message))
         try:
             msg = json.loads(message)
             event, data = msg['event'], msg['data']

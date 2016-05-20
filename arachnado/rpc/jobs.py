@@ -17,8 +17,8 @@ class JobsRpc(object):
         self.storage.unsubscribe('tailed')
 
     def _publish(self, data):
-        print("=============================================================")
-        print("jobs rpc :")
-        print(data)
+        # print("=============================================================")
+        # print("jobs rpc :")
+        # print(data)
         if self.storage.tailing:
             self.handler.write_event('jobs.tailed', data)
