@@ -73,6 +73,9 @@ def main(port, host, start_manhole, manhole_port, manhole_host, loglevel, opts):
     jobs_uri = _getval(storage_opts, 'jobs_uri_env', 'jobs_uri')
     sites_uri = _getval(storage_opts, 'sites_uri_env', 'sites_uri')
 
+    settings.update({k: v for k, v in opts['arachnado.scrapy'].items()
+                     if k.isupper()})
+
     settings.update({
         'MONGO_EXPORT_ENABLED': storage_opts['enabled'],
         'MONGO_EXPORT_JOBS_URI': jobs_uri,

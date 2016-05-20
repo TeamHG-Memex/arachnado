@@ -15,6 +15,7 @@ FILENAMES = [
 
 def load_config(config_files=(), overrides=()):
     cp = SafeConfigParser()
+    cp.optionxform = str  # make parsing case-sensitive
     cp.read(FILENAMES + config_files)
 
     for section, option, value in overrides:
