@@ -73,7 +73,8 @@ setup(
         'tornado >= 4.2, < 4.3',
         'docopt >= 0.6',
         'service_identity',
-        'motor >= 0.6.2'
+        'motor >= 0.6.2',
+        'autologin-middleware',
     ],
     extras_requires={
         'mongo': [],   # backwards compatibility

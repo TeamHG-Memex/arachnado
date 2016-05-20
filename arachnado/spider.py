@@ -8,6 +8,7 @@ import re
 import scrapy
 from scrapy.linkextractors import LinkExtractor
 from scrapy.http.response.html import HtmlResponse
+from autologin_middleware import link_looks_like_logout
 
 from arachnado.crawler_process import ArachnadoCrawler
 from arachnado.utils.spiders import get_spider_cls
@@ -19,7 +20,14 @@ DEFAULT_SETTINGS = {
     'DEPTH_PRIORITY': 1,
     'SCHEDULER_DISK_QUEUE': 'scrapy.squeues.PickleFifoDiskQueue',
     'SCHEDULER_MEMORY_QUEUE': 'scrapy.squeues.FifoMemoryQueue',
+
+    # Turn it ON if the goal is to crawl the whole webiste
+    # (vs crawling most recent content):
     'PREFER_PAGINATION': False,
+
+    # To enable autologin turn this option ON and pass AUTOLOGIN_URL
+    # (e.g. 'http://127.0.0.1:8089')
+    'AUTOLOGIN_ENABLED': False,
 
     'BOT_NAME': 'arachnado',
     'COOKIES_DEBUG': False,
@@ -51,6 +59,9 @@ DEFAULT_SETTINGS = {
     },
     'DOWNLOADER_MIDDLEWARES': {
         'arachnado.downloadermiddlewares.proxyfromsettings.ProxyFromSettingsMiddleware': 10,
+        'autologin_middleware.AutologinMiddleware': 605,
+        'scrapy.downloadermiddlewares.cookies.CookiesMiddleware': None,
+        'autologin_middleware.ExposeCookiesMiddleware': 700,
     },
     'ITEM_PIPELINES': {
         'arachnado.pipelines.mongoexport.MongoExportPipeline': 10,
@@ -138,6 +149,8 @@ class CrawlWebsiteSpider(ArachnadoSpider):
                     yield scrapy.Request(url, meta={'is_page': True})
 
         for link in self.get_links(response):
+            if link_looks_like_logout(link):
+                continue
             yield scrapy.Request(link.url, self.parse)
 
     def _pagination_urls(self, response):
