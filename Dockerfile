@@ -18,6 +18,10 @@ RUN apt-get update; apt-get install -y --no-install-recommends \
     python-lxml
 RUN pip install -U pip setuptools
 
+# install nodejs
+RUN curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
+RUN apt-get install -y nodejs
+
 # To use forum spiders with Arachnado, clone repos and uncomment lines
 
 # git clone git@github.com:TeamHG-Memex/bot_engines.git
@@ -33,11 +37,8 @@ COPY requirements.txt /app/requirements.txt
 RUN pip install -r requirements.txt
 
 # rebuild static files
-RUN curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
-RUN apt-get install -y nodejs
 COPY package.json /app/package.json
 RUN npm install
-
 COPY arachnado/static/js /app/arachnado/static/js
 COPY webpack.config.js /app/webpack.config.js
 RUN npm run build
