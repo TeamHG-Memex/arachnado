@@ -270,7 +270,6 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
             'status': status,
             'stats': crawler.spider.crawler.stats.get_stats(crawler.spider),
             'downloads': self._downloader_stats(crawler),
-            'flags': list(getattr(crawler.spider, 'flags', [])),
             'args': crawler.spider.kwargs,
             'settings': crawler.spider.user_settings,
             # 'engine_info': dict(get_engine_status(crawler.engine))

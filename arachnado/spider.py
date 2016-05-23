@@ -84,12 +84,9 @@ class ArachnadoSpider(scrapy.Spider):
     motor_job_id = None
     kwargs = None
     user_settings = None
-    flags = None
 
     def __init__(self, *args, **kwargs):
         super(ArachnadoSpider, self).__init__(*args, **kwargs)
-
-        self.flags = set()
         self.kwargs = kwargs
         # don't log scraped items
         logging.getLogger("scrapy.core.scraper").setLevel(logging.INFO)
