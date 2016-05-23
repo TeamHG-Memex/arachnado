@@ -71,6 +71,8 @@ class JsonRpcWebsocketHandler(websocket.WebSocketHandler):
             data = json.loads(data)
         message = json_encode({'event': event, 'data': data})
         try:
-            yield self.write_message(message)
+            msg_d = self.write_message(message)
+            if msg_d is not None:
+                yield msg_d
         except WebSocketClosedError:
             pass
