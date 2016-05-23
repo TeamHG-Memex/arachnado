@@ -108,8 +108,8 @@ class CrawlWebsiteSpider(ArachnadoSpider):
         self.start_url = add_scheme_if_missing(self.domain)
 
     def start_requests(self):
-        self.logger.info("Started job %s#%d for domain %s",
-                         self.motor_job_id, self.crawl_id, self.domain)
+        self.logger.info("Started job %s (mongo id=%s) for domain %s",
+                         self.crawl_id, self.motor_job_id, self.domain)
         yield scrapy.Request(self.start_url, self.parse_first,
                              dont_filter=True)
 

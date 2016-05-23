@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import logging
 import itertools
 import operator
+import uuid
 
 import six
 from scrapy.core.downloader import Downloader
@@ -159,8 +160,6 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
     assigns unique ids to each spider job, workarounds some Scrapy
     issues and provides extra stats.
     """
-    crawl_ids = itertools.count(start=1)
-
     def __init__(self, settings=None):
         self.signals = SignalManager(self)
         self.signals.connect(self.on_spider_closed,
@@ -178,7 +177,7 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
         logger_.setLevel(logging.INFO)
 
     def crawl(self, crawler_or_spidercls, *args, **kwargs):
-        kwargs['crawl_id'] = next(self.crawl_ids)
+        kwargs['crawl_id'] = uuid.uuid4().hex
         crawler = self.create_crawler(crawler_or_spidercls)
 
         # aggregate all crawler signals
@@ -308,7 +307,7 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
             return "unknown"
         if not crawler.crawling:
             return "stopping"
-        if int(crawler.spider.crawl_id) in self._paused_jobs:
+        if crawler.spider.crawl_id in self._paused_jobs:
             return "suspended"
         return "crawling"
 

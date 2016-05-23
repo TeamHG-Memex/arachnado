@@ -114,11 +114,11 @@ class _ControlJobHandler(ApiHandler, BaseRequestHandler):
 
     def post(self):
         if self.is_json:
-            job_id = int(self.json_args['job_id'])
+            job_id = self.json_args['job_id']
             self.control_job(job_id)
             self.write({"status": "ok"})
         else:
-            job_id = int(self.get_body_argument('job_id'))
+            job_id = self.get_body_argument('job_id')
             self.control_job(job_id)
             self.redirect("/")
 
@@ -149,7 +149,7 @@ class CrawlerStatus(BaseRequestHandler):
         if crawl_ids_arg == '':
             jobs = self.crawler_process.get_jobs()
         else:
-            crawl_ids = set(map(int, crawl_ids_arg.split(',')))
+            crawl_ids = set(crawl_ids_arg.split(','))
             jobs = [job for job in self.crawler_process.get_jobs()
                     if job['id'] in crawl_ids]
 

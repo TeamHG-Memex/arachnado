@@ -72,6 +72,7 @@ class MongoExportPipeline(object):
             yield self.items_col.ensure_index(self.job_id_key)
 
             self.job_id = yield self.jobs_col.insert({
+                'id': spider.crawl_id,
                 'started_at': datetime.datetime.utcnow(),
                 'spider': spider.name,
             })
