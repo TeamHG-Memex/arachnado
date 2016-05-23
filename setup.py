@@ -74,7 +74,7 @@ setup(
         'docopt >= 0.6',
         'service_identity',
         'motor >= 0.6.2',
-        'autologin-middleware',
+        'autologin-middleware >= 0.1.1',
     ],
     extras_requires={
         'mongo': [],   # backwards compatibility
