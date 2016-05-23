@@ -4,6 +4,7 @@ from __future__ import absolute_import
 import contextlib
 import logging
 import re
+import copy
 
 import scrapy
 from scrapy.linkextractors import LinkExtractor
@@ -79,11 +80,11 @@ class ArachnadoSpider(scrapy.Spider):
     A base spider that contains common attributes and utilities for all
     Arachnado spiders
     """
-    crawl_id = None
-    domain = None
-    motor_job_id = None
-    kwargs = None
-    user_settings = None
+    crawl_id = None       # assigned by ArachnadoCrawlerProcess
+    motor_job_id = None   # assigned by MongoExportPipeline
+    domain = None         # set by caller code, e.g. by handlers.StartCrawler
+    kwargs = None         # set in a constructor
+    user_settings = None  # set by caller code; for information only
 
     def __init__(self, *args, **kwargs):
         super(ArachnadoSpider, self).__init__(*args, **kwargs)
@@ -179,13 +180,15 @@ class DomainCrawlers(object):
         """ Create, start and return a crawler for a given domain. """
         spider_cls = get_spider_cls(domain, self.spider_packages,
                                     CrawlWebsiteSpider)
-        if spider_cls is not None:
-            crawler = self._get_crawler(spider_cls, settings)
-            self.crawler_process.crawl(crawler, domain=domain, **args)
-            return crawler
+        if not spider_cls:
+            return
 
-    def _get_crawler(self, spider_cls=None, settings=None):
-        _settings = DEFAULT_SETTINGS.copy()
+        crawler = self._create_crawler(spider_cls, settings)
+        self.crawler_process.crawl(crawler, domain=domain, **args)
+        return crawler
+
+    def _create_crawler(self, spider_cls=None, settings=None):
+        _settings = copy.deepcopy(DEFAULT_SETTINGS)
         _settings.update(self.settings)
         _settings.update(settings or {})
         spider_cls = _arachnadoize_spider_cls(spider_cls)
