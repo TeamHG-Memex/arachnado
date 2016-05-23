@@ -75,6 +75,7 @@ setup(
         'service_identity',
         'motor >= 0.6.2',
         'autologin-middleware >= 0.1.1',
+        'six',
     ],
     extras_requires={
         'mongo': [],   # backwards compatibility

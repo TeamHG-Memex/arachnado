@@ -66,7 +66,7 @@ class SiteCheckerCrawler(Crawler):
 
 class SiteCheckerSpider(scrapy.Spider):
     name = 'site-checker'
-    handle_httpstatus_list = range(100, 300) + range(400, 600)
+    handle_httpstatus_list = list(range(100, 300)) + list(range(400, 600))
     error_messages = {
         TimeoutError: 'timeout',
         DNSLookupError: 'host not found',
@@ -100,12 +100,12 @@ class SiteCheckerSpider(scrapy.Spider):
         raise DontCloseSpider
 
     def run_checks(self, sites):
-        for site in sites.itervalues():
+        for site in sites.values():
             if str(site['_id']) not in self.running_ids:
                 self.running_ids.add(str(site['_id']))
                 self.run_check(site)
         # Remove deleted checks from running_ids
-        self.running_ids &= set(sites.iterkeys())
+        self.running_ids &= set(sites.keys())
 
     def parse_site(self, response):
         id_ = str(response.meta['_id'])

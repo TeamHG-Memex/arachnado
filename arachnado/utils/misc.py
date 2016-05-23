@@ -1,5 +1,5 @@
 from __future__ import absolute_import
-import urlparse
+from six.moves.urllib.parse import urlparse
 
 from scrapy.utils.serialize import ScrapyJSONEncoder
 from bson.objectid import ObjectId
@@ -66,4 +66,4 @@ def get_netloc(url):
     >>> get_netloc("http://blog.example.org/foo")
     'blog.example.org'
     """
-    return urlparse.urlparse(add_scheme_if_missing(url)).netloc
+    return urlparse(add_scheme_if_missing(url)).netloc

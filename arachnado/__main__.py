@@ -59,7 +59,6 @@ def main(port, host, start_manhole, manhole_port, manhole_host, loglevel, opts):
     from arachnado.storages.mongotail import MongoTailStorage
     from arachnado.spider import DomainCrawlers
     from arachnado.cron import Cron
-    from arachnado import manhole
 
     settings = {
         'LOG_LEVEL': loglevel,
@@ -103,6 +102,7 @@ def main(port, host, start_manhole, manhole_port, manhole_host, loglevel, opts):
     logger.info("Arachnado v%s is started on %s:%s" % (__version__, host, port))
 
     if start_manhole:
+        from arachnado import manhole
         manhole.start(manhole_port, manhole_host, {'cp': crawler_process})
         logger.info("Manhole server is started on %s:%s" % (
             manhole_host, manhole_port))

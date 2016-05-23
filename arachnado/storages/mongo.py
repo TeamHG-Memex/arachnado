@@ -77,7 +77,7 @@ class MongoStorage(object):
 
     @property
     def available_subscriptions(self):
-        return self.signals.keys()
+        return list(self.signals.keys())
 
     @coroutine
     def fetch(self):
