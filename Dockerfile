@@ -22,10 +22,22 @@ RUN pip install -U pip setuptools
 RUN curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
 RUN apt-get install -y nodejs
 
-# install arachnado
 WORKDIR /app
-COPY . /app
+
+# Install Python packages. Requirements change less often than source code,
+# so this is above COPY . /app
+COPY ./requirements.txt /app/requirements.txt
 RUN pip install -r requirements.txt
+
+# Install npm packages required to build static files.
+COPY package.json /app/package.json
+RUN npm install
+
+# install arachnado
+COPY . /app
+
+# npm install is executed again because node_modules can be overwritten
+# if .dockerignore is not active (may happen with docker-compose or DockerHub)
 RUN npm install
 RUN npm run build
 RUN pip install .
