@@ -16,4 +16,7 @@ dist/
 error.log
 bot_engines/
 bot_spiders/
+.coverage
+.coverage.*
+htmlcov/
 
