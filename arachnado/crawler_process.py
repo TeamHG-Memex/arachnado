@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 import logging
-import itertools
 import operator
-import uuid
 
 import six
+from twisted.internet import defer
 from scrapy.core.downloader import Downloader
 from scrapy.utils.reactor import CallLaterOnce
 from scrapy import signals
@@ -201,7 +200,10 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
 
     def stop_job(self, crawl_id):
         """ Stop a single crawl job """
-        self.get_crawler(crawl_id).stop()
+        crawler = self.get_crawler(crawl_id)
+        dfd = crawler.engine.close_spider(crawler.spider, 'stopped')
+        dfd.addBoth(lambda _: crawler.stop())
+        return dfd
 
     def pause_job(self, crawl_id):
         """ Pause a crawling job """

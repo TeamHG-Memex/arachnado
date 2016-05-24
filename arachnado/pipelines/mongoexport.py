@@ -5,13 +5,13 @@ Async MongoDB item exporter using Motor_.
 .. _Motor: https://github.com/mongodb/motor
 """
 from __future__ import absolute_import
-import json
 import logging
 import datetime
 
-import scrapy
 from tornado import gen
+import scrapy
 from scrapy.exceptions import NotConfigured
+from scrapy import signals
 
 from arachnado.utils.twistedtornado import tt_coroutine
 from arachnado.utils.misc import json_encode
@@ -62,6 +62,10 @@ class MongoExportPipeline(object):
         self.jobs_client, _, _, _, self.jobs_col = \
             motor_from_uri(self.jobs_uri)
 
+        # XXX: spider_closed is used instead of close_spider because
+        # the latter doesn't provide a closing reason.
+        crawler.signals.connect(self.spider_closed, signals.spider_closed)
+
     @classmethod
     def from_crawler(cls, crawler):
         return cls(crawler)
@@ -74,6 +78,7 @@ class MongoExportPipeline(object):
             self.job_id = yield self.jobs_col.insert({
                 'id': spider.crawl_id,
                 'started_at': datetime.datetime.utcnow(),
+                'status': 'running',
                 'spider': spider.name,
             })
             spider.motor_job_id = str(self.job_id)
@@ -89,7 +94,7 @@ class MongoExportPipeline(object):
             )
 
     @tt_coroutine
-    def close_spider(self, spider):
+    def spider_closed(self, spider, reason, **kwargs):
         if self.job_id is None:
             self.jobs_client.close()
             self.items_client.close()
@@ -98,10 +103,15 @@ class MongoExportPipeline(object):
         # json is to fix an issue with dots in key names
         stats = json_encode(self.crawler.stats.get_stats())
 
+        status = 'finished'
+        if reason == 'shutdown':
+            status = 'shutdown'
+
         yield self.jobs_col.update(
             {'_id': self.job_id},
             {'$set': {
                 'finished_at': datetime.datetime.utcnow(),
+                'status': status,
                 'stats': stats,
             }}
         )
