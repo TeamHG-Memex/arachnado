@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
+
+import os
 import uuid
 
 from arachnado.crawler_process import ArachnadoCrawler
@@ -37,6 +39,11 @@ class DomainCrawlers(object):
     def _create_crawler(self, crawl_id, spider_cls, settings=None):
         _settings = Settings(self.settings)
         _settings.setdict(settings, 'cmdline')
+
+        root = _settings.get('DISK_QUEUES_ROOT')
+        jobdir = os.path.join(root, crawl_id)
+        _settings.set('JOBDIR', jobdir, priority='cmdline')
+
         spider_cls = ArachnadoSpider.inherit_from_me(spider_cls)
         return ArachnadoCrawler(spider_cls, _settings)
 
