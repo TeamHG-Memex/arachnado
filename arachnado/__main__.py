@@ -25,6 +25,7 @@ Options:
 """
 from __future__ import absolute_import
 import os
+import re
 import sys
 import logging
 from os import getenv
@@ -57,7 +58,7 @@ def main(port, host, start_manhole, manhole_port, manhole_host, loglevel, opts):
     from arachnado.site_checker import get_site_checker_crawler
     from arachnado.storages.mongo import MongoStorage
     from arachnado.storages.mongotail import MongoTailStorage
-    from arachnado.spider import DomainCrawlers
+    from arachnado.domain_crawlers import DomainCrawlers
     from arachnado.cron import Cron
 
     settings = {
@@ -85,13 +86,17 @@ def main(port, host, start_manhole, manhole_port, manhole_host, loglevel, opts):
     site_storage = MongoStorage(sites_uri, cache=True)
     item_storage = MongoTailStorage(items_uri)
 
-    site_checker_crawler = get_site_checker_crawler(site_storage)
-
     crawler_process = ArachnadoCrawlerProcess(settings)
+
+    site_checker_crawler = get_site_checker_crawler(site_storage)
     crawler_process.crawl(site_checker_crawler)
 
     spider_packages = opts['arachnado.scrapy']['spider_packages']
-    domain_crawlers = DomainCrawlers(crawler_process, spider_packages, settings)
+    domain_crawlers = DomainCrawlers(
+        crawler_process=crawler_process,
+        spider_packages=_parse_spider_packages(spider_packages),
+        settings=settings
+    )
 
     cron = Cron(domain_crawlers, site_storage)
     cron.start()
@@ -112,6 +117,14 @@ def main(port, host, start_manhole, manhole_port, manhole_host, loglevel, opts):
 
 def _getval(opts, env_key, key):
     return getenv(opts[env_key]) or opts[key]
+
+
+def _parse_spider_packages(spider_packages):
+    """
+    >>> _parse_spider_packages("mypackage.spiders package2  package3  ")
+    ['mypackage.spiders', 'package2', 'package3']
+    """
+    return [name for name in re.split('\s+', spider_packages) if name]
 
 
 def _get_opts(args):

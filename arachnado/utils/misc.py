@@ -4,11 +4,7 @@ from six.moves.urllib.parse import urlparse
 from scrapy.utils.serialize import ScrapyJSONEncoder
 from bson.objectid import ObjectId
 
-MB = 1024 * 1024
-
-# XXX: this is copy-pasted to make motor_exporter independent
-
-
+# XXX: this is copy-pasted  to make motor_exporter independent
 class JSONEncoder(ScrapyJSONEncoder):
 
     def __init__(self, *args, **kwargs):
@@ -26,7 +22,11 @@ _encoder = JSONEncoder()
 def json_encode(obj, encoding=None):
     """
     Encode a Python object to JSON.
-    Unlike standard json.dumps, datetime.datetime objects are supported.
+    Unlike standard json.dumps, datetime.datetime and ObjectID
+    objects are supported.
+
+    >>> json_encode([{"o": ObjectId("303132333435363738396162")}, 123])
+    '[{"o": "303132333435363738396162"}, 123]'
     """
     return _encoder.encode(obj)
 

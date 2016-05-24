@@ -177,7 +177,6 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
         logger_.setLevel(logging.INFO)
 
     def crawl(self, crawler_or_spidercls, *args, **kwargs):
-        kwargs['crawl_id'] = uuid.uuid4().hex
         crawler = self.create_crawler(crawler_or_spidercls)
 
         # aggregate all crawler signals
@@ -215,9 +214,10 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
         self.get_crawler(crawl_id).engine.unpause()
 
     def get_crawler(self, crawl_id):
-        for crawler in self.crawlers:
-            if getattr(crawler.spider, "crawl_id") == crawl_id:
-                return crawler
+        if crawl_id is not None:
+            for crawler in self.crawlers:
+                if getattr(crawler.spider, "crawl_id", None) == crawl_id:
+                    return crawler
         raise KeyError("Job is not known: %s" % crawl_id)
 
     def _resend_signal(self, **kwargs):
