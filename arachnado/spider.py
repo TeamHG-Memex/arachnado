@@ -51,7 +51,7 @@ class CrawlWebsiteSpider(ArachnadoSpider):
     A spider which crawls all the website.
     To run it, set its ``crawl_id`` and ``domain`` arguments.
     """
-    name = 'crawlwebsite'
+    name = 'generic'
     custom_settings = {
         'DEPTH_LIMIT': 10,
     }
