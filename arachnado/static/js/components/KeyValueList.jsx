@@ -68,7 +68,7 @@ var KeyValueRow = React.createClass({
     },
     render: function() {
         return (
-            <div class="row" style={{marginLeft: -8, paddingBottom:32}}>
+            <div className="row" style={{marginLeft: -8, paddingBottom:8}}>
                 <div className="col-xs-5" style={smallPadding}>
                     <input type="text" placeholder={this.props.keyPlaceholder}
                         style={{width: '100%'}} value={this.state.key} onChange={this.onKeyChange}/>
