@@ -21,7 +21,7 @@ class DomainCrawlers(object):
         self.crawler_process = crawler_process
         self.spider_packages = spider_packages
 
-    def crawl_domain(self, domain, args, settings):
+    def start(self, domain, args, settings):
         """ Create, start and return a crawler for a given domain. """
         spider_cls = get_spider_cls(domain, self.spider_packages,
                                     CrawlWebsiteSpider)

@@ -97,6 +97,6 @@ class Cron(object):
             url = 'spider://' + site['engine']
             args = {'post_days': '-1'}  # TODO: change in bot_engines
 
-        crawler = self.domain_crawlers.crawl_domain(url, {}, args)
+        crawler = self.domain_crawlers.start(url, {}, args)
         if crawler:
             self.schedule(id_)
