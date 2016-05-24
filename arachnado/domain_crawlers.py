@@ -30,6 +30,12 @@ class DomainCrawlers(object):
 
         crawl_id = uuid.uuid4().hex
         crawler = self._create_crawler(crawl_id, spider_cls, settings)
+        crawler.start_options = dict(
+            domain=domain,
+            args=args,
+            settings=settings,
+            crawl_id=crawl_id
+        )
         self.crawler_process.crawl(crawler,
                                    domain=domain,
                                    crawl_id=crawl_id,

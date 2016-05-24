@@ -94,7 +94,6 @@ class StartCrawler(ApiHandler, BaseRequestHandler):
             domain = self.json_args['domain']
             args = self.json_args.get('options', {}).get('args', {})
             settings = self.json_args.get('options', {}).get('settings', {})
-            args['user_settings'] = settings
             if self.crawl(domain, args, settings):
                 self.write({"status": "ok",
                             "job_id": self.crawler.spider.crawl_id})

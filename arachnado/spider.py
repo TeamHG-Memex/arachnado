@@ -16,15 +16,12 @@ class ArachnadoSpider(scrapy.Spider):
     A base spider that contains common attributes and utilities for all
     Arachnado spiders
     """
-    crawl_id = None       # assigned by ArachnadoCrawlerProcess
-    motor_job_id = None   # assigned by MongoExportPipeline
-    domain = None         # set by caller code, e.g. by handlers.StartCrawler
-    kwargs = None         # set in a constructor
-    user_settings = None  # set by caller code; for information only
+    crawl_id = None       # unique crawl ID, assigned by DomainCrawlers
+    motor_job_id = None   # MongoDB record ID, assigned by MongoExportPipeline
+    domain = None         # seed url, set by caller code
 
     def __init__(self, *args, **kwargs):
         super(ArachnadoSpider, self).__init__(*args, **kwargs)
-        self.kwargs = kwargs
         # don't log scraped items
         logging.getLogger("scrapy.core.scraper").setLevel(logging.INFO)
 

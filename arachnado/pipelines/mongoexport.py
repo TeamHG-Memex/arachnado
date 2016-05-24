@@ -80,6 +80,7 @@ class MongoExportPipeline(object):
                 'started_at': datetime.datetime.utcnow(),
                 'status': 'running',
                 'spider': spider.name,
+                'options': getattr(spider.crawler, 'start_options', {}),
             })
             spider.motor_job_id = str(self.job_id)
 

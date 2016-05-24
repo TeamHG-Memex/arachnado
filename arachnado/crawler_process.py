@@ -135,6 +135,9 @@ class ArachnadoCrawler(Crawler):
     """
     Extended Crawler which uses ArachnadoExecutionEngine.
     """
+    # Should be set by caller. Currently DomainCrawlers class sets it (ugly).
+    start_options = None
+
     def _create_engine(self):
         return ArachnadoExecutionEngine(self, lambda _: self.stop())
 
@@ -254,6 +257,8 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
     # FIXME: methods below are ugly for two reasons:
     # 1. they assume spiders have certain attributes;
     # 2. they try to get crawling status based on auxilary information.
+    #
+    # Time to move them to DomainCrawler?
 
     def get_jobs(self):
         """ Return a list of active jobs """
@@ -264,15 +269,17 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
                 for crawler in crawlers]
 
     def _get_job_info(self, crawler, status):
+        start_options = getattr(crawler, 'start_options', {})
         return {
             'id': crawler.spider.crawl_id,
             'job_id': getattr(crawler.spider, 'motor_job_id'),
             'seed': crawler.spider.domain,
             'status': status,
-            'stats': crawler.spider.crawler.stats.get_stats(crawler.spider),
+            'stats': crawler.stats.get_stats(crawler.spider),
             'downloads': self._downloader_stats(crawler),
-            'args': crawler.spider.kwargs,
-            'settings': crawler.spider.user_settings,
+            'args': start_options.get('args', {}),
+            'settings': start_options.get('settings', {}),
+            # 'start_options': start_options,
             # 'engine_info': dict(get_engine_status(crawler.engine))
         }
 
