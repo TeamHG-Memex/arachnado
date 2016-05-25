@@ -9,6 +9,7 @@ import logging
 import datetime
 
 from tornado import gen
+from tornado.ioloop import PeriodicCallback
 from bson.objectid import ObjectId
 import scrapy
 from scrapy.exceptions import NotConfigured
@@ -47,6 +48,10 @@ class MongoExportPipeline(object):
 
     If MONGO_EXPORT_JOBID_KEY option is set, job id is added to
     each stored item under the specified key name.
+
+    If MONGO_EXPORT_DUMP_PERIOD is non-zero then updated job stats are saved
+    to Mongo periodically every ``MONGO_EXPORT_DUMP_PERIOD`` seconds
+    (default is 15).
     """
 
     def __init__(self, crawler):
@@ -66,6 +71,9 @@ class MongoExportPipeline(object):
         # XXX: spider_closed is used instead of close_spider because
         # the latter doesn't provide a closing reason.
         crawler.signals.connect(self.spider_closed, signals.spider_closed)
+
+        self.dump_period = settings.getfloat('MONGO_EXPORT_DUMP_PERIOD', 15.0)
+        self._dump_pc = None
 
     @classmethod
     def from_crawler(cls, crawler):
@@ -90,6 +98,12 @@ class MongoExportPipeline(object):
             spider.motor_job_id = str(self.job_id)
             logger.info("Crawl job generated id: %s", self.job_id,
                         extra={'crawler': self.crawler})
+
+            if self.dump_period:
+                self._dump_pc = PeriodicCallback(self.dump_stats,
+                                                 self.dump_period * 1000)
+                self._dump_pc.start()
+
         except Exception:
             self.job_id = None
             logger.error(
@@ -100,13 +114,13 @@ class MongoExportPipeline(object):
 
     @tt_coroutine
     def spider_closed(self, spider, reason, **kwargs):
+        if self._dump_pc is not None and self._dump_pc.is_running():
+            self._dump_pc.stop()
+
         if self.job_id is None:
             self.jobs_client.close()
             self.items_client.close()
             return
-
-        # json is to fix an issue with dots in key names
-        stats = json_encode(self.crawler.stats.get_stats())
 
         status = 'finished'
         if reason == 'shutdown':
@@ -117,7 +131,7 @@ class MongoExportPipeline(object):
             {'$set': {
                 'finished_at': datetime.datetime.utcnow(),
                 'status': status,
-                'stats': stats,
+                'stats': self._get_stats(),
             }}
         )
         self.jobs_client.close()
@@ -141,3 +155,20 @@ class MongoExportPipeline(object):
                 'crawler': self.crawler
             })
         raise gen.Return(item)
+
+    def _get_stats(self):
+        # json is to fix an issue with dots in key names
+        return json_encode(self.crawler.stats.get_stats())
+
+    @gen.coroutine
+    def dump_stats(self):
+        # json is to fix an issue with dots in key names
+        stats = self._get_stats()
+        yield self.jobs_col.update(
+            {'_id': ObjectId(self.job_id)},
+            {'$set': {
+                'stats': stats,
+            }}
+        )
+        logger.info("Stats are stored for job %s" % self.job_id,
+                    extra={'crawler': self.crawler})
