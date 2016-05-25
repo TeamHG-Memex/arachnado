@@ -60,6 +60,10 @@ ITEM_PIPELINES = {
     'arachnado.pipelines.mongoexport.MongoExportPipeline': 10,
 }
 
+EXTENSIONS = {
+    'arachnado.extensions.queuesize.QueueSizeExtension': 100,
+}
+
 MONGO_EXPORT_ENABLED = True
 MONGO_EXPORT_JOBID_KEY = '_job_id'
 HTTPCACHE_ENABLED = False

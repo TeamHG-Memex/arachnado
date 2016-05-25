@@ -170,6 +170,15 @@ function _formatItemSpeed(info) {
 }
 
 
+/* Return a number of requests in a queue */
+function getNumQueued(stats) {
+    var initialSize = stats['scheduler/initial'] || 0;
+    var enqueued = stats['scheduler/enqueued'] || 0;
+    var dequeued = stats['scheduler/dequeued'] || 0;
+    return initialSize + enqueued - dequeued;
+}
+
+
 function _getRowInfo(job, curTime){
     var stats = job.stats || {};
     var status = simplifiedStatus(job.status);
@@ -205,7 +214,7 @@ function _getRowInfo(job, curTime){
         downloaded: downloaded,
         downloadSpeed: downloadSpeed,
         itemsSpeed: itemsSpeed,
-        todo: (stats['scheduler/enqueued'] || 0) - (stats['scheduler/dequeued'] || 0),
+        todo: getNumQueued(stats),
         shortId: shortId,
         duration: duration
     }
