@@ -183,12 +183,7 @@ function _getRowInfo(job, curTime){
     var stats = job.stats || {};
     var status = simplifiedStatus(job.status);
     var downloaded = stats['downloader/response_bytes'] || 0;
-
-
-    var shortId = job.id;
-    if (job.job_id) {
-        shortId = shortId + ": " + job.job_id.slice(-5);
-    }
+    var shortId = job.id.slice(0, 5) + "…";
 
     var duration = 0;
     if (stats['start_time']) {
@@ -265,7 +260,7 @@ var JobRowVerbose = React.createClass({
         var job = this.props.job;
         var info = _getRowInfo(job, this.props.serverTime);
         var columns = [
-            <th key='col-id' scope="row">{info.id}</th>
+            <th key='col-id' scope="row">{job.id}</th>
         ];
         var data = [
             job.seed,
