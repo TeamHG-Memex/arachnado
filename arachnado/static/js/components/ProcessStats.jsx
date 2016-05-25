@@ -3,6 +3,7 @@
 var filesize = require("filesize");
 var prettyMs = require("pretty-ms");
 var React = require("react");
+var ReactDOM = require("react-dom");
 var Reflux = require("reflux");
 var { Table } = require("react-bootstrap");
 
@@ -55,5 +56,5 @@ export var ProcessStatsTable = React.createClass({
 
 
 export function installHeader(elemId) {
-    React.render(<HeaderProcessStats />, document.getElementById(elemId));
+    ReactDOM.render(<HeaderProcessStats />, document.getElementById(elemId));
 }

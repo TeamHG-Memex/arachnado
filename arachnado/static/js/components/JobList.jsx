@@ -4,7 +4,7 @@ var React = require("react");
 var Reflux = require("reflux");
 var filesize = require("filesize");
 var prettyMs = require('pretty-ms');
-var { Link, Navigation } = require('react-router');
+var { History, withRouter } = require('react-router');
 
 var { Table, Glyphicon, Button } = require("react-bootstrap");
 var JobStore = require("../stores/JobStore");
@@ -212,13 +212,14 @@ function _getRowInfo(job, curTime){
 }
 
 
-var JobRow = React.createClass({
-    mixins: [Navigation],
+var JobRow = withRouter(React.createClass({
     render: function () {
         var job = this.props.job;
         var info = _getRowInfo(job, this.props.serverTime);
         var style = {cursor: "pointer"};
-        var cb = () => { this.transitionTo("job", {id: job.id}) };
+        var cb = () => {
+            this.props.router.push(`/job/${job.id}`);
+        };
 
         var columns = [
             <td key='col-buttons'><JobControlIcons job={job}/></td>,
@@ -247,11 +248,10 @@ var JobRow = React.createClass({
         }
         return this.props.job.seed;
     },
-});
+}));
 
 
 var JobRowVerbose = React.createClass({
-    mixins: [Navigation],
     render: function () {
         var job = this.props.job;
         var info = _getRowInfo(job, this.props.serverTime);

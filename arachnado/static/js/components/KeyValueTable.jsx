@@ -8,7 +8,7 @@ export var KeyValueTable = React.createClass({
             var header = <thead></thead>;
         }
         else {
-            var header = <thead><th>Name</th><th className="col-md-3">Value</th></thead>;
+            var header = <thead><tr><th>Name</th><th className="col-md-3">Value</th></tr></thead>;
         }
 
         return <Table condensed style={{tableLayout: 'fixed'}}>

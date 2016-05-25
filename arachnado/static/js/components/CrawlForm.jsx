@@ -55,7 +55,7 @@ export var CrawlForm = React.createClass({
     },
 
     onChange: function (ev) {
-        this.setState({value: this.refs.domainInput.getDOMNode().value});
+        this.setState({value: this.refs.domainInput.value});
     },
 
     onSubmit: function (ev) {

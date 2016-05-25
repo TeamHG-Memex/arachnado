@@ -53,7 +53,7 @@ var NoJobPage = React.createClass({
             <div>
                 <h2>Job is not found</h2>
                 <p>This job is either not available or never existed.</p>
-                <Link to="index">
+                <Link to="/">
                     <Glyphicon glyph="menu-left"/>&nbsp;
                     Back to Full Job List
                 </Link>
@@ -79,7 +79,7 @@ export var JobPage = React.createClass({
             <div className="row">
                 <div className="row">
                     <div className="col-lg-12">
-                        <Link to="index" className="btn">
+                        <Link to="/" className="btn">
                             <Glyphicon glyph="menu-left"/>&nbsp;All Jobs
                         </Link>&nbsp;&nbsp;
                         <JobControlButtons job={job}/>

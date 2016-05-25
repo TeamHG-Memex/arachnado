@@ -3,8 +3,7 @@ var React = require("react");
 var Reflux = require("reflux");
 var moment = require('moment');
 var debounce = require("debounce");
-var { Link } = require('react-router');
-var { Input, Panel, Table, Button, ButtonGroup, ButtonToolbar, Glyphicon, ButtonToolbar, Modal } = require("react-bootstrap");
+var { Table, Button, Glyphicon, Modal } = require("react-bootstrap");
 var { KeyValueList } = require("../components/KeyValueList");
 var { keyValueListToDict } = require('../utils/SitesAPI');
 var JobStore = require("../stores/JobStore");
@@ -169,13 +168,13 @@ var SiteRow = React.createClass({
         this.sendState();
     },
     onNotesChange(e) {
-        var value = this.refs.notes.getDOMNode().value;
+        var value = this.refs.notes.value;
         this.state.site.notes = value;
         this.setState(this.state);
         this.sendState();
     },
     onScheduleChange() {
-        var value = this.refs.schedule.getDOMNode().value;
+        var value = this.refs.schedule.value;
         this.state.site.schedule = value;
         this.setState(this.state);
         this.sendState();
@@ -212,8 +211,8 @@ var AddSite = React.createClass({
 
     addSites() {
         var urlRegex = /[-a-zA-Z0-9@:%_\+.~#?&//=]{2,256}\.[a-z]{2,6}\b(\/[-a-zA-Z0-9@:%_\+.~#?&//=]*)?/gi;
-        var urls = this.refs.newSites.getDOMNode().value.match(urlRegex);
-        if(urls !== null) {
+        var urls = this.refs.newSites.value.match(urlRegex);
+        if (urls !== null) {
             urls.forEach((url) => {
                 SitesStore.Actions.create(url);
             });
