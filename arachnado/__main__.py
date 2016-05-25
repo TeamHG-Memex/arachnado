@@ -97,6 +97,7 @@ def main(port, host, start_manhole, manhole_port, manhole_host, loglevel, opts):
         spider_packages=_parse_spider_packages(spider_packages),
         settings=settings
     )
+    domain_crawlers.resume(job_storage)
 
     cron = Cron(domain_crawlers, site_storage)
     cron.start()

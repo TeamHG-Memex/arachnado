@@ -80,12 +80,12 @@ class MongoStorage(object):
         return list(self.signals.keys())
 
     @coroutine
-    def fetch(self):
+    def fetch(self, query=None):
         if self.fetching:
             return
         self.fetching = True
         docs = []
-        cursor = self.col.find()
+        cursor = self.col.find(query)
         while (yield cursor.fetch_next):
             doc = cursor.next_object()
             docs.append(doc)

@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
-
 import os
 import uuid
+import warnings
 
-from arachnado.crawler_process import ArachnadoCrawler
+from tornado.ioloop import IOLoop
+from tornado import gen
 from scrapy.settings import Settings
 
 import arachnado.settings
+from arachnado.crawler_process import ArachnadoCrawler
 from arachnado.spider import CrawlWebsiteSpider, ArachnadoSpider
 from arachnado.utils.spiders import get_spider_cls
 
@@ -21,14 +23,26 @@ class DomainCrawlers(object):
         self.crawler_process = crawler_process
         self.spider_packages = spider_packages
 
-    def start(self, domain, args, settings):
+    def resume(self, job_storage):
+        @gen.coroutine
+        def _resume():
+            query = {"status": {"$in": ["shutdown", "running"]}}
+            for job in (yield job_storage.fetch(query)):
+                if 'options' not in job:
+                    warnings.warn("invalid job without options, can't resume: %s" % job)
+                    continue
+                self.start(**job['options'])
+
+        IOLoop.instance().add_callback(_resume)
+
+    def start(self, domain, args, settings, crawl_id=None):
         """ Create, start and return a crawler for a given domain. """
         spider_cls = get_spider_cls(domain, self.spider_packages,
                                     CrawlWebsiteSpider)
         if not spider_cls:
             return
 
-        crawl_id = uuid.uuid4().hex
+        crawl_id = uuid.uuid4().hex if crawl_id is None else crawl_id
         crawler = self._create_crawler(crawl_id, spider_cls, settings)
         crawler.start_options = dict(
             domain=domain,

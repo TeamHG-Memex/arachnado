@@ -101,4 +101,4 @@ var KeyValueRow = React.createClass({
             this.props.onChange(index, key, value);
         }
     }
-})
+});

@@ -77,14 +77,21 @@ class CrawlWebsiteSpider(ArachnadoSpider):
         if self.domain.startswith("www."):
             allow_domain = allow_domain[len("www."):]
 
-        self.link_extractor = LinkExtractor(
-            allow_domains=[allow_domain],
-            canonicalize=False,
-        )
-        self.get_links = self.link_extractor.extract_links
+        self.state['allow_domain'] = allow_domain
 
         for elem in self.parse(response):
             yield elem
+
+    @property
+    def link_extractor(self):
+        return LinkExtractor(
+            allow_domains=[self.state['allow_domain']],
+            canonicalize=False,
+        )
+
+    @property
+    def get_links(self):
+        return self.link_extractor.extract_links
 
     def parse(self, response):
         if not isinstance(response, HtmlResponse):

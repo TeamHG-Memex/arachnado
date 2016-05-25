@@ -9,6 +9,7 @@ import logging
 import datetime
 
 from tornado import gen
+from bson.objectid import ObjectId
 import scrapy
 from scrapy.exceptions import NotConfigured
 from scrapy import signals
@@ -74,16 +75,19 @@ class MongoExportPipeline(object):
     def open_spider(self, spider):
         try:
             yield self.items_col.ensure_index(self.job_id_key)
+            yield self.jobs_col.ensure_index('id', unique=True)
 
-            self.job_id = yield self.jobs_col.insert({
+            job = yield self.jobs_col.find_and_modify({
+                'id': spider.crawl_id,
+            }, {
                 'id': spider.crawl_id,
                 'started_at': datetime.datetime.utcnow(),
                 'status': 'running',
                 'spider': spider.name,
                 'options': getattr(spider.crawler, 'start_options', {}),
-            })
+            }, upsert=True, new=True)
+            self.job_id = str(job['_id'])
             spider.motor_job_id = str(self.job_id)
-
             logger.info("Crawl job generated id: %s", self.job_id,
                         extra={'crawler': self.crawler})
         except Exception:
@@ -109,7 +113,7 @@ class MongoExportPipeline(object):
             status = 'shutdown'
 
         yield self.jobs_col.update(
-            {'_id': self.job_id},
+            {'_id': ObjectId(self.job_id)},
             {'$set': {
                 'finished_at': datetime.datetime.utcnow(),
                 'status': status,
