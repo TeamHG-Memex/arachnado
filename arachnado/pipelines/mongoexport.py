@@ -7,6 +7,7 @@ Async MongoDB item exporter using Motor_.
 from __future__ import absolute_import
 import logging
 import datetime
+import copy
 
 from tornado import gen
 from tornado.ioloop import PeriodicCallback
@@ -17,7 +18,7 @@ from scrapy import signals
 
 from arachnado.utils.twistedtornado import tt_coroutine
 from arachnado.utils.misc import json_encode
-from arachnado.utils.mongo import motor_from_uri
+from arachnado.utils.mongo import motor_from_uri, replace_dots
 
 
 logger = logging.getLogger(__name__)
@@ -131,7 +132,8 @@ class MongoExportPipeline(object):
             {'$set': {
                 'finished_at': datetime.datetime.utcnow(),
                 'status': status,
-                'stats': self._get_stats(),
+                'stats': self._get_stats_json(),
+                'stats_dict': self._get_stats_escaped(),
             }}
         )
         self.jobs_client.close()
@@ -156,18 +158,22 @@ class MongoExportPipeline(object):
             })
         raise gen.Return(item)
 
-    def _get_stats(self):
+    def _get_stats_json(self):
         # json is to fix an issue with dots in key names
         return json_encode(self.crawler.stats.get_stats())
+
+    def _get_stats_escaped(self):
+        return replace_dots(copy.deepcopy(self.crawler.stats.get_stats()))
 
     @gen.coroutine
     def dump_stats(self):
         # json is to fix an issue with dots in key names
-        stats = self._get_stats()
+        stats = self._get_stats_json()
         yield self.jobs_col.update(
             {'_id': ObjectId(self.job_id)},
             {'$set': {
                 'stats': stats,
+                'stats_dict': self._get_stats_escaped(),
             }}
         )
         logger.info("Stats are stored for job %s" % self.job_id,

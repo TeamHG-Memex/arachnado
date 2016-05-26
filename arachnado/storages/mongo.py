@@ -5,23 +5,7 @@ from tornado.gen import coroutine, Return
 from bson.objectid import ObjectId
 from scrapy.signalmanager import SignalManager
 
-from arachnado.utils.mongo import motor_from_uri
-
-
-def replace_dots(son):
-    """Recursively replace keys that contains dots"""
-    for key, value in son.items():
-        if '.' in key:
-            new_key = key.replace('.', '_')
-            if isinstance(value, dict):
-                son[new_key] = replace_dots(
-                    son.pop(key)
-                )
-            else:
-                son[new_key] = son.pop(key)
-        elif isinstance(value, dict):  # recurse into sub-docs
-            son[key] = replace_dots(value)
-    return son
+from arachnado.utils.mongo import motor_from_uri, replace_dots
 
 
 class MongoStorage(object):
