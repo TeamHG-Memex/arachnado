@@ -3,7 +3,7 @@ var React = require("react");
 var Reflux = require("reflux");
 var moment = require('moment');
 var debounce = require("debounce");
-var { Table, Button, Glyphicon, Modal } = require("react-bootstrap");
+var { Table, Button, ButtonGroup, Glyphicon, Modal, FormControl } = require("react-bootstrap");
 var { KeyValueList } = require("../components/KeyValueList");
 var { keyValueListToDict } = require('../utils/SitesAPI');
 var JobStore = require("../stores/JobStore");
@@ -14,9 +14,10 @@ var SiteTable = React.createClass({
         var rows = this.props.sites.map((site, index) =>
             <SiteRow site={site} key={site._id}/>
         );
-        return (<Table striped bordered hover>
+        return (<Table>
             <thead>
                 <tr>
+                    <th></th>
                     <th>URL</th>
                     <th>Title</th>
                     <th>Status</th>
@@ -57,7 +58,7 @@ var SiteRow = React.createClass({
             : {backgroundColor: '#FFDDDC'};
         scheduleStyle.width = '100px';
         var scheduleText = '';
-        if(this.props.site.schedule) {
+        if (this.props.site.schedule) {
             scheduleText = scheduleValid
                 ? "Next run: " + this.formatTime(this.props.site.schedule_at)
                 : "Invalid entry"
@@ -73,6 +74,11 @@ var SiteRow = React.createClass({
         return (
             <tbody>
                 <tr className={trClass}>
+                    <td>
+                        <ButtonGroup style={{display:"flex"}} bsSize="xsmall">
+                            <Button bsStyle="success" onClick={this.startCrawl}>Crawl</Button>
+                        </ButtonGroup>
+                    </td>
                     <td>
                         <small>
                             <a href={this.props.site.url} target="_blank">
@@ -93,10 +99,16 @@ var SiteRow = React.createClass({
                     <td>
                         <textarea onChange={this.onNotesChange} ref="notes" value={this.state.site.notes}></textarea>
                     </td>
-                    <td className="text-nowrap">
-                        <div><a href="#" onClick={this.startCrawl}><small>CRAWL</small></a></div>
-                        <div><a href="#" onClick={this.toggleOptions}><small>OPTIONS</small></a></div>
-                        <div><a href="#" onClick={this.delete}><small>DELETE</small></a></div>
+                    <td>
+                        <ButtonGroup style={{display:"flex"}} bsSize="xsmall">
+                            <Button bsStyle="info" onClick={this.toggleOptions} active={this.state.optionsVisible}>
+                                <Glyphicon glyph="cog"/>
+                            </Button>
+                            &nbsp;
+                            <Button bsStyle="danger" onClick={this.delete}>
+                                <Glyphicon glyph="remove"/>
+                            </Button>
+                        </ButtonGroup>
                     </td>
                 </tr>
                 {this.state.optionsVisible ?
@@ -112,7 +124,9 @@ var SiteRow = React.createClass({
     },
     delete(e) {
         e.preventDefault();
-        SitesStore.Actions.delete(this.props.site._id);
+        if (confirm("Are you sure?")){
+            SitesStore.Actions.delete(this.props.site._id);
+        }
     },
     startCrawl(e) {
         e.preventDefault();
@@ -132,7 +146,7 @@ var SiteRow = React.createClass({
                     args: args,
                     settings: settings,
                 }
-            )
+            );
         }
     },
     formatTime(dt) {
