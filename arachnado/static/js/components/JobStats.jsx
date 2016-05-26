@@ -67,9 +67,6 @@ var SHORT_NAMES = {
 function getJobStatRows(stats){
     return Object.keys(stats).map(key => {
         var value = stats[key];
-        if (value == 0){
-            return "";
-        }
         if (/_bytes$|memusage/.test(key)){
             value = filesize(value);
         }
