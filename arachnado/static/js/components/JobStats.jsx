@@ -64,9 +64,12 @@ var SHORT_NAMES = {
 };
 
 
-function getJobStatRows(stats){
+function getJobStatRows(stats, showZeros){
     return Object.keys(stats).map(key => {
         var value = stats[key];
+        if (!showZeros && !value){
+            return "";
+        }
         if (/_bytes$|memusage/.test(key)){
             value = filesize(value);
         }
@@ -85,7 +88,7 @@ export var AggregateJobStats = React.createClass({
     mixins: [JobsMixin],
     render: function () {
         var stats = this.getAggregateStats(this.state.jobs);
-        var rows = getJobStatRows(stats);
+        var rows = getJobStatRows(stats, false);
         if (rows.length == 0){
             return (
                 <p>
@@ -116,7 +119,7 @@ export var JobStats = React.createClass({
         var stats = this.props.job.stats;
         var sortedStats = {};
         Object.keys(stats).sort().forEach(k => {sortedStats[k] = stats[k]});
-        var rows = getJobStatRows(sortedStats);
+        var rows = getJobStatRows(sortedStats, true);
         if (rows.length == 0) {
             return <p>Nothing to show yet.</p>;
         }
