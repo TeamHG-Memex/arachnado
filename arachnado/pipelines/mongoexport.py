@@ -52,7 +52,7 @@ class MongoExportPipeline(object):
 
     If MONGO_EXPORT_DUMP_PERIOD is non-zero then updated job stats are saved
     to Mongo periodically every ``MONGO_EXPORT_DUMP_PERIOD`` seconds
-    (default is 15).
+    (default is 60).
     """
 
     def __init__(self, crawler):
@@ -72,8 +72,9 @@ class MongoExportPipeline(object):
         # XXX: spider_closed is used instead of close_spider because
         # the latter doesn't provide a closing reason.
         crawler.signals.connect(self.spider_closed, signals.spider_closed)
+        crawler.signals.connect(self.spider_closing, signals.spider_closing)
 
-        self.dump_period = settings.getfloat('MONGO_EXPORT_DUMP_PERIOD', 15.0)
+        self.dump_period = settings.getfloat('MONGO_EXPORT_DUMP_PERIOD', 60.0)
         self._dump_pc = None
 
     @classmethod
@@ -115,30 +116,29 @@ class MongoExportPipeline(object):
 
     @tt_coroutine
     def spider_closed(self, spider, reason, **kwargs):
-        if self._dump_pc is not None and self._dump_pc.is_running():
-            self._dump_pc.stop()
+        self._stop_periodic_tasks()
 
-        if self.job_id is None:
+        if self.job_id is None:  # what's this?
             self.jobs_client.close()
             self.items_client.close()
             return
 
-        status = 'finished'
-        if reason == 'shutdown':
-            status = 'shutdown'
+        # update the job one more time because something might
+        # have happened while the spider is closing
+        yield self._update_finished_job(reason)
 
-        yield self.jobs_col.update(
-            {'_id': ObjectId(self.job_id)},
-            {'$set': {
-                'finished_at': datetime.datetime.utcnow(),
-                'status': status,
-                'stats': self._get_stats_json(),
-                'stats_dict': self._get_stats_escaped(),
-            }}
-        )
         self.jobs_client.close()
         self.items_client.close()
-        logger.info("Job info %s is saved", self.job_id,
+        logger.info("Info is saved for a closed job %s", self.job_id,
+                    extra={'crawler': self.crawler})
+
+    @tt_coroutine
+    def spider_closing(self, spider, reason, **kwargs):
+        self._stop_periodic_tasks()
+        if self.job_id is None:  # what's this?
+            return
+        yield self._update_finished_job(reason)
+        logger.info("Info is saved for a closing job %s", self.job_id,
                     extra={'crawler': self.crawler})
 
     @tt_coroutine
@@ -157,6 +157,24 @@ class MongoExportPipeline(object):
                 'crawler': self.crawler
             })
         raise gen.Return(item)
+
+    def _update_finished_job(self, reason):
+        status = 'finished'
+        if reason == 'shutdown':
+            status = 'shutdown'
+        return self.jobs_col.update(
+            {'_id': ObjectId(self.job_id)},
+            {'$set': {
+                'finished_at': datetime.datetime.utcnow(),
+                'status': status,
+                'stats': self._get_stats_json(),
+                'stats_dict': self._get_stats_escaped(),
+            }}
+        )
+
+    def _stop_periodic_tasks(self):
+        if self._dump_pc is not None and self._dump_pc.is_running():
+            self._dump_pc.stop()
 
     def _get_stats_json(self):
         # json is to fix an issue with dots in key names
