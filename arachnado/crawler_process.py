@@ -19,7 +19,7 @@ from arachnado.process_stats import ProcessStatsMonitor
 
 logger = logging.getLogger(__name__)
 
-# monkey patch Scrapy to add an extra signal
+# monkey patch Scrapy to add extra signals
 signals.spider_closing = object()
 signals.engine_paused = object()
 signals.engine_resumed = object()
@@ -108,9 +108,13 @@ class ArachnadoExecutionEngine(ExecutionEngine):
         if self.slot.closing:
             return self.slot.closing
         self.crawler.crawling = False
-        self.signals.send_catch_log(signals.spider_closing)
-        return super(ArachnadoExecutionEngine, self).close_spider(spider,
-                                                                  reason)
+        dfd = self.signals.send_catch_log_deferred(signals.spider_closing,
+                                                   spider=spider,
+                                                   reason=reason)
+        dfd.addBoth(
+            lambda _: super(ArachnadoExecutionEngine, self).close_spider(spider, reason)
+        )
+        return dfd
 
     def pause(self):
         """Pause the execution engine"""
