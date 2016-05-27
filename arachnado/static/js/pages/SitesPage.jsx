@@ -137,19 +137,18 @@ var SiteRow = React.createClass({
             _id: this.props.site._id,
             last_crawled: new Date(),
         });
+
+        var options = {
+            settings: keyValueListToDict(this.props.site.settings),
+            args: keyValueListToDict(this.props.site.args)
+        };
+
         if(this.props.site.engine == 'generic') {
-            JobStore.Actions.startCrawl(this.props.site.url);
+            JobStore.Actions.startCrawl(this.props.site.url, options);
         } else {
-            var settings = keyValueListToDict(this.props.site.settings);
-            var args = keyValueListToDict(this.props.site.args);
             args.start_urls = [this.props.site.url];
-            JobStore.Actions.startCrawl(
-                'spider://' + this.props.site.engine,
-                {
-                    args: args,
-                    settings: settings,
-                }
-            );
+            var url = 'spider://' + this.props.site.engine;
+            JobStore.Actions.startCrawl(url, options);
         }
     },
     formatTime(dt) {

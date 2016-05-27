@@ -63,7 +63,7 @@ export var CrawlForm = React.createClass({
         var options = {
             settings: keyValueListToDict(this.state.settings),
             args: keyValueListToDict(this.state.args),
-        }
+        };
         if (this.state.value != "") {
             JobStore.Actions.startCrawl(this.state.value, options);
             this.setState({value: ""});

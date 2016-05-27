@@ -92,15 +92,25 @@ class Cron(object):
             site = self.site_storage.cache[id_]
         except KeyError:
             return
+
+        args = _key_value_to_dict(site.get('args', []))
+        settings = _key_value_to_dict(site.get('settings', []))
+
         if not site.get('engine'):
             site['engine'] = 'generic'
+
         if site['engine'] == 'generic':
             url = site['url']
-            args = {}
         else:
             url = 'spider://' + site['engine']
-            args = {'post_days': '-1'}  # TODO: change in bot_engines
+            args.setdefault('post_days', '-1')  # TODO: move it to bot_engines?
 
-        crawler = self.domain_crawlers.start(url, {}, args)
+        crawler = self.domain_crawlers.start(url, args, settings)
         if crawler:
             self.schedule(id_)
+
+
+def _key_value_to_dict(obj):
+    if isinstance(obj, dict):
+        return obj
+    return {el['key']: el['value'] for el in obj}
