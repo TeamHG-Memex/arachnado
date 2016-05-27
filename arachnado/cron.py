@@ -50,6 +50,10 @@ class Cron(object):
                 self.cancel(id_)
                 self.schedule(id_)
             return
+
+        if not site['schedule']:
+            return
+
         try:
             cron = croniter(site['schedule'])
         except Exception:
