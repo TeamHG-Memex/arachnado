@@ -3,7 +3,7 @@ var React = require("react");
 var Reflux = require("reflux");
 var moment = require('moment');
 var debounce = require("debounce");
-var { Table, Button, ButtonGroup, Glyphicon, Modal, FormControl } = require("react-bootstrap");
+var { Table, Button, ButtonGroup, Glyphicon, Modal, FormControl, Well } = require("react-bootstrap");
 var { KeyValueList } = require("../components/KeyValueList");
 var { keyValueListToDict } = require('../utils/SitesAPI');
 var JobStore = require("../stores/JobStore");
@@ -113,9 +113,12 @@ var SiteRow = React.createClass({
                 </tr>
                 {this.state.optionsVisible ?
                 <tr>
-                    <td colSpan="8">
-                        <KeyValueList title="Spider args" list={this.state.site.args} onChange={this.onArgsChange}/>
-                        <KeyValueList title="Scrapy settings" list={this.state.site.settings} onChange={this.onSettingsChange}/>
+                    <td colSpan="4"></td>
+                    <td colSpan="6">
+                        <Well style={{marginTop:-4}}>
+                            <KeyValueList title="Scrapy settings" list={this.state.site.settings} onChange={this.onSettingsChange}/>
+                            <KeyValueList title="Spider args" list={this.state.site.args} onChange={this.onArgsChange}/>
+                        </Well>
                     </td>
                 </tr>
                 : null}
