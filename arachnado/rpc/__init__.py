@@ -9,6 +9,7 @@ from tornadorpc.json import JSONRPCHandler
 from tornado.concurrent import Future
 from tornado import gen
 import tornado.ioloop
+from bson.objectid import ObjectId
 
 from arachnado.rpc.jobs import JobsRpc
 from arachnado.rpc.sites import SitesRpc
@@ -25,7 +26,7 @@ class MainRpcHttpHandler(JSONRPCHandler):
     """ Main JsonRpc router for REST requests"""
 
     def initialize(self, *args, **kwargs):
-        print("MainRpcHttpHandler init")
+        # print("MainRpcHttpHandler init")
         self.jobs = JobsRpc(self, *args, **kwargs)
         self.sites = SitesRpc(self, *args, **kwargs)
         self.pages = PagesRpc(self, *args, **kwargs)
@@ -43,8 +44,6 @@ class MainRpcHttpHandler(JSONRPCHandler):
         self._RPC_.response(self)
 
 
-
-
 class MainRpcWebsocketHandler(JsonRpcWebsocketHandler, MainRpcHttpHandler):
     """ Main JsonRpc router for WS stream"""
 
@@ -58,16 +57,16 @@ class JobsRpcWebsocketHandler(MainRpcWebsocketHandler):
 
     @gen.coroutine
     def write_event(self, event, data):
-        print("write_event!!!!!!!!!!!!!")
+        # print("write_event!!!!!!!!!!!!!")
         if event == self.job_event_type and self.delay_mode:
             self.job_info[data["id"]] = data
         else:
             return super(MainRpcWebsocketHandler, self).write_event(event, data)
 
     def subscribe_to_jobs(self, include=[], exclude=[], update_delay=0):
-        print("subscribe_to_jobs!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-        print(include)
-        print(exclude)
+        # print("subscribe_to_jobs!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        # print(include)
+        # print(exclude)
         conditions = []
         for inc_str in include:
             conditions.append({"urls":{'$regex': '.*' + inc_str + '.*'}})
@@ -88,14 +87,14 @@ class JobsRpcWebsocketHandler(MainRpcWebsocketHandler):
         self.jobs.subscribe(query=jobs_q)
 
     def initialize(self, *args, **kwargs):
-        print("JobsRpcWebsocketHandler init")
+        # print("JobsRpcWebsocketHandler init")
         self.jobs = JobsRpc(self, *args, **kwargs)
 
     def send_updates(self):
-        for job_id in self.job_info:
+        job_ids = set(self.job_info.keys())
+        for job_id in job_ids:
             res = super(JobsRpcWebsocketHandler, self).write_event(self.job_event_type, self.job_info[job_id])
             self.job_info.pop(job_id)
-            return res
 
 
 class ItemsRpcWebsocketHandler(MainRpcWebsocketHandler):
@@ -107,28 +106,42 @@ class ItemsRpcWebsocketHandler(MainRpcWebsocketHandler):
 
     @gen.coroutine
     def write_event(self, event, data):
-        print("write_event!!!!!!!!!!!!!")
+        # print("write_event!!!!!!!!!!!!!")
         if event == self.page_event_type and self.delay_mode:
             self.items.append(data)
         else:
             return super(MainRpcWebsocketHandler, self).write_event(event, data)
 
     def subscribe_to_items(self, site_ids={}, update_delay=0):
-        print("subscribe_to_items!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-        print(site_ids)
+        # print("subscribe_to_items!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        # print(site_ids)
         # print(exclude)
         conditions = []
         for site in site_ids:
+            if "url_field" in site_ids[site]:
+                url_field_name = site_ids[site]["url_field"]
+                item_id = site_ids[site]["id"]
+            else:
+                url_field_name = "url"
+                item_id = site_ids[site]
+            item_id = ObjectId(item_id)
             conditions.append(
-                {"$and":[{"url":{"$regex": site + '.*'}},
-                    {"_id":{"$gt":site_ids[site]}}
+                {"$and":[{url_field_name:{"$regex": site + '.*'}},
+                    {"_id":{"$gt":item_id}}
                 ]}
             )
+            # conditions.append(
+            #         {"_id":{"$gt":item_id}}
+            # )
         items_q = {}
         if len(conditions) == 1:
             items_q = conditions[0]
         elif len(conditions):
-            items_q = {"$or": conditions }
+            items_q = {"$or": conditions}
+        # print(items_q)
+        # items_q = {"$and":[{"_id":{"$gt": ObjectId("5731c771a8cb9c2ddb29cdc6")}},
+        #                    {"url":{"$regex":"https://ru-ru.facebook.com.*"}}]}
+        # print(items_q)
         if update_delay > 0:
             self.delay_mode = True
             self.item_hb = tornado.ioloop.PeriodicCallback(
@@ -136,14 +149,16 @@ class ItemsRpcWebsocketHandler(MainRpcWebsocketHandler):
                 update_delay
             )
             self.item_hb.start()
+            print("hb started")
         self.pages.subscribe(query=items_q)
 
     def initialize(self, *args, **kwargs):
-        print("ItemsRpcWebsocketHandler init")
+        # print("ItemsRpcWebsocketHandler init")
         self.pages = PagesRpc(self, *args, **kwargs)
 
     def send_updates(self):
-        for item in self.items:
-            self.items.remove(item)
-            return super(ItemsRpcWebsocketHandler, self).write_event(self.page_event_type, item)
+        print("send_updates: {}".format(len(self.items)))
+        while len(self.items):
+            item = self.items.pop()
+            super(ItemsRpcWebsocketHandler, self).write_event(self.page_event_type, item)
 
