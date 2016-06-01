@@ -50,23 +50,46 @@ class MainRpcWebsocketHandler(JsonRpcWebsocketHandler, MainRpcHttpHandler):
 
 class JobsRpcWebsocketHandler(MainRpcWebsocketHandler):
     """ jobs info for WS stream"""
-    job_info = {}
+    stored_data = []
     delay_mode = False
-    job_event_type = 'jobs.tailed'
-    job_hb = None
+    event_types = ['jobs.tailed']
+    data_hb = None
+    i_args = None
+    i_kwargs = None
+    storages = {}
 
     @gen.coroutine
     def write_event(self, event, data):
         # print("write_event!!!!!!!!!!!!!")
-        if event == self.job_event_type and self.delay_mode:
-            self.job_info[data["id"]] = data
+        if event in self.event_types and self.delay_mode:
+            self.stored_data.append({"event":event, "data":data})
         else:
             return super(MainRpcWebsocketHandler, self).write_event(event, data)
 
+    def init_hb(self, update_delay):
+        if update_delay > 0:
+            self.delay_mode = True
+            self.data_hb = tornado.ioloop.PeriodicCallback(
+                lambda: self.send_updates(),
+                update_delay
+            )
+            self.data_hb.start()
+
+    def add_storage(self, mongo_q):
+        storage = self.create_storage_link()
+        storage.subscribe(query=mongo_q)
+        new_id = str(len(self.storages))
+        self.storages[new_id] = storage
+        return new_id
+
     def subscribe_to_jobs(self, include=[], exclude=[], update_delay=0):
-        # print("subscribe_to_jobs!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-        # print(include)
-        # print(exclude)
+        mongo_q = self.create_query(include=include, exclude=exclude)
+        self.init_hb(update_delay)
+        return self.add_storage(mongo_q)
+
+    def create_query(self, **kwargs):
+        include = kwargs.get("include", [])
+        exclude = kwargs.get("exclude", [])
         conditions = []
         for inc_str in include:
             conditions.append({"urls":{'$regex': '.*' + inc_str + '.*'}})
@@ -77,45 +100,38 @@ class JobsRpcWebsocketHandler(MainRpcWebsocketHandler):
             jobs_q = conditions[0]
         elif len(conditions):
             jobs_q = {"$and": conditions }
-        if update_delay > 0:
-            self.delay_mode = True
-            self.job_hb = tornado.ioloop.PeriodicCallback(
-                lambda: self.send_updates(),
-                update_delay
-            )
-            self.job_hb.start()
-        self.jobs.subscribe(query=jobs_q)
+        return jobs_q
+
+    def cancel_subscription(self, subscription_id):
+        storage = self.storages.pop(subscription_id)
+        storage._on_close()
 
     def initialize(self, *args, **kwargs):
-        # print("JobsRpcWebsocketHandler init")
-        self.jobs = JobsRpc(self, *args, **kwargs)
+        self.i_args = args
+        self.i_kwargs = kwargs
+        # # print("JobsRpcWebsocketHandler init")
+        # pass
+
+    def create_storage_link(self):
+        return JobsRpc(self, *self.i_args, **self.i_kwargs)
 
     def send_updates(self):
-        job_ids = set(self.job_info.keys())
-        for job_id in job_ids:
-            res = super(JobsRpcWebsocketHandler, self).write_event(self.job_event_type, self.job_info[job_id])
-            self.job_info.pop(job_id)
+        print("send_updates: {}".format(len(self.stored_data)))
+        while len(self.stored_data):
+            item = self.stored_data.pop()
+            super(MainRpcWebsocketHandler, self).write_event(item["event"], item["data"])
 
 
-class ItemsRpcWebsocketHandler(MainRpcWebsocketHandler):
+class ItemsRpcWebsocketHandler(JobsRpcWebsocketHandler):
     """ items info for WS stream"""
-    items = []
-    delay_mode = False
-    page_event_type = 'pages.tailed'
-    item_hb = None
+    #TODO: create basic abstract class
+    event_types = ['pages.tailed']
 
-    @gen.coroutine
-    def write_event(self, event, data):
-        # print("write_event!!!!!!!!!!!!!")
-        if event == self.page_event_type and self.delay_mode:
-            self.items.append(data)
-        else:
-            return super(MainRpcWebsocketHandler, self).write_event(event, data)
+    def create_storage_link(self):
+        return PagesRpc(self, *self.i_args, **self.i_kwargs)
 
-    def subscribe_to_items(self, site_ids={}, update_delay=0):
-        # print("subscribe_to_items!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-        # print(site_ids)
-        # print(exclude)
+    def create_query(self, **kwargs):
+        site_ids = kwargs.get("site_ids", {})
         conditions = []
         for site in site_ids:
             if "url_field" in site_ids[site]:
@@ -130,35 +146,14 @@ class ItemsRpcWebsocketHandler(MainRpcWebsocketHandler):
                     {"_id":{"$gt":item_id}}
                 ]}
             )
-            # conditions.append(
-            #         {"_id":{"$gt":item_id}}
-            # )
         items_q = {}
         if len(conditions) == 1:
             items_q = conditions[0]
         elif len(conditions):
             items_q = {"$or": conditions}
-        # print(items_q)
-        # items_q = {"$and":[{"_id":{"$gt": ObjectId("5731c771a8cb9c2ddb29cdc6")}},
-        #                    {"url":{"$regex":"https://ru-ru.facebook.com.*"}}]}
-        # print(items_q)
-        if update_delay > 0:
-            self.delay_mode = True
-            self.item_hb = tornado.ioloop.PeriodicCallback(
-                lambda: self.send_updates(),
-                update_delay
-            )
-            self.item_hb.start()
-            print("hb started")
-        self.pages.subscribe(query=items_q)
+        return items_q
 
-    def initialize(self, *args, **kwargs):
-        # print("ItemsRpcWebsocketHandler init")
-        self.pages = PagesRpc(self, *args, **kwargs)
-
-    def send_updates(self):
-        print("send_updates: {}".format(len(self.items)))
-        while len(self.items):
-            item = self.items.pop()
-            super(ItemsRpcWebsocketHandler, self).write_event(self.page_event_type, item)
-
+    def subscribe_to_items(self, site_ids={}, update_delay=0):
+        mongo_q = self.create_query(site_ids=site_ids)
+        self.init_hb(update_delay)
+        return self.add_storage(mongo_q)   
