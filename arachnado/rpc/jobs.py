@@ -2,7 +2,7 @@ import logging
 
 
 class JobsRpc(object):
-
+    handler_id = None
     logger = logging.getLogger(__name__)
 
     def __init__(self, handler, job_storage, **kwargs):
@@ -21,4 +21,7 @@ class JobsRpc(object):
         # print("jobs rpc :")
         # print(data)
         if self.storage.tailing:
-            self.handler.write_event('jobs.tailed', data)
+            if self.handler_id:
+                self.handler.write_event('jobs.tailed', data, handler_id=self.handler_id)
+            else:
+                self.handler.write_event('jobs.tailed', data)

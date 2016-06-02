@@ -16,6 +16,8 @@ from arachnado.rpc.sites import SitesRpc
 from arachnado.rpc.pages import PagesRpc
 from arachnado.rpc.ws import JsonRpcWebsocketHandler
 
+from arachnado.crawler_process import agg_stats_changed, CrawlerProcessSignals as CPS
+
 
 logger = logging.getLogger(__name__)
 tornadorpc.config.verbose = True
@@ -52,15 +54,27 @@ class JobsRpcWebsocketHandler(MainRpcWebsocketHandler):
     """ jobs info for WS stream"""
     stored_data = []
     delay_mode = False
-    event_types = ['jobs.tailed']
+    event_types = ['stats:changed']
     data_hb = None
     i_args = None
     i_kwargs = None
     storages = {}
 
     @gen.coroutine
-    def write_event(self, event, data):
-        # print("write_event!!!!!!!!!!!!!")
+    def write_event(self, event, data, handler_id=None):
+        #TODO: implement job id filtering
+        if event == 'jobs.tailed' and "id" in data and handler_id:
+            self.storages[handler_id]["job_ids"].add(data["id"])
+        if event in ['stats:changed', 'jobs:state']:
+            if event == 'stats:changed':
+                job_id = data[0]
+            else:
+                job_id = data["id"]
+            allowed = False
+            for storage in self.storages.values():
+                allowed = allowed or job_id in storage["job_ids"]
+            if not allowed:
+                return
         if event in self.event_types and self.delay_mode:
             self.stored_data.append({"event":event, "data":data})
         else:
@@ -77,9 +91,13 @@ class JobsRpcWebsocketHandler(MainRpcWebsocketHandler):
 
     def add_storage(self, mongo_q):
         storage = self.create_storage_link()
-        storage.subscribe(query=mongo_q)
         new_id = str(len(self.storages))
-        self.storages[new_id] = storage
+        self.storages[new_id] = {
+            "storage": storage,
+            "job_ids": set([])
+        }
+        storage.handler_id = new_id
+        storage.subscribe(query=mongo_q)
         return new_id
 
     def subscribe_to_jobs(self, include=[], exclude=[], update_delay=0):
@@ -104,16 +122,42 @@ class JobsRpcWebsocketHandler(MainRpcWebsocketHandler):
 
     def cancel_subscription(self, subscription_id):
         storage = self.storages.pop(subscription_id)
-        storage._on_close()
+        if storage:
+            storage._on_close()
+            return True
+        else:
+            return False
 
     def initialize(self, *args, **kwargs):
         self.i_args = args
         self.i_kwargs = kwargs
+        self.cp = kwargs.get("crawler_process", None)
         # # print("JobsRpcWebsocketHandler init")
         # pass
 
     def create_storage_link(self):
         return JobsRpc(self, *self.i_args, **self.i_kwargs)
+
+    def on_close(self):
+        logger.debug("connection closed")
+        self.cp.signals.disconnect(self.on_stats_changed, agg_stats_changed)
+        for storage in self.storages.values():
+            storage["storage"]._on_close()
+        super(MainRpcWebsocketHandler, self).on_close()
+
+    def open(self):
+        logger.debug("new connection")
+        super(MainRpcWebsocketHandler, self).open()
+        self.cp.signals.connect(self.on_stats_changed, agg_stats_changed)
+        self.cp.signals.connect(self.on_spider_closed, CPS.spider_closed)
+
+    def on_spider_closed(self, spider):
+        for job in self.cp.jobs:
+            self.write_event("jobs:state", job)
+
+    def on_stats_changed(self, changes, crawler):
+        crawl_id = crawler.spider.crawl_id
+        self.write_event("stats:changed", [crawl_id, changes])
 
     def send_updates(self):
         print("send_updates: {}".format(len(self.stored_data)))
@@ -156,4 +200,4 @@ class ItemsRpcWebsocketHandler(JobsRpcWebsocketHandler):
     def subscribe_to_items(self, site_ids={}, update_delay=0):
         mongo_q = self.create_query(site_ids=site_ids)
         self.init_hb(update_delay)
-        return self.add_storage(mongo_q)   
+        return self.add_storage(mongo_q)
