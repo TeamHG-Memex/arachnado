@@ -69,10 +69,15 @@ class JsonRpcWebsocketHandler(websocket.WebSocketHandler):
     def write_event(self, event, data):
         if isinstance(data, basestring):
             data = json.loads(data)
-        message = json_encode({'event': event, 'data': data})
         try:
+            message = json_encode({'event': event, 'data': data})
             msg_d = self.write_message(message)
             if msg_d is not None:
                 yield msg_d
         except WebSocketClosedError:
-            pass
+            logging.error("WebSocketClosedError")
+        except Exception as ex:
+            logging.error(ex)
+            logging.error(data)
+            logging.error(event)
+

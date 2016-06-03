@@ -8,7 +8,8 @@ from tornado.web import Application, RequestHandler, url, HTTPError
 from arachnado.utils.misc import json_encode
 from arachnado.monitor import Monitor
 from arachnado.handler_utils import ApiHandler, NoEtagsMixin
-from arachnado.rpc import MainRpcHttpHandler, MainRpcWebsocketHandler, JobsRpcWebsocketHandler, ItemsRpcWebsocketHandler
+from arachnado.rpc import MainRpcHttpHandler, MainRpcWebsocketHandler
+from arachnado.rpc.data import DataRpcWebsocketHandler
 
 
 at_root = lambda *args: os.path.join(os.path.dirname(__file__), *args)
@@ -37,8 +38,7 @@ def get_application(crawler_process, domain_crawlers,
         url(r"/ws-updates", Monitor, context, name="ws-updates"),
         url(r"/ws-rpc", MainRpcWebsocketHandler, context, name="ws-rpc"),
         url(r"/rpc", MainRpcHttpHandler, context, name="rpc"),
-        url(r"/ws-jobs", JobsRpcWebsocketHandler, context, name="ws-jobs"),
-        url(r"/ws-items", ItemsRpcWebsocketHandler, context, name="ws-items"),
+        url(r"/ws-data", DataRpcWebsocketHandler, context, name="ws-data"),
     ]
     return Application(
         handlers=handlers,
