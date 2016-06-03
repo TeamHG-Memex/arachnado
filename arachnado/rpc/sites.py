@@ -29,7 +29,6 @@ class Sites(object):
                 self._publish(data, subscription)
             )
 
-    # TODO - call it!
     def _on_close(self):
         self.storage.unsubscribe(self.storage.available_subscriptions)
 
