@@ -1,4 +1,4 @@
-import pymongo
+import six
 from bson.objectid import ObjectId
 from tornado.gen import sleep, coroutine
 
@@ -28,7 +28,7 @@ class MongoTailStorage(MongoStorage):
         if self.tailing:
             raise RuntimeError('This storage is already tailing')
         self.tailing = True
-        if isinstance(last_object_id, basestring):
+        if isinstance(last_object_id, six.string_types):
             last_object_id = ObjectId(last_object_id)
 
         if query is not None:
@@ -76,7 +76,8 @@ class MongoTailStorage(MongoStorage):
                     stack.append(v)
                 elif isinstance(v, list):
                     stack.extend(v)
-                elif isinstance(v, unicode) and v.startswith(u'ObjectId('):
+                elif isinstance(v, six.string_types) \
+                        and v.startswith(u'ObjectId('):
                     d[k] = ObjectId(v[9:-1])
 
         return query

@@ -28,7 +28,7 @@ class ArachnadoRPC(object):
         else:
             self.send_data(response.data)
 
-    def on_done(self, future, *, data):
+    def on_done(self, future, data):
         data['result'] = future.result()
         self.send_data(data)
 
