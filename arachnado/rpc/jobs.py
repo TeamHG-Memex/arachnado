@@ -1,7 +1,7 @@
 import logging
 
 
-class JobsRpc(object):
+class Jobs(object):
 
     logger = logging.getLogger(__name__)
 

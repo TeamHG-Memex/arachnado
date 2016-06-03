@@ -1,7 +1,7 @@
 import json
 import logging
 
-import jsonrpclib
+# FIXME import jsonrpclib
 from tornado import websocket, gen
 import tornado.ioloop
 from tornado.web import RequestHandler
@@ -11,7 +11,7 @@ from arachnado.utils.misc import json_encode
 
 
 logger = logging.getLogger(__name__)
-jsonrpclib.config.use_jsonclass = False
+# FIXME jsonrpclib.config.use_jsonclass = False
 
 
 class JsonRpcWebsocketHandler(websocket.WebSocketHandler):
