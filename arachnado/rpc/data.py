@@ -30,7 +30,7 @@ class DataRpcWebsocketHandler(MainRpcWebsocketHandler):
     i_kwargs = None
     storages = {}
 
-    def subscribe_to_items(self, site_ids={}, update_delay=0):
+    def subscribe_to_pages(self, site_ids={}, update_delay=0):
         mongo_q = self.create_items_query(site_ids=site_ids)
         self.init_hb(update_delay)
         return self.add_storage(mongo_q, storage=self.create_items_storage_link())
@@ -111,8 +111,9 @@ class DataRpcWebsocketHandler(MainRpcWebsocketHandler):
         import traceback
         traceback.print_stack()
         logger.info("connection closed")
-        self.cp.signals.disconnect(self.on_stats_changed, agg_stats_changed)
-        self.cp.signals.disconnect(self.on_spider_closed, CPS.spider_closed)
+        if self.cp:
+            self.cp.signals.disconnect(self.on_stats_changed, agg_stats_changed)
+            self.cp.signals.disconnect(self.on_spider_closed, CPS.spider_closed)
         for storage in self.storages.values():
             storage["storage"]._on_close()
         if self.data_hb:
@@ -122,12 +123,14 @@ class DataRpcWebsocketHandler(MainRpcWebsocketHandler):
     def open(self):
         logger.info("new connection")
         super(MainRpcWebsocketHandler, self).open()
-        self.cp.signals.connect(self.on_stats_changed, agg_stats_changed)
-        self.cp.signals.connect(self.on_spider_closed, CPS.spider_closed)
+        if self.cp:
+            self.cp.signals.connect(self.on_stats_changed, agg_stats_changed)
+            self.cp.signals.connect(self.on_spider_closed, CPS.spider_closed)
 
     def on_spider_closed(self, spider):
-        for job in self.cp.jobs:
-            self.write_event("jobs:state", job)
+        if self.cp:
+            for job in self.cp.jobs:
+                self.write_event("jobs:state", job)
 
     def on_stats_changed(self, changes, crawler):
         crawl_id = crawler.spider.crawl_id
