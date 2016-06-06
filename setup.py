@@ -77,6 +77,7 @@ setup(
         'json-rpc >= 1.10',
         'autologin-middleware >= 0.1.1',
         'six',
+        'croniter >= 0.3.12',
     ],
     extras_require={
         'mongo': [],   # backwards compatibility
