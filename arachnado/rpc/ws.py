@@ -1,83 +1,68 @@
 import json
 import logging
+import six
 
-import jsonrpclib
-from tornado import websocket, gen
-import tornado.ioloop
+from tornado.ioloop import PeriodicCallback
+from tornado.concurrent import Future
 from tornado.web import RequestHandler
-from tornado.websocket import WebSocketClosedError
+from tornado import websocket, gen
 
 from arachnado.utils.misc import json_encode
+from arachnado.rpc import ArachnadoRPC
 
 
 logger = logging.getLogger(__name__)
-jsonrpclib.config.use_jsonclass = False
 
 
-class JsonRpcWebsocketHandler(websocket.WebSocketHandler):
+class RpcWebsocketHandler(ArachnadoRPC, websocket.WebSocketHandler):
+    """ JsonRpc router for WS stream.
+    """
 
     def on_message(self, message):
-        self._results = []
         try:
-            msg = json.loads(message.encode('utf-8'))
+            msg = json.loads(message)
             event, data = msg['event'], msg['data']
         except (TypeError, ValueError):
-            logger.warn("Invalid message skipped" + message[:500])
+            logger.warn('Invalid message skipped: {!r}'.format(message[:500]))
             return
         if event == 'rpc:request':
-            self.on_event(data)
+            self.handle_request(json.dumps(data))
         else:
-            logger.warn("Unsupported event type: " + event)
+            logger.warn('Unsupported event type: {!r}'.format(event))
 
-    def on_event(self, data):
-        self._RPC_.run(self, json_encode(data))
-
-    def _result(self, result):
-        """A little hacky way to not close WS stream"""
-        self._RPC_finished = False
-        super(JsonRpcWebsocketHandler, self)._result(result)
-
-    def on_result(self, data):
-        return self.write_event('rpc:response', data)
-
-    def open(self):
-        """Forward open event to resource objects"""
-        for resource_name, resource in self.__dict__.iteritems():
-            if hasattr(RequestHandler, resource_name):
-                continue
-            if hasattr(resource, '_on_open'):
-                resource._on_open()
-
-        self.__pinger = tornado.ioloop.PeriodicCallback(
-            lambda: self.ping('PING'),
-            1000 * 15
-        )
-        self.__pinger.start()
-
-    def on_close(self):
-        """Forward on_close event to resource objects"""
-        self._RPC_finished = True
-        for resource_name, resource in self.__dict__.iteritems():
-            if hasattr(RequestHandler, resource_name):
-                continue
-            if hasattr(resource, '_on_close'):
-                resource._on_close()
-
-        self.__pinger.stop()
+    def send_data(self, data):
+        self.write_event('rpc:response', data)
 
     @gen.coroutine
     def write_event(self, event, data):
-        if isinstance(data, basestring):
+        if isinstance(data, six.string_types):
             data = json.loads(data)
+        message = json_encode({'event': event, 'data': data})
         try:
-            message = json_encode({'event': event, 'data': data})
-            msg_d = self.write_message(message)
-            if msg_d is not None:
-                yield msg_d
-        except WebSocketClosedError:
-            logging.error("WebSocketClosedError")
-        except Exception as ex:
-            logging.error(ex)
-            logging.error(data)
-            logging.error(event)
+            self.write_message(message)
+        except websocket.WebSocketClosedError:
+            pass
+
+    def open(self):
+        """ Forward open event to resource objects.
+        """
+        for resource in self._resources():
+            if hasattr(resource, '_on_open'):
+                resource._on_open()
+        self._pinger = PeriodicCallback(lambda: self.ping(b'PING'), 1000 * 15)
+        self._pinger.start()
+
+    def on_close(self):
+        """ Forward on_close event to resource objects.
+        """
+        for resource in self._resources():
+            if hasattr(resource, '_on_close'):
+                resource._on_close()
+        self._pinger.stop()
+
+    def _resources(self):
+        for resource_name, resource in self.__dict__.items():
+            if hasattr(RequestHandler, resource_name):
+                continue
+            yield resource
 

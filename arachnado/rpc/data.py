@@ -2,26 +2,29 @@ import logging
 
 from arachnado.utils.misc import json_encode
 # A little monkey patching to have custom types encoded right
-from jsonrpclib import jsonrpc
-jsonrpc.jdumps = json_encode
-import tornadorpc
+# from jsonrpclib import jsonrpc
+# jsonrpc.jdumps = json_encode
+# import tornadorpc
+import json
 from tornado import gen
 import tornado.ioloop
 from bson.objectid import ObjectId
+from jsonrpc.dispatcher import Dispatcher
 
-from arachnado.rpc.jobs import JobsRpc
-from arachnado.rpc.pages import PagesRpc
+from arachnado.rpc.jobs import Jobs
+from arachnado.rpc.sites import Sites
+from arachnado.rpc.pages import Pages
 
 from arachnado.crawler_process import agg_stats_changed, CrawlerProcessSignals as CPS
-from arachnado.rpc import MainRpcWebsocketHandler
+from arachnado.rpc.ws import RpcWebsocketHandler
 
 logger = logging.getLogger(__name__)
-tornadorpc.config.verbose = True
-tornadorpc.config.short_errors = True
+# tornadorpc.config.verbose = True
+# tornadorpc.config.short_errors = True
 
 
-class DataRpcWebsocketHandler(MainRpcWebsocketHandler):
-    """ jobs info for WS stream"""
+class DataRpcWebsocketHandler(RpcWebsocketHandler):
+    """ jobs and pages API"""
     stored_data = []
     delay_mode = False
     event_types = ['stats:changed', 'pages.tailed']
@@ -29,11 +32,13 @@ class DataRpcWebsocketHandler(MainRpcWebsocketHandler):
     i_args = None
     i_kwargs = None
     storages = {}
+    # TODO: allow client to update this
+    max_msg_size = 2**20
 
     def subscribe_to_pages(self, site_ids={}, update_delay=0):
-        mongo_q = self.create_items_query(site_ids=site_ids)
+        mongo_q = self.create_pages_query(site_ids=site_ids)
         self.init_hb(update_delay)
-        return self.add_storage(mongo_q, storage=self.create_items_storage_link())
+        return self.add_storage(mongo_q, storage=self.create_pages_storage_link())
 
     def subscribe_to_jobs(self, include=[], exclude=[], update_delay=0):
         mongo_q = self.create_jobs_query(include=include, exclude=exclude)
@@ -57,7 +62,14 @@ class DataRpcWebsocketHandler(MainRpcWebsocketHandler):
         if event in self.event_types and self.delay_mode:
             self.stored_data.append({"event":event, "data":data})
         else:
-            return super(MainRpcWebsocketHandler, self).write_event(event, data)
+            return self._send_event(event, data)
+
+    def _send_event(self, event, data):
+        message = json_encode({'event': event, 'data': data})
+        if len(message) < self.max_msg_size:
+            # logging.info("{}: {}: {}".format(self.cnt, event, len(message)))
+            # self.cnt += 1
+            return super(DataRpcWebsocketHandler, self).write_event(event, data)
 
     def init_hb(self, update_delay):
         if update_delay > 0 and not self.data_hb:
@@ -69,6 +81,7 @@ class DataRpcWebsocketHandler(MainRpcWebsocketHandler):
             self.data_hb.start()
 
     def add_storage(self, mongo_q, storage):
+        self.dispatcher.add_object(storage)
         new_id = str(len(self.storages))
         self.storages[new_id] = {
             "storage": storage,
@@ -103,13 +116,17 @@ class DataRpcWebsocketHandler(MainRpcWebsocketHandler):
         self.i_args = args
         self.i_kwargs = kwargs
         self.cp = kwargs.get("crawler_process", None)
+        self.dispatcher = Dispatcher()
+        self.dispatcher["subscribe_to_pages"] = self.subscribe_to_pages
+        self.dispatcher["subscribe_to_jobs"] = self.subscribe_to_jobs
 
     def create_jobs_storage_link(self):
-        return JobsRpc(self, *self.i_args, **self.i_kwargs)
+        jobs = Jobs(self, *self.i_args, **self.i_kwargs)
+        return jobs
 
     def on_close(self):
-        import traceback
-        traceback.print_stack()
+        # import traceback
+        # traceback.print_stack()
         logger.info("connection closed")
         if self.cp:
             self.cp.signals.disconnect(self.on_stats_changed, agg_stats_changed)
@@ -118,11 +135,11 @@ class DataRpcWebsocketHandler(MainRpcWebsocketHandler):
             storage["storage"]._on_close()
         if self.data_hb:
             self.data_hb.stop()
-        # super(MainRpcWebsocketHandler, self).on_close()
+        super(DataRpcWebsocketHandler, self).on_close()
 
     def open(self):
         logger.info("new connection")
-        super(MainRpcWebsocketHandler, self).open()
+        super(DataRpcWebsocketHandler, self).open()
         if self.cp:
             self.cp.signals.connect(self.on_stats_changed, agg_stats_changed)
             self.cp.signals.connect(self.on_spider_closed, CPS.spider_closed)
@@ -140,12 +157,13 @@ class DataRpcWebsocketHandler(MainRpcWebsocketHandler):
         print("send_updates: {}".format(len(self.stored_data)))
         while len(self.stored_data):
             item = self.stored_data.pop()
-            super(MainRpcWebsocketHandler, self).write_event(item["event"], item["data"])
+            return self._send_event(item["event"], item["data"])
 
-    def create_items_storage_link(self):
-        return PagesRpc(self, *self.i_args, **self.i_kwargs)
+    def create_pages_storage_link(self):
+        pages = Pages(self, *self.i_args, **self.i_kwargs)
+        return pages
 
-    def create_items_query(self, site_ids):
+    def create_pages_query(self, site_ids):
         conditions = []
         for site in site_ids:
             if "url_field" in site_ids[site]:

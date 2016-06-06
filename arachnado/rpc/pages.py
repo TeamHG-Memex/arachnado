@@ -1,7 +1,7 @@
 from arachnado.storages.mongotail import MongoTailStorage
 
 
-class PagesRpc(object):
+class Pages(object):
     handler_id = None
 
     def __init__(self, handler, item_storage, **kwargs):

@@ -1,7 +1,7 @@
 import logging
 
 
-class JobsRpc(object):
+class Jobs(object):
     handler_id = None
     logger = logging.getLogger(__name__)
 
@@ -17,9 +17,6 @@ class JobsRpc(object):
         self.storage.unsubscribe('tailed')
 
     def _publish(self, data):
-        # print("=============================================================")
-        # print("jobs rpc :")
-        # print(data)
         if self.storage.tailing:
             if self.handler_id:
                 self.handler.write_event('jobs.tailed', data, handler_id=self.handler_id)

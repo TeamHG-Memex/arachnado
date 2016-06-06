@@ -29,7 +29,7 @@ class PageItemsMiddleware(object):
             'crawled_at': datetime.datetime.utcnow(),
             'url': response.url,
             'status': response.status,
-            'headers': response.headers,
+            'headers': response.headers.to_unicode_dict(),
             'body': response.body_as_unicode(),
             'meta': response.meta,
             'items': items,
