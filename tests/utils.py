@@ -6,8 +6,9 @@ from arachnado.storages.mongotail import MongoTailStorage
 
 
 def get_app(ws_uri):
-    items_uri = "mongodb://localhost:27017/arachnado/items"
-    jobs_uri = "mongodb://localhost:27017/arachnado/jobs"
+    db_uri = "mongodb://localhost:27017/arachnado"
+    items_uri = "{}/items".format(db_uri)
+    jobs_uri = "{}/jobs".format(db_uri)
     job_storage = MongoTailStorage(jobs_uri, cache=True)
     item_storage = MongoTailStorage(items_uri)
     context = {

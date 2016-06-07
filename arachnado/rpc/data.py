@@ -105,7 +105,7 @@ class DataRpcWebsocketHandler(RpcWebsocketHandler):
         return jobs_q
 
     def cancel_subscription(self, subscription_id):
-        storage = self.storages.pop(subscription_id)
+        storage = self.storages.pop(subscription_id, None)
         if storage:
             storage._on_close()
             return True
@@ -119,6 +119,7 @@ class DataRpcWebsocketHandler(RpcWebsocketHandler):
         self.dispatcher = Dispatcher()
         self.dispatcher["subscribe_to_pages"] = self.subscribe_to_pages
         self.dispatcher["subscribe_to_jobs"] = self.subscribe_to_jobs
+        self.dispatcher["cancel_subscription"] = self.cancel_subscription
 
     def create_jobs_storage_link(self):
         jobs = Jobs(self, *self.i_args, **self.i_kwargs)
