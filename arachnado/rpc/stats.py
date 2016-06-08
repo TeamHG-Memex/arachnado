@@ -1,7 +1,7 @@
 import logging
 
 
-class StatsRpc(object):
+class Stats(object):
 
     logger = logging.getLogger(__name__)
 

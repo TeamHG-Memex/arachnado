@@ -74,10 +74,12 @@ setup(
         'docopt >= 0.6',
         'service_identity',
         'motor >= 0.6.2',
+        'json-rpc >= 1.10',
         'autologin-middleware >= 0.1.1',
         'six',
+        'croniter >= 0.3.12',
     ],
-    extras_requires={
+    extras_require={
         'mongo': [],   # backwards compatibility
         'extras': ['autopager >= 0.2'],
     }

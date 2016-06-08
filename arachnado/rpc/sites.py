@@ -1,9 +1,7 @@
 import logging
 
-from tornadorpc import async
 
-
-class SitesRpc(object):
+class Sites(object):
 
     logger = logging.getLogger(__name__)
 
@@ -11,11 +9,8 @@ class SitesRpc(object):
         self.handler = handler
         self.storage = site_storage
 
-    @async
     def list(self):
-        def _list(future):
-            self.handler.result(future.result())
-        self.storage.fetch().add_done_callback(_list)
+        return self.storage.fetch()
 
     def post(self, site):
         self.storage.create(site)

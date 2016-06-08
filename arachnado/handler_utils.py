@@ -9,7 +9,7 @@ class ApiHandler(web.RequestHandler):
 
     def prepare(self):
         if self.request.headers.get("Content-Type", "").startswith("application/json"):
-            self.json_args = json.loads(self.request.body)
+            self.json_args = json.loads(self.request.body.decode("utf-8"))
             self.is_json = True
         else:
             self.json_args = None

@@ -6,7 +6,7 @@ motor == 0.6.2
 pymongo==2.8        # required for motor 0.6.2
 docopt == 0.6.2
 service_identity
-tornadorpc == 0.1.1
+json-rpc==1.10.3
 croniter == 0.3.8
 autopager == 0.2
 autologin-middleware == 0.1.1

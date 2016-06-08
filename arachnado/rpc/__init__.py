@@ -1,44 +1,48 @@
-import logging
+from functools import partial
 
-from arachnado.utils.misc import json_encode
-# A little monkey patching to have custom types encoded right
-from jsonrpclib import jsonrpc
-jsonrpc.jdumps = json_encode
-import tornadorpc
-from tornadorpc.json import JSONRPCHandler
+from jsonrpc import JSONRPCResponseManager
+from jsonrpc.dispatcher import Dispatcher
+from tornado.web import RequestHandler, asynchronous
 from tornado.concurrent import Future
 
-from arachnado.rpc.jobs import JobsRpc
-from arachnado.rpc.sites import SitesRpc
-from arachnado.rpc.pages import PagesRpc
-from arachnado.rpc.ws import JsonRpcWebsocketHandler
+from arachnado.utils.misc import json_encode
+from arachnado.rpc.jobs import Jobs
+from arachnado.rpc.sites import Sites
+from arachnado.rpc.pages import Pages
 
 
-logger = logging.getLogger(__name__)
-tornadorpc.config.verbose = True
-tornadorpc.config.short_errors = True
-
-
-class MainRpcHttpHandler(JSONRPCHandler):
-    """ Main JsonRpc router for REST requests"""
-
+class ArachnadoRPC(object):
+    """ Base class for all Arachnado RPC resources.
+    """
     def initialize(self, *args, **kwargs):
-        self.jobs = JobsRpc(self, *args, **kwargs)
-        self.sites = SitesRpc(self, *args, **kwargs)
-        self.pages = PagesRpc(self, *args, **kwargs)
+        self.dispatcher = Dispatcher()
+        self.dispatcher.add_object(Jobs(self, *args, **kwargs))
+        self.dispatcher.add_object(Sites(self, *args, **kwargs))
+        self.dispatcher.add_object(Pages(self, *args, **kwargs))
 
-    def result(self, result):
-        if isinstance(result, Future):
-            result.add_done_callback(self._result)
+    def handle_request(self, body):
+        response = JSONRPCResponseManager.handle(body, self.dispatcher)
+        if isinstance(response.result, Future):
+            response.result.add_done_callback(
+                partial(self.on_done, data=response.data))
         else:
-            self._result(result)
+            self.send_data(response.data)
 
-    def _result(self, result):
-        if isinstance(result, Future):
-            result = result.result()
-        self._results.append(result)
-        self._RPC_.response(self)
+    def on_done(self, future, data):
+        data['result'] = future.result()
+        self.send_data(data)
+
+    def send_data(self, data):
+        raise NotImplementedError
 
 
-class MainRpcWebsocketHandler(JsonRpcWebsocketHandler, MainRpcHttpHandler):
-    """ Main JsonRpc router for WS stream"""
+class RpcHttpHandler(ArachnadoRPC, RequestHandler):
+    """ JsonRpc router for REST requests.
+    """
+    @asynchronous
+    def post(self):
+        self.handle_request(self.request.body)
+
+    def send_data(self, data):
+        self.write(json_encode(data))
+        self.finish()
