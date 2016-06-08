@@ -1,23 +1,28 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 import os
-import re
 
-from scrapy.utils.misc import walk_modules
-from scrapy.utils.spider import iter_spider_classes
 from tornado.web import Application, RequestHandler, url, HTTPError
+# from tornado.escape import json_decode
 
-from arachnado.utils import json_encode
-from arachnado.spider import create_crawler, CrawlWebsiteSpider
+from arachnado.utils.misc import json_encode
 from arachnado.monitor import Monitor
 from arachnado.handler_utils import ApiHandler, NoEtagsMixin
+from arachnado.rpc import RpcHttpHandler
+from arachnado.rpc.ws import RpcWebsocketHandler
+
 
 at_root = lambda *args: os.path.join(os.path.dirname(__file__), *args)
 
 
-def get_application(crawler_process, opts):
+def get_application(crawler_process, domain_crawlers,
+                    site_storage, item_storage, job_storage, opts):
     context = {
         'crawler_process': crawler_process,
+        'domain_crawlers': domain_crawlers,
+        'job_storage': job_storage,
+        'site_storage': site_storage,
+        'item_storage': item_storage,
         'opts': opts,
     }
     debug = opts['arachnado']['debug']
@@ -30,7 +35,9 @@ def get_application(crawler_process, opts):
         url(r"/crawler/pause", PauseCrawler, context, name="pause"),
         url(r"/crawler/resume", ResumeCrawler, context, name="resume"),
         url(r"/crawler/status", CrawlerStatus, context, name="status"),
-        url(r"/ws-updates", Monitor, context, name="ws"),
+        url(r"/ws-updates", Monitor, context, name="ws-updates"),
+        url(r"/ws-rpc", RpcWebsocketHandler, context, name="ws-rpc"),
+        url(r"/rpc", RpcHttpHandler, context, name="rpc"),
     ]
     return Application(
         handlers=handlers,
@@ -43,47 +50,17 @@ def get_application(crawler_process, opts):
     )
 
 
-def get_spider_cls(url, spider_packages,
-                   default=CrawlWebsiteSpider):
-    """
-    Return spider class based on provided url.
-
-    :param url: if it looks like `spider://spidername` it tries to load spider
-        named `spidername`, otherwise it returns default spider class
-    :param spider_packages: a list of package names that will be searched for
-        spider classes
-    :param default: the class that is returned when `url` doesn't start with
-        `spider://`
-    """
-    if url.startswith('spider://'):
-        spider_name = url[len('spider://'):]
-        return find_spider_cls(spider_name, spider_packages)
-    return default
-
-
-def find_spider_cls(spider_name, spider_packages):
-    """
-    Find spider class which name is equal to `spider_name` argument
-
-    :param spider_name: spider name to look for
-    :param spider_packages: a list of package names that will be searched for
-        spider classes
-    """
-    for package_name in spider_packages:
-        for module in walk_modules(package_name):
-            for spider_cls in iter_spider_classes(module):
-                if spider_cls.name == spider_name:
-                    return spider_cls
-
-
 class BaseRequestHandler(RequestHandler):
 
-    def initialize(self, crawler_process, opts):
+    def initialize(self, crawler_process, domain_crawlers,
+                   site_storage, opts, **kwargs):
         """
         :param arachnado.crawler_process.ArachnadoCrawlerProcess
             crawler_process:
         """
         self.crawler_process = crawler_process
+        self.domain_crawlers = domain_crawlers
+        self.site_storage = site_storage
         self.opts = opts
 
     def render(self, *args, **kwargs):
@@ -109,54 +86,39 @@ class StartCrawler(ApiHandler, BaseRequestHandler):
     """
     This endpoint starts crawling for a domain.
     """
-    def crawl(self, domain):
-        storage_opts = self.opts['arachnado.storage']
-        settings = {
-            'MOTOR_PIPELINE_ENABLED': storage_opts['enabled'],
-            'MOTOR_PIPELINE_DB_NAME': storage_opts['db_name'],
-            'MOTOR_PIPELINE_DB': storage_opts['db_name'],
-            'MOTOR_PIPELINE_URI': storage_opts['uri'],
-        }
-        spider_cls = get_spider_cls(domain, self._get_spider_package_names())
-
-        if spider_cls is not None:
-            self.crawler = create_crawler(settings, spider_cls=spider_cls)
-            self.crawler_process.crawl(self.crawler, domain=domain)
-            return True
-        return False
+    def crawl(self, domain, args, settings):
+        self.crawler = self.domain_crawlers.start(domain, args, settings)
+        return bool(self.crawler)
 
     def post(self):
         if self.is_json:
             domain = self.json_args['domain']
-            if self.crawl(domain):
+            args = self.json_args.get('options', {}).get('args', {})
+            settings = self.json_args.get('options', {}).get('settings', {})
+            if self.crawl(domain, args, settings):
                 self.write({"status": "ok",
                             "job_id": self.crawler.spider.crawl_id})
             else:
                 self.write({"status": "error"})
         else:
             domain = self.get_body_argument('domain')
-            if self.crawl(domain):
+            if self.crawl(domain, {}, {}):
                 self.redirect("/")
             else:
                 raise HTTPError(400)
 
-    def _get_spider_package_names(self):
-        return [name for name in re.split(
-            '\s+', self.opts['arachnado.scrapy']['spider_packages']
-        ) if name]
-
 
 class _ControlJobHandler(ApiHandler, BaseRequestHandler):
-    def control_job(self, job_id):
+    def control_job(self, job_id, **kwargs):
         raise NotImplementedError
 
     def post(self):
         if self.is_json:
-            job_id = int(self.json_args['job_id'])
+            job_id = self.json_args['job_id']
             self.control_job(job_id)
             self.write({"status": "ok"})
         else:
-            job_id = int(self.get_body_argument('job_id'))
+            job_id = self.get_body_argument('job_id')
             self.control_job(job_id)
             self.redirect("/")
 
@@ -187,7 +149,7 @@ class CrawlerStatus(BaseRequestHandler):
         if crawl_ids_arg == '':
             jobs = self.crawler_process.get_jobs()
         else:
-            crawl_ids = set(map(int, crawl_ids_arg.split(',')))
+            crawl_ids = set(crawl_ids_arg.split(','))
             jobs = [job for job in self.crawler_process.get_jobs()
                     if job['id'] in crawl_ids]
 

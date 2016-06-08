@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 import logging
-import itertools
 import operator
+
+import six
+from twisted.internet import defer
 from scrapy.core.downloader import Downloader
 from scrapy.utils.reactor import CallLaterOnce
-import six
-
 from scrapy import signals
 from scrapy.signalmanager import SignalManager
 from scrapy.crawler import CrawlerProcess, Crawler
@@ -19,7 +19,7 @@ from arachnado.process_stats import ProcessStatsMonitor
 
 logger = logging.getLogger(__name__)
 
-# monkey patch Scrapy to add an extra signal
+# monkey patch Scrapy to add extra signals
 signals.spider_closing = object()
 signals.engine_paused = object()
 signals.engine_resumed = object()
@@ -108,8 +108,13 @@ class ArachnadoExecutionEngine(ExecutionEngine):
         if self.slot.closing:
             return self.slot.closing
         self.crawler.crawling = False
-        self.signals.send_catch_log(signals.spider_closing)
-        return super(ArachnadoExecutionEngine, self).close_spider(spider, reason)
+        dfd = self.signals.send_catch_log_deferred(signals.spider_closing,
+                                                   spider=spider,
+                                                   reason=reason)
+        dfd.addBoth(
+            lambda _: super(ArachnadoExecutionEngine, self).close_spider(spider, reason)
+        )
+        return dfd
 
     def pause(self):
         """Pause the execution engine"""
@@ -134,13 +139,17 @@ class ArachnadoCrawler(Crawler):
     """
     Extended Crawler which uses ArachnadoExecutionEngine.
     """
+    # Should be set by caller. Currently DomainCrawlers class sets it (ugly).
+    start_options = None
+
     def _create_engine(self):
         return ArachnadoExecutionEngine(self, lambda _: self.stop())
 
 
 class ArachnadoDownloader(Downloader):
     def _enqueue_request(self, request, spider):
-        dfd = super(ArachnadoDownloader, self)._enqueue_request(request, spider)
+        dfd = super(ArachnadoDownloader, self)._enqueue_request(request,
+                                                                spider)
         self.signals.send_catch_log(signals.downloader_enqueued)
 
         def _send_dequeued(_):
@@ -157,48 +166,51 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
     assigns unique ids to each spider job, workarounds some Scrapy
     issues and provides extra stats.
     """
-    crawl_ids = itertools.count(start=1)
-
     def __init__(self, settings=None):
         self.signals = SignalManager(self)
-        self.signals.connect(self.on_spider_closed, CrawlerProcessSignals.spider_closed)
+        self.signals.connect(self.on_spider_closed,
+                             CrawlerProcessSignals.spider_closed)
         self._finished_jobs = []
         self._paused_jobs = set()
         self.procmon = ProcessStatsMonitor()
         self.procmon.start()
 
-        super(ArachnadoCrawlerProcess, self).__init__(settings or {})
+        super(ArachnadoCrawlerProcess, self).__init__(settings)
 
         # don't log DepthMiddleware messages
         # see https://github.com/scrapy/scrapy/issues/1308
-        logging.getLogger("scrapy.spidermiddlewares.depth").setLevel(logging.INFO)
+        logger_ = logging.getLogger("scrapy.spidermiddlewares.depth")
+        logger_.setLevel(logging.INFO)
 
     def crawl(self, crawler_or_spidercls, *args, **kwargs):
-        kwargs['crawl_id'] = next(self.crawl_ids)
-
-        crawler = crawler_or_spidercls
-        if not isinstance(crawler_or_spidercls, Crawler):
-            crawler = self._create_crawler(crawler_or_spidercls)
+        crawler = self.create_crawler(crawler_or_spidercls)
 
         # aggregate all crawler signals
         for name in SCRAPY_SIGNAL_NAMES:
-            crawler.signals.connect(self._resend_signal, getattr(signals, name))
+            crawler.signals.connect(self._resend_signal,
+                                    getattr(signals, name))
 
         # aggregate signals from crawler EventedStatsCollectors
         if hasattr(crawler.stats, "signals"):
-            crawler.stats.signals.connect(self._resend_signal, stats.stats_changed)
+            crawler.stats.signals.connect(
+                self._resend_signal, stats.stats_changed
+            )
 
-        d = super(ArachnadoCrawlerProcess, self).crawl(crawler_or_spidercls, *args, **kwargs)
+        d = super(ArachnadoCrawlerProcess, self).crawl(crawler, *args, **kwargs)
         return d
 
     def _create_crawler(self, spidercls):
+        # this is overridden to create ArachnadoCrawler instead of Crawler
         if isinstance(spidercls, six.string_types):
             spidercls = self.spider_loader.load(spidercls)
         return ArachnadoCrawler(spidercls, self.settings)
 
     def stop_job(self, crawl_id):
         """ Stop a single crawl job """
-        self.get_crawler(crawl_id).stop()
+        crawler = self.get_crawler(crawl_id)
+        dfd = crawler.engine.close_spider(crawler.spider, 'stopped')
+        dfd.addBoth(lambda _: crawler.stop())
+        return dfd
 
     def pause_job(self, crawl_id):
         """ Pause a crawling job """
@@ -211,9 +223,10 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
         self.get_crawler(crawl_id).engine.unpause()
 
     def get_crawler(self, crawl_id):
-        for crawler in self.crawlers:
-            if getattr(crawler.spider, "crawl_id") == crawl_id:
-                return crawler
+        if crawl_id is not None:
+            for crawler in self.crawlers:
+                if getattr(crawler.spider, "crawl_id", None) == crawl_id:
+                    return crawler
         raise KeyError("Job is not known: %s" % crawl_id)
 
     def _resend_signal(self, **kwargs):
@@ -241,35 +254,38 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
 
     def on_spider_closed(self, spider, reason):
         # spiders are closed not that often, insert(0,...) should be fine
-        self._finished_jobs.insert(0, {
-            'id': spider.crawl_id,
-            'job_id': getattr(spider, 'motor_job_id'),
-            'seed': spider.domain,
-            'status': reason,
-            'stats': spider.crawler.stats.get_stats(spider),
-            'downloads': self._downloader_stats(spider.crawler)
-        })
+        if isinstance(spider.crawler, ArachnadoCrawler):
+            self._finished_jobs.insert(0, self._get_job_info(spider.crawler,
+                                                             reason))
 
     # FIXME: methods below are ugly for two reasons:
     # 1. they assume spiders have certain attributes;
     # 2. they try to get crawling status based on auxilary information.
+    #
+    # Time to move them to DomainCrawler?
 
     def get_jobs(self):
         """ Return a list of active jobs """
         crawlers = [crawler for crawler in self.crawlers
-                    if crawler.spider is not None]
-        return [
-            {
-                'id': crawler.spider.crawl_id,
-                'job_id': getattr(crawler.spider, 'motor_job_id'),
-                'seed': crawler.spider.domain,
-                'status': self._get_crawler_status(crawler),
-                'stats': crawler.spider.crawler.stats.get_stats(crawler.spider),
-                'downloads': self._downloader_stats(crawler)
-                # 'engine_info': dict(get_engine_status(crawler.engine))
-            }
-            for crawler in crawlers
-        ]
+                    if crawler.spider is not None and
+                    isinstance(crawler, ArachnadoCrawler)]
+        return [self._get_job_info(crawler, self._get_crawler_status(crawler))
+                for crawler in crawlers]
+
+    def _get_job_info(self, crawler, status):
+        start_options = getattr(crawler, 'start_options', {})
+        return {
+            'id': crawler.spider.crawl_id,
+            'job_id': getattr(crawler.spider, 'motor_job_id'),
+            'seed': crawler.spider.domain,
+            'status': status,
+            'stats': crawler.stats.get_stats(crawler.spider),
+            'downloads': self._downloader_stats(crawler),
+            'args': start_options.get('args', {}),
+            'settings': start_options.get('settings', {}),
+            # 'start_options': start_options,
+            # 'engine_info': dict(get_engine_status(crawler.engine))
+        }
 
     @classmethod
     def _downloader_stats(cls, crawler):
@@ -294,7 +310,8 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
             'delay': slot.delay,
             'lastseen': slot.lastseen,
             'len(queue)': len(slot.queue),
-            'transferring': [cls._request_info(req) for req in slot.transferring],
+            'transferring': [cls._request_info(req)
+                             for req in slot.transferring],
             'active': [cls._request_info(req) for req in slot.active],
         }
 
@@ -303,7 +320,7 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
             return "unknown"
         if not crawler.crawling:
             return "stopping"
-        if int(crawler.spider.crawl_id) in self._paused_jobs:
+        if crawler.spider.crawl_id in self._paused_jobs:
             return "suspended"
         return "crawling"
 

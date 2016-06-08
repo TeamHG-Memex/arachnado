@@ -26,12 +26,14 @@
   },
   "dependencies": {
     "debounce": "^1.0.0",
-    "eventemitter3": "^1.1.1",
-    "filesize": "^3.1.2",
+    "eventemitter3": "^1.2.0",
+    "filesize": "^3.3.0",
     "pretty-ms": "^1.2.0",
-    "react": "^0.13.3",
-    "react-bootstrap": "^0.23.4",
-    "react-router": "^0.13.3",
-    "reflux": "^0.2.8"
+    "react": "^15.0.1",
+    "react-dom": "^15.0.1",
+    "react-bootstrap": "^0.29.4",
+    "react-router": "^2.4.1",
+    "reflux": "^0.4.1",
+    "moment": "^2.13.0"
   }
 }

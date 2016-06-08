@@ -3,6 +3,7 @@ A widget which shows if a server is idle/crawling or if we're not connected.
 */
 
 var React = require('react');
+var ReactDOM = require("react-dom");
 var Reflux = require('reflux');
 var { Label } = require('react-bootstrap');
 var ConnectionStore = require("../stores/ConnectionStore");
@@ -38,5 +39,5 @@ var ConnectionMonitor = React.createClass({
 });
 
 export function install(elemId) {
-    React.render(<ConnectionMonitor />, document.getElementById(elemId));
+    ReactDOM.render(<ConnectionMonitor />, document.getElementById(elemId));
 }

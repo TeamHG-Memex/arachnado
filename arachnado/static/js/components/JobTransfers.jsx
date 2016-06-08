@@ -1,7 +1,7 @@
 /*
 Widgets for job downloads info.
 */
-var React = require("react/addons");
+var React = require("react");
 //var ReactCSSTransitionGroup = React.addons.CSSTransitionGroup;
 var Reflux = require("reflux");
 var filesize = require("filesize");

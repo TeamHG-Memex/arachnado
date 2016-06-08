@@ -29,7 +29,7 @@ setup(
     packages=find_packages(),
     package_data={
         'arachnado': [
-            "settings/*.conf",
+            "config/*.conf",
             "templates/*.html",
             "static/css/*.css",
             
@@ -67,14 +67,20 @@ setup(
         'Topic :: Software Development :: Libraries :: Python Modules',
     ],
     install_requires=[
-        'scrapy >= 1.0.0',
-        'Twisted >= 12',
+        'scrapy >= 1.1.0',
+        'Twisted >= 16',
         'psutil >= 2.2',
-        'tornado >= 4.2',
+        'tornado >= 4.2, < 4.3',
         'docopt >= 0.6',
         'service_identity',
+        'motor >= 0.6.2',
+        'json-rpc >= 1.10',
+        'autologin-middleware >= 0.1.1',
+        'six',
+        'croniter >= 0.3.12',
     ],
-    extras_requires={
-        'mongo': ['motor >= 0.4.1']
+    extras_require={
+        'mongo': [],   # backwards compatibility
+        'extras': ['autopager >= 0.2'],
     }
 )

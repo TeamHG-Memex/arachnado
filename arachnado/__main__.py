@@ -20,13 +20,15 @@ Options:
                             "twisted", "tornado" and "auto".
   --debug                   Enable debug mode.
   --version                 Show version information
-  -h --help                 Show this help
+  --help                    Show this help
 
 """
 from __future__ import absolute_import
 import os
+import re
 import sys
 import logging
+from os import getenv
 
 from docopt import docopt
 from tornado.ioloop import IOLoop
@@ -53,16 +55,60 @@ def setup_event_loop(use_twisted_reactor, debug=True):
 def main(port, host, start_manhole, manhole_port, manhole_host, loglevel, opts):
     from arachnado.handlers import get_application
     from arachnado.crawler_process import ArachnadoCrawlerProcess
-    from arachnado import manhole
+    from arachnado.site_checker import get_site_checker_crawler
+    from arachnado.storages.mongo import MongoStorage
+    from arachnado.storages.mongotail import MongoTailStorage
+    from arachnado.domain_crawlers import DomainCrawlers
+    from arachnado.cron import Cron
 
-    settings = {'LOG_LEVEL': loglevel}
+    settings = {
+        'LOG_LEVEL': loglevel,
+    }
+
+    # mongo export options
+    storage_opts = opts['arachnado.storage']
+    assert storage_opts['enabled'], "Storage can't be turned off"
+
+    items_uri = _getval(storage_opts, 'items_uri_env', 'items_uri')
+    jobs_uri = _getval(storage_opts, 'jobs_uri_env', 'jobs_uri')
+    sites_uri = _getval(storage_opts, 'sites_uri_env', 'sites_uri')
+
+    settings.update({k: v for k, v in opts['arachnado.scrapy'].items()
+                     if k.isupper()})
+
+    settings.update({
+        'MONGO_EXPORT_ENABLED': storage_opts['enabled'],
+        'MONGO_EXPORT_JOBS_URI': jobs_uri,
+        'MONGO_EXPORT_ITEMS_URI': items_uri,
+    })
+
+    job_storage = MongoTailStorage(jobs_uri, cache=True)
+    site_storage = MongoStorage(sites_uri, cache=True)
+    item_storage = MongoTailStorage(items_uri)
+
     crawler_process = ArachnadoCrawlerProcess(settings)
 
-    app = get_application(crawler_process, opts)
+    site_checker_crawler = get_site_checker_crawler(site_storage)
+    crawler_process.crawl(site_checker_crawler)
+
+    spider_packages = opts['arachnado.scrapy']['spider_packages']
+    domain_crawlers = DomainCrawlers(
+        crawler_process=crawler_process,
+        spider_packages=_parse_spider_packages(spider_packages),
+        settings=settings
+    )
+    domain_crawlers.resume(job_storage)
+
+    cron = Cron(domain_crawlers, site_storage)
+    cron.start()
+
+    app = get_application(crawler_process, domain_crawlers,
+                          site_storage, item_storage, job_storage, opts)
     app.listen(int(port), host)
     logger.info("Arachnado v%s is started on %s:%s" % (__version__, host, port))
 
     if start_manhole:
+        from arachnado import manhole
         manhole.start(manhole_port, manhole_host, {'cp': crawler_process})
         logger.info("Manhole server is started on %s:%s" % (
             manhole_host, manhole_port))
@@ -70,8 +116,21 @@ def main(port, host, start_manhole, manhole_port, manhole_host, loglevel, opts):
     crawler_process.start(stop_after_crawl=False)
 
 
-def _settings(args):
-    from arachnado.options import load_settings, ensure_bool
+def _getval(opts, env_key, key):
+    return getenv(opts[env_key]) or opts[key]
+
+
+def _parse_spider_packages(spider_packages):
+    """
+    >>> _parse_spider_packages("mypackage.spiders package2  package3  ")
+    ['mypackage.spiders', 'package2', 'package3']
+    """
+    return [name for name in re.split('\s+', spider_packages) if name]
+
+
+def _get_opts(args):
+    """ Combine options from config files and command-line arguments """
+    from arachnado.config import load_config, ensure_bool
 
     if args['--config']:
         path = os.path.expanduser(args['--config'])
@@ -97,7 +156,7 @@ def _settings(args):
         'port': '--manhole-port',
         'host': '--manhole-host',
     })
-    opts = load_settings(config_files, overrides)
+    opts = load_config(config_files, overrides)
     ensure_bool(opts, 'arachnado', 'debug')
     ensure_bool(opts, 'arachnado.storage', 'enabled')
     ensure_bool(opts, 'arachnado.manhole', 'enabled')
@@ -106,7 +165,7 @@ def _settings(args):
 
 def run():
     args = docopt(__doc__, version=__version__)
-    opts = _settings(args)
+    opts = _get_opts(args)
 
     if args['show-settings']:
         from pprint import pprint

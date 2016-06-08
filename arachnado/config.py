@@ -1,20 +1,21 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 import os
-from ConfigParser import SafeConfigParser
+from six.moves.configparser import SafeConfigParser
 
 _ROOT = os.path.abspath(os.path.dirname(__file__))
 
 FILENAMES = [
-    os.path.join(_ROOT, 'settings', 'defaults.conf'),
+    os.path.join(_ROOT, 'config', 'defaults.conf'),
     '/etc/arachnado.conf',
     os.path.expanduser('~/.config/arachnado.conf'),
     os.path.expanduser('~/.arachnado.conf'),
 ]
 
 
-def load_settings(config_files=(), overrides=()):
+def load_config(config_files=(), overrides=()):
     cp = SafeConfigParser()
+    cp.optionxform = str  # make parsing case-sensitive
     cp.read(FILENAMES + config_files)
 
     for section, option, value in overrides:

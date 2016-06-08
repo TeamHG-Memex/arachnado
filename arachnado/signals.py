@@ -6,6 +6,10 @@ from __future__ import absolute_import
 
 
 class Signal(object):
+    """
+    >>> Signal("my_signal", supports_defer=False)
+    Signal('my_signal', supports_defer=False)
+    """
     def __init__(self, name, supports_defer):
         self.name = name
         self.supports_defer = supports_defer

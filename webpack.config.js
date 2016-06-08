@@ -12,7 +12,6 @@ module.exports = {
 
         'vendor': [
             'react',
-            'react/addons',
             'react-bootstrap',
             'react-router',
             'reflux',

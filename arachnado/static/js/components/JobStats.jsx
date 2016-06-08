@@ -5,7 +5,6 @@ var filesize = require("filesize");
 var { Table } = require("react-bootstrap");
 var { KeyValueTable } = require("./KeyValueTable");
 
-var JobStore = require("../stores/JobStore");
 var { JobsMixin } = require("./RefluxMixins");
 
 var range = (top) => Array.from(new Array(top), (_,i) => i);
@@ -65,10 +64,10 @@ var SHORT_NAMES = {
 };
 
 
-function getJobStatRows(stats){
+function getJobStatRows(stats, showZeros){
     return Object.keys(stats).map(key => {
         var value = stats[key];
-        if (value == 0){
+        if (!showZeros && !value){
             return "";
         }
         if (/_bytes$|memusage/.test(key)){
@@ -77,8 +76,8 @@ function getJobStatRows(stats){
         var shortKey = SHORT_NAMES[key] || key;
         return (
             <tr key={key}>
-                <td>{shortKey}</td>
-                <td>{value}</td>
+                <td style={{wordWrap: 'break-word'}}>{shortKey}</td>
+                <td style={{wordWrap: 'break-word'}}>{value}</td>
             </tr>
         );
     }).filter(item => item != "");
@@ -89,7 +88,7 @@ export var AggregateJobStats = React.createClass({
     mixins: [JobsMixin],
     render: function () {
         var stats = this.getAggregateStats(this.state.jobs);
-        var rows = getJobStatRows(stats);
+        var rows = getJobStatRows(stats, false);
         if (rows.length == 0){
             return (
                 <p>
@@ -120,7 +119,7 @@ export var JobStats = React.createClass({
         var stats = this.props.job.stats;
         var sortedStats = {};
         Object.keys(stats).sort().forEach(k => {sortedStats[k] = stats[k]});
-        var rows = getJobStatRows(sortedStats);
+        var rows = getJobStatRows(sortedStats, true);
         if (rows.length == 0) {
             return <p>Nothing to show yet.</p>;
         }

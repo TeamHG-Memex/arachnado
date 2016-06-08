@@ -5,7 +5,7 @@ import logging
 
 from tornado import websocket
 
-from arachnado.utils import json_encode
+from arachnado.utils.misc import json_encode
 
 
 logger = logging.getLogger(__name__)
@@ -22,10 +22,25 @@ class BaseWSHandler(websocket.WebSocketHandler):
 
     def write_event(self, event, data):
         """ Send a message to the client """
-        message = json_encode({'event': event, 'data': data})
-        self.write_message(message)
+        # if event != "process:stats":
+        #     print("-----------------================")
+        #     print("write_event {} {}".format(event, data))
+        message = None
+        try:
+            message = json_encode({'event': event, 'data': data})
+        except Exception as e:
+            logger.warn("Invalid event message skipped {} {} {}".format(e, event, data))
+            return
+
+        if message:
+            try:
+                self.write_message(message)
+            except Exception as e:
+                logger.warn("Error while sending message {}".format(e))
 
     def on_message(self, message):
+        # print("-----------------================")
+        # print("on message {}".format(message))
         try:
             msg = json.loads(message)
             event, data = msg['event'], msg['data']

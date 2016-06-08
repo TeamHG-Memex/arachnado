@@ -18,10 +18,6 @@ To install Arachnado use pip::
 
     pip install arachnado
 
-To install Arachnado with MongoDB support use this command::
-
-    pip install arachnado[mongo]
-
 Run
 ---
 
@@ -43,7 +39,7 @@ the server::
     arachnado --config ./my-config.conf
 
 For available options check
-https://github.com/TeamHG-Memex/arachnado/blob/master/arachnado/settings/defaults.conf.
+https://github.com/TeamHG-Memex/arachnado/blob/master/arachnado/config/defaults.conf.
 
 Development
 -----------

@@ -1,71 +1,14 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
-import datetime
+import contextlib
 import logging
 
 import scrapy
 from scrapy.linkextractors import LinkExtractor
 from scrapy.http.response.html import HtmlResponse
+from autologin_middleware import link_looks_like_logout
 
-from .utils import MB, add_scheme_if_missing, get_netloc
-from .crawler_process import ArachnadoCrawler
-
-
-DEFAULT_SETTINGS = {
-    'DEPTH_STATS_VERBOSE': True,
-    'DEPTH_PRIORITY': -1,
-
-    'BOT_NAME': 'arachnado',
-    'USER_AGENT': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_3) '
-                  'AppleWebKit/537.36 (KHTML, like Gecko) '
-                  'Chrome/39.0.2148.0 Safari/537.36',
-
-    'MEMUSAGE_ENABLED': True,
-    'DOWNLOAD_MAXSIZE': 1 * MB,
-    # see https://github.com/scrapy/scrapy/issues/1303
-    # 'DOWNLOAD_WARNSIZE': 1 * MB,
-
-    # 'CLOSESPIDER_PAGECOUNT': 30,  # for debugging
-    'LOG_LEVEL': 'DEBUG',
-    'TELNETCONSOLE_ENABLED': False,
-    # 'CONCURRENT_REQUESTS': 100,
-
-    'EXTENSIONS': {
-        'scrapy.extensions.throttle.AutoThrottle': None,
-        'arachnado.extensions.throttle.AutoThrottle': 0,
-    },
-
-    'AUTOTHROTTLE_ENABLED': True,
-    'AUTOTHROTTLE_DEBUG': False,
-    'AUTOTHROTTLE_START_DELAY': 5,
-    'AUTOTHROTTLE_MAX_DELAY': 60,
-    'AUTOTHROTTLE_TARGET_CONCURRENCY': 1.0,
-    'CONCURRENT_REQUESTS_PER_DOMAIN': 4,
-    'DOWNLOAD_DELAY': 0.3,  # min download delay
-
-    'STATS_CLASS': 'arachnado.stats.EventedStatsCollector',
-    'DOWNLOADER': 'arachnado.crawler_process.ArachnadoDownloader',
-
-    # see https://github.com/scrapy/scrapy/issues/1054
-    'DOWNLOAD_HANDLERS': {'s3': None},
-
-    'ITEM_PIPELINES': {
-        'arachnado.motor_exporter.pipelines.MotorPipeline': 100,
-    },
-
-    'MOTOR_PIPELINE_JOBID_KEY': '_job_id',
-
-    'HTTPCACHE_ENABLED': False,
-    # This storage is read-only. Responses are stored by MotorPipeline
-    'HTTPCACHE_STORAGE': 'arachnado.extensions.httpcache.'
-                         'ArachnadoCacheStorage',
-}
-
-
-def create_crawler(settings=None, spider_cls=None):
-    _settings = DEFAULT_SETTINGS.copy()
-    _settings.update(settings or {})
-    return ArachnadoCrawler(spider_cls, _settings)
+from arachnado.utils.misc import add_scheme_if_missing, get_netloc
 
 
 class ArachnadoSpider(scrapy.Spider):
@@ -73,25 +16,34 @@ class ArachnadoSpider(scrapy.Spider):
     A base spider that contains common attributes and utilities for all
     Arachnado spiders
     """
-    crawl_id = None
-    domain = None
-    motor_job_id = None
+    crawl_id = None       # unique crawl ID, assigned by DomainCrawlers
+    motor_job_id = None   # MongoDB record ID, assigned by MongoExportPipeline
+    domain = None         # seed url, set by caller code
 
     def __init__(self, *args, **kwargs):
         super(ArachnadoSpider, self).__init__(*args, **kwargs)
         # don't log scraped items
         logging.getLogger("scrapy.core.scraper").setLevel(logging.INFO)
 
-    def get_page_item(self, response, type_='page'):
-        return {
-            'crawled_at': datetime.datetime.utcnow(),
-            'url': response.url,
-            'status': response.status,
-            'headers': response.headers,
-            'body': response.body_as_unicode(),
-            'meta': response.meta,
-            '_type': type_,
-        }
+    @classmethod
+    def inherit_from_me(cls, spider_cls):
+        """
+        Ensure that spider is inherited from ArachnadoSpider
+        to receive its features. HackHackHack.
+
+        >>> class Foo(scrapy.Spider):
+        ...     name = 'foo'
+        >>> issubclass(Foo, ArachnadoSpider)
+        False
+        >>> Foo2 = ArachnadoSpider.inherit_from_me(Foo)
+        >>> Foo2.name
+        'foo'
+        >>> issubclass(Foo2, ArachnadoSpider)
+        True
+        """
+        if not isinstance(spider_cls, cls):
+            return type(spider_cls.__name__, (spider_cls, cls), {})
+        return spider_cls
 
 
 class CrawlWebsiteSpider(ArachnadoSpider):
@@ -99,7 +51,7 @@ class CrawlWebsiteSpider(ArachnadoSpider):
     A spider which crawls all the website.
     To run it, set its ``crawl_id`` and ``domain`` arguments.
     """
-    name = 'crawlwebsite'
+    name = 'generic'
     custom_settings = {
         'DEPTH_LIMIT': 10,
     }
@@ -109,8 +61,8 @@ class CrawlWebsiteSpider(ArachnadoSpider):
         self.start_url = add_scheme_if_missing(self.domain)
 
     def start_requests(self):
-        self.logger.info("Started job %s#%d for domain %s",
-                         self.motor_job_id, self.crawl_id, self.domain)
+        self.logger.info("Started job %s (mongo id=%s) for domain %s",
+                         self.crawl_id, self.motor_job_id, self.domain)
         yield scrapy.Request(self.start_url, self.parse_first,
                              dont_filter=True)
 
@@ -125,19 +77,51 @@ class CrawlWebsiteSpider(ArachnadoSpider):
         if self.domain.startswith("www."):
             allow_domain = allow_domain[len("www."):]
 
-        self.get_links = LinkExtractor(
-            allow_domains=[allow_domain]
-        ).extract_links
+        self.state['allow_domain'] = allow_domain
 
         for elem in self.parse(response):
             yield elem
+
+    @property
+    def link_extractor(self):
+        return LinkExtractor(
+            allow_domains=[self.state['allow_domain']],
+            canonicalize=False,
+        )
+
+    @property
+    def get_links(self):
+        return self.link_extractor.extract_links
 
     def parse(self, response):
         if not isinstance(response, HtmlResponse):
             self.logger.info("non-HTML response is skipped: %s" % response.url)
             return
 
-        yield self.get_page_item(response)
+        if self.settings.getbool('PREFER_PAGINATION'):
+            # Follow pagination links; pagination is not a subject of
+            # a max depth limit. This also prioritizes pagination links because
+            # depth is not increased for them.
+            with _dont_increase_depth(response):
+                for url in self._pagination_urls(response):
+                    yield scrapy.Request(url, meta={'is_page': True})
 
         for link in self.get_links(response):
+            if link_looks_like_logout(link):
+                continue
             yield scrapy.Request(link.url, self.parse)
+
+    def _pagination_urls(self, response):
+        import autopager
+        return [url for url in autopager.urls(response)
+                if self.link_extractor.matches(url)]
+
+
+@contextlib.contextmanager
+def _dont_increase_depth(response):
+    # XXX: a hack to keep the same depth for outgoing requests
+    response.meta['depth'] -= 1
+    try:
+        yield
+    finally:
+        response.meta['depth'] += 1

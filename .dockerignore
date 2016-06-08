@@ -7,3 +7,4 @@ notebooks/
 arachnado.egg-info/
 *.pyc
 node_modules/
+.scrapy/

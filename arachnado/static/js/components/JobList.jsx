@@ -4,7 +4,7 @@ var React = require("react");
 var Reflux = require("reflux");
 var filesize = require("filesize");
 var prettyMs = require('pretty-ms');
-var { Link, Navigation } = require('react-router');
+var { History, withRouter } = require('react-router');
 
 var { Table, Glyphicon, Button } = require("react-bootstrap");
 var JobStore = require("../stores/JobStore");
@@ -102,6 +102,7 @@ export var JobResumeButton = React.createClass({
     }
 });
 
+
 export function buttonsForStatus(status){
     var status = simplifiedStatus(status);
     if (status == "crawling") {
@@ -169,16 +170,20 @@ function _formatItemSpeed(info) {
 }
 
 
+/* Return a number of requests in a queue */
+function getNumQueued(stats) {
+    var initialSize = stats['scheduler/initial'] || 0;
+    var enqueued = stats['scheduler/enqueued'] || 0;
+    var dequeued = stats['scheduler/dequeued'] || 0;
+    return initialSize + enqueued - dequeued;
+}
+
+
 function _getRowInfo(job, curTime){
     var stats = job.stats || {};
     var status = simplifiedStatus(job.status);
     var downloaded = stats['downloader/response_bytes'] || 0;
-
-
-    var shortId = job.id;
-    if (job.job_id) {
-        shortId = shortId + ": " + job.job_id.slice(-5);
-    }
+    var shortId = job.id.slice(0, 5) + "…";
 
     var duration = 0;
     if (stats['start_time']) {
@@ -204,20 +209,21 @@ function _getRowInfo(job, curTime){
         downloaded: downloaded,
         downloadSpeed: downloadSpeed,
         itemsSpeed: itemsSpeed,
-        todo: (stats['scheduler/enqueued'] || 0) - (stats['scheduler/dequeued'] || 0),
+        todo: getNumQueued(stats),
         shortId: shortId,
         duration: duration
     }
 }
 
 
-var JobRow = React.createClass({
-    mixins: [Navigation],
+var JobRow = withRouter(React.createClass({
     render: function () {
         var job = this.props.job;
         var info = _getRowInfo(job, this.props.serverTime);
         var style = {cursor: "pointer"};
-        var cb = () => { this.transitionTo("job", {id: job.id}) };
+        var cb = () => {
+            this.props.router.push(`/job/${job.id}`);
+        };
 
         var columns = [
             <td key='col-buttons'><JobControlIcons job={job}/></td>,
@@ -225,7 +231,7 @@ var JobRow = React.createClass({
         ];
 
         var data = [
-            job.seed,
+            this.formatSeed(),
             info.status,
             _formatItemSpeed(info),
             filesize(info.downloaded),
@@ -237,17 +243,28 @@ var JobRow = React.createClass({
         );
 
         return <tr className={info.rowClass}>{columns}</tr>;
-    }
-});
+    },
+    formatSeed: function() {
+        var job = this.props.job;
+        if (job.seed.startsWith('spider://')) {
+            var url = "";
+            if (job.args.start_urls != undefined){
+                url = job.args.start_urls[0];
+            }
+            var engine = job.seed.substring('spider://'.length);
+            return `${url} (${engine})`;
+        }
+        return job.seed;
+    },
+}));
 
 
 var JobRowVerbose = React.createClass({
-    mixins: [Navigation],
     render: function () {
         var job = this.props.job;
         var info = _getRowInfo(job, this.props.serverTime);
         var columns = [
-            <th key='col-id' scope="row">{info.id}</th>
+            <th key='col-id' scope="row">{job.id}</th>
         ];
         var data = [
             job.seed,

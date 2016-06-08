@@ -7,7 +7,7 @@ from scrapy.statscollectors import StatsCollector
 from scrapy.signalmanager import SignalManager
 
 from arachnado.signals import Signal
-from arachnado.utils import decorate_methods
+from arachnado.utils.misc import decorate_methods
 
 
 def store_changed_value(meth):
