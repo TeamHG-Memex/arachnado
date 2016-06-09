@@ -245,12 +245,16 @@ var JobRow = withRouter(React.createClass({
         return <tr className={info.rowClass}>{columns}</tr>;
     },
     formatSeed: function() {
-        if(this.props.job.seed.startsWith('spider://')) {
-            var url = this.props.job.args.start_urls[0];
-            var engine = this.props.job.seed.substring('spider://'.length);
+        var job = this.props.job;
+        if (job.seed.startsWith('spider://')) {
+            var url = "";
+            if (job.args.start_urls != undefined){
+                url = job.args.start_urls[0];
+            }
+            var engine = job.seed.substring('spider://'.length);
             return `${url} (${engine})`;
         }
-        return this.props.job.seed;
+        return job.seed;
     },
 }));
 

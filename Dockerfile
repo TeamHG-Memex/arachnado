@@ -4,9 +4,9 @@ ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update; apt-get install -y --no-install-recommends \
     git \
     curl \
-    python \
-    python-pip \
-    python-dev \
+    python3 \
+    python3-pip \
+    python3-dev \
     build-essential \
     pkg-config \
     libsqlite3-dev \
@@ -15,8 +15,8 @@ RUN apt-get update; apt-get install -y --no-install-recommends \
     libxslt1-dev \
     zlib1g-dev \
     libssl-dev \
-    python-lxml
-RUN pip install -U pip setuptools
+    python3-lxml
+RUN pip3 install -U pip setuptools
 
 # install nodejs
 RUN curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
@@ -27,7 +27,7 @@ WORKDIR /app
 # Install Python packages. Requirements change less often than source code,
 # so this is above COPY . /app
 COPY ./requirements.txt /app/requirements.txt
-RUN pip install -r requirements.txt
+RUN pip3 install -r requirements.txt
 
 # Install npm packages required to build static files.
 COPY package.json /app/package.json
@@ -40,7 +40,7 @@ COPY . /app
 # if .dockerignore is not active (may happen with docker-compose or DockerHub)
 RUN npm install
 RUN npm run build
-RUN pip install .
+RUN pip3 install .
 
 # use e.g. -v /path/to/my/arachnado/config.conf:/etc/arachnado.conf
 # docker run option to override arachnado parameters
