@@ -41,6 +41,14 @@ the server::
 For available options check
 https://github.com/TeamHG-Memex/arachnado/blob/master/arachnado/config/defaults.conf.
 
+Test
+-----------
+To start unit tests for API:
+
+python -m tornado.test.runtests tests.test_data
+or
+python3 -m tornado.test.runtests tests.test_data
+
 Development
 -----------
 
