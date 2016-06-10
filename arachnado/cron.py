@@ -96,10 +96,8 @@ class Cron(object):
         args = _key_value_to_dict(site.get('args', []))
         settings = _key_value_to_dict(site.get('settings', []))
 
-        if not site.get('engine'):
-            site['engine'] = 'generic'
-
-        if site['engine'] == 'generic':
+        # checking for == 'generic' to be backwards compatible
+        if not site.get('engine') or site['engine'] == 'generic':
             url = site['url']
         else:
             url = 'spider://' + site['engine']
