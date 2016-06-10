@@ -305,8 +305,7 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
             splash_args = request.meta['splash'].get('args', {})
             if 'url' in splash_args:
                 info['url'] = splash_args['url']
-            if 'http_method' in splash_args:
-                info['method'] = splash_args['http_method']
+            info['method'] = splash_args.get('http_method', 'GET')
         return info
 
     @classmethod
