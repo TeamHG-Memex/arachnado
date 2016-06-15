@@ -26,7 +26,7 @@ class TestJobsAPI(tornado.testing.AsyncHTTPTestCase):
         jobs_command = {
             'event': 'rpc:request',
             'data': {
-                'id':0,
+                'id': "test_jobs_0",
                 'jsonrpc': '2.0',
                 'method': 'subscribe_to_jobs',
                 'params': {
@@ -39,15 +39,16 @@ class TestJobsAPI(tornado.testing.AsyncHTTPTestCase):
         response = yield ws_client.read_message()
         json_response = json.loads(response)
         print(json_response)
-        self.assertTrue("id" in json_response.get("data", {}))
-        self.execute_cancel(ws_client, json_response.get("data", {}).get("id", -1), True)
+        subs_id = json_response.get("data", {}).get("result").get("id", -1)
+        self.assertNotEqual(subs_id, -1)
+        self.execute_cancel(ws_client, subs_id, True)
 
     @tornado.testing.gen_test
     def test_jobs_filter_include(self):
         jobs_command = {
             'event': 'rpc:request',
             'data': {
-                'id':0,
+                'id': "test_jobs_1",
                 'jsonrpc': '2.0',
                 'method': 'subscribe_to_jobs',
                 'params': {
@@ -61,7 +62,8 @@ class TestJobsAPI(tornado.testing.AsyncHTTPTestCase):
         response = yield ws_client.read_message()
         json_response = json.loads(response)
         print(json_response)
-        self.assertTrue("id" in json_response.get("data", {}))
+        subs_id = json_response.get("data", {}).get("result").get("id", -1)
+        self.assertNotEqual(subs_id, -1)
         cnt = 0
         while cnt < 1:
             response = yield ws_client.read_message()
@@ -70,14 +72,14 @@ class TestJobsAPI(tornado.testing.AsyncHTTPTestCase):
                 self.assertFail()
                 break
             cnt += 1
-        self.execute_cancel(ws_client, json_response.get("data", {}).get("id", -1), True)
+        self.execute_cancel(ws_client, subs_id, True)
 
     @tornado.testing.gen_test
     def test_pages_no_filter(self):
         pages_command = {
             'event': 'rpc:request',
             'data': {
-                'id':0,
+                'id': "test_pages_0",
                 'jsonrpc': '2.0',
                 'method': 'subscribe_to_pages',
                 'params': {
@@ -90,8 +92,9 @@ class TestJobsAPI(tornado.testing.AsyncHTTPTestCase):
         response = yield ws_client.read_message()
         json_response = json.loads(response)
         print(json_response)
-        self.assertTrue("id" in json_response.get("data", {}))
-        self.execute_cancel(ws_client, json_response.get("data", {}).get("id", -1), True)
+        subs_id = json_response.get("data", {}).get("result").get("id", -1)
+        self.assertNotEqual(subs_id, -1)
+        self.execute_cancel(ws_client, subs_id, True)
 
     @tornado.testing.gen_test
     def test_wrong_cancel(self):
@@ -103,7 +106,7 @@ class TestJobsAPI(tornado.testing.AsyncHTTPTestCase):
         jobs_command = {
             'event': 'rpc:request',
             'data': {
-                'id':0,
+                'id': "test_cancel",
                 'jsonrpc': '2.0',
                 'method': 'cancel_subscription',
                 'params': {

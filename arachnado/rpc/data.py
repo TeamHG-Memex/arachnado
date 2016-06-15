@@ -35,15 +35,28 @@ class DataRpcWebsocketHandler(RpcWebsocketHandler):
     # TODO: allow client to update this
     max_msg_size = 2**20
 
-    def subscribe_to_pages(self, site_ids={}, update_delay=0):
-        mongo_q = self.create_pages_query(site_ids=site_ids)
+    def subscribe_to_pages(self, site_ids={}, update_delay=0, mode="urls"):
         self.init_hb(update_delay)
-        return self.add_storage(mongo_q, storage=self.create_pages_storage_link())
+        if mode == "urls":
+            mongo_q = self.create_pages_query(site_ids=site_ids)
+            return { "datatype": "pages_subscription_id",
+                "id": self.add_storage(mongo_q, storage=self.create_pages_storage_link())
+            }
+        elif mode == "ids":
+            res = {}
+            for site_id in site_ids:
+                mongo_q = self.create_pages_query(site_ids=site_ids[site_id])
+                res[site_id] = self.add_storage(mongo_q, storage=self.create_pages_storage_link())
+            return { "datatype": "pages_subscription_id",
+                "id": res,
+            }
 
     def subscribe_to_jobs(self, include=[], exclude=[], update_delay=0):
         mongo_q = self.create_jobs_query(include=include, exclude=exclude)
         self.init_hb(update_delay)
-        return self.add_storage(mongo_q, storage=self.create_jobs_storage_link())
+        return { "datatype": "job_subscription_id",
+            "id": self.add_storage(mongo_q, storage=self.create_jobs_storage_link())
+        }
 
     @gen.coroutine
     def write_event(self, event, data, handler_id=None):
