@@ -44,7 +44,9 @@ RUN pip3 install .
 
 # use e.g. -v /path/to/my/arachnado/config.conf:/etc/arachnado.conf
 # docker run option to override arachnado parameters
-VOLUME /etc/arachnado.conf
+# The VOLUME is not exposed here because Docker assumes that volumes are folders
+# (unless the file really exists), so this can cause problems in docker-compose
+# later (see https://github.com/docker/docker/issues/21702#issuecomment-221987049)
 
 # this folder is added to PYTHONPATH, so modules from there are available
 # for spider_packages Arachnado option
