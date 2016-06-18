@@ -2,7 +2,7 @@
 import os
 import tornado
 import json
-from arachnado.rpc.data import DataRpcWebsocketHandler
+from arachnado.rpc.data import PagesDataRpcWebsocketHandler, JobsDataRpcWebsocketHandler
 from arachnado.storages.mongotail import MongoTailStorage
 from arachnado.utils.mongo import motor_from_uri
 
@@ -10,7 +10,7 @@ def get_db_uri():
     return "mongodb://localhost:27017/arachnado-test"
 
 
-def get_app(ws_uri):
+def get_app(ws_pages_uri, ws_jobs_uri):
     db_uri = get_db_uri()
     items_uri = "{}/items".format(db_uri)
     jobs_uri = "{}/jobs".format(db_uri)
@@ -22,7 +22,8 @@ def get_app(ws_uri):
         'item_storage': item_storage,
     }
     app = tornado.web.Application([
-        (ws_uri, DataRpcWebsocketHandler, context)
+        (ws_pages_uri, PagesDataRpcWebsocketHandler, context),
+        (ws_jobs_uri, JobsDataRpcWebsocketHandler, context),
     ])
     return app
 

@@ -9,7 +9,7 @@ from arachnado.utils.misc import json_encode
 from arachnado.monitor import Monitor
 from arachnado.handler_utils import ApiHandler, NoEtagsMixin
 
-from arachnado.rpc.data import DataRpcWebsocketHandler
+from arachnado.rpc.data import PagesDataRpcWebsocketHandler, JobsDataRpcWebsocketHandler
 
 from arachnado.rpc import RpcHttpHandler
 from arachnado.rpc.ws import RpcWebsocketHandler
@@ -41,7 +41,8 @@ def get_application(crawler_process, domain_crawlers,
         url(r"/ws-updates", Monitor, context, name="ws-updates"),
         url(r"/ws-rpc", RpcWebsocketHandler, context, name="ws-rpc"),
         url(r"/rpc", RpcHttpHandler, context, name="rpc"),
-        url(r"/ws-data", DataRpcWebsocketHandler, context, name="ws-data"),
+        url(r"/ws-pages-data", PagesDataRpcWebsocketHandler, context, name="ws-pages-data"),
+        url(r"/ws-jobs-data", JobsDataRpcWebsocketHandler, context, name="ws-jobs-data"),
     ]
     return Application(
         handlers=handlers,

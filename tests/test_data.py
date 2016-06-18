@@ -7,7 +7,8 @@ import tests.utils as u
 
 
 class TestJobsAPI(tornado.testing.AsyncHTTPTestCase):
-    ws_uri = r"/ws-data"
+    pages_uri = r"/ws-pages-data"
+    jobs_uri = r"/ws-jobs-data"
 
     def setUp(self):
         print("setUp:")
@@ -15,7 +16,7 @@ class TestJobsAPI(tornado.testing.AsyncHTTPTestCase):
         super(TestJobsAPI, self).setUp()
 
     def get_app(self):
-        return u.get_app(self.ws_uri)
+        return u.get_app(self.pages_uri, self.jobs_uri)
 
     # @tornado.testing.gen_test
     # def test_fail(self):
@@ -33,7 +34,7 @@ class TestJobsAPI(tornado.testing.AsyncHTTPTestCase):
                 },
             },
         }
-        ws_url = "ws://localhost:" + str(self.get_http_port()) + self.ws_uri
+        ws_url = "ws://localhost:" + str(self.get_http_port()) + self.jobs_uri
         ws_client = yield tornado.websocket.websocket_connect(ws_url)
         ws_client.write_message(json.dumps(jobs_command))
         response = yield ws_client.read_message()
@@ -56,7 +57,7 @@ class TestJobsAPI(tornado.testing.AsyncHTTPTestCase):
                 },
             },
         }
-        ws_url = "ws://localhost:" + str(self.get_http_port()) + self.ws_uri
+        ws_url = "ws://localhost:" + str(self.get_http_port()) + self.jobs_uri
         ws_client = yield tornado.websocket.websocket_connect(ws_url)
         ws_client.write_message(json.dumps(jobs_command))
         response = yield ws_client.read_message()
@@ -86,7 +87,7 @@ class TestJobsAPI(tornado.testing.AsyncHTTPTestCase):
                 },
             },
         }
-        ws_url = "ws://localhost:" + str(self.get_http_port()) + self.ws_uri
+        ws_url = "ws://localhost:" + str(self.get_http_port()) + self.pages_uri
         ws_client = yield tornado.websocket.websocket_connect(ws_url)
         ws_client.write_message(json.dumps(pages_command))
         response = yield ws_client.read_message()
@@ -98,7 +99,7 @@ class TestJobsAPI(tornado.testing.AsyncHTTPTestCase):
 
     @tornado.testing.gen_test
     def test_wrong_cancel(self):
-        ws_url = "ws://localhost:" + str(self.get_http_port()) + self.ws_uri
+        ws_url = "ws://localhost:" + str(self.get_http_port()) + self.pages_uri
         ws_client = yield tornado.websocket.websocket_connect(ws_url)
         self.execute_cancel(ws_client, -1, False)
 

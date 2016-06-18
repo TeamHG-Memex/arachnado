@@ -51,6 +51,7 @@ class RpcWebsocketHandler(ArachnadoRPC, websocket.WebSocketHandler):
                 resource._on_open()
         self._pinger = PeriodicCallback(lambda: self.ping(b'PING'), 1000 * 15)
         self._pinger.start()
+        logger.info("Pinger initiated")
 
     def on_close(self):
         """ Forward on_close event to resource objects.
