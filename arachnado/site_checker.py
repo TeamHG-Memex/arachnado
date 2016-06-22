@@ -165,5 +165,5 @@ class SiteCheckerSpider(scrapy.Spider):
     def detect_engine(self, body):
         result = self.detector.detect(body) if self.detector else None
         if result is None:
-            return 'generic', {}
+            return None, {}
         return result

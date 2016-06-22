@@ -143,7 +143,8 @@ var SiteRow = React.createClass({
             args: keyValueListToDict(this.props.site.args)
         };
 
-        if(this.props.site.engine == 'generic') {
+        // checking for == 'generic' to be backwards compatible
+        if(!this.props.site.engine || this.props.site.engine == 'generic') {
             JobStore.Actions.startCrawl(this.props.site.url, options);
         } else {
             args.start_urls = [this.props.site.url];
