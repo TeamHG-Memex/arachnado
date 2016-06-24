@@ -100,7 +100,7 @@ class DataRpcWebsocketHandler(RpcWebsocketHandler):
     def send_updates(self):
         logger.debug("send_updates: {}".format(len(self.stored_data)))
         while len(self.stored_data):
-            item = self.stored_data.pop()
+            item = self.stored_data.pop(0)
             return self._send_event(item["event"], item["data"])
 
 
@@ -125,7 +125,10 @@ class JobsDataRpcWebsocketHandler(DataRpcWebsocketHandler):
             if event == 'stats:changed':
                 if len(data) > 1:
                     job_id = data[0]
-                    event_data = data[1]
+                    # dumps for back compatibility
+                    event_data = {"stats": json.dumps(data[1]),
+                                  "stats_dict": data[1],
+                                  }
                     # same as crawl_id
                     event_data["id"] = job_id
                     # mongo id
