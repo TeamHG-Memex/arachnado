@@ -106,6 +106,7 @@ class DataRpcWebsocketHandler(RpcWebsocketHandler):
 
 class JobsDataRpcWebsocketHandler(DataRpcWebsocketHandler):
     event_types = ['stats:changed',]
+    mongo_id_mapping = {}
 
     def subscribe_to_jobs(self, include=[], exclude=[], update_delay=0):
         mongo_q = self.create_jobs_query(include=include, exclude=exclude)
@@ -116,11 +117,19 @@ class JobsDataRpcWebsocketHandler(DataRpcWebsocketHandler):
 
     @gen.coroutine
     def write_event(self, event, data, handler_id=None):
+        event_data = data
         if event == 'jobs.tailed' and "id" in data and handler_id:
             self.storages[handler_id]["job_ids"].add(data["id"])
+            self.mongo_id_mapping[data["id"]] = data.get("_id", None)
         if event in ['stats:changed', 'jobs:state']:
             if event == 'stats:changed':
-                job_id = data[0]
+                if len(data) > 1:
+                    job_id = data[0]
+                    event_data = data[1]
+                    # same as crawl_id
+                    event_data["id"] = job_id
+                    # mongo id
+                    event_data["_id"] = self.mongo_id_mapping.get(job_id, "")
             else:
                 job_id = data["id"]
             allowed = False
@@ -129,9 +138,9 @@ class JobsDataRpcWebsocketHandler(DataRpcWebsocketHandler):
             if not allowed:
                 return
         if event in self.event_types and self.delay_mode:
-            self.stored_data.append({"event":event, "data":data})
+            self.stored_data.append({"event":event, "data":event_data})
         else:
-            return self._send_event(event, data)
+            return self._send_event(event, event_data)
 
     def create_jobs_query(self, include, exclude):
         conditions = []
