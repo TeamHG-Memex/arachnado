@@ -107,6 +107,7 @@ class DataRpcWebsocketHandler(RpcWebsocketHandler):
 class JobsDataRpcWebsocketHandler(DataRpcWebsocketHandler):
     event_types = ['stats:changed',]
     mongo_id_mapping = {}
+    job_url_mapping = {}
 
     def subscribe_to_jobs(self, include=[], exclude=[], update_delay=0):
         mongo_q = self.create_jobs_query(include=include, exclude=exclude)
@@ -121,7 +122,9 @@ class JobsDataRpcWebsocketHandler(DataRpcWebsocketHandler):
         if event == 'jobs.tailed' and "id" in data and handler_id:
             self.storages[handler_id]["job_ids"].add(data["id"])
             self.mongo_id_mapping[data["id"]] = data.get("_id", None)
+            self.job_url_mapping[data["id"]] = data.get("urls", None)
         if event in ['stats:changed', 'jobs:state']:
+            job_id = None
             if event == 'stats:changed':
                 if len(data) > 1:
                     job_id = data[0]
@@ -133,11 +136,14 @@ class JobsDataRpcWebsocketHandler(DataRpcWebsocketHandler):
                     event_data["id"] = job_id
                     # mongo id
                     event_data["_id"] = self.mongo_id_mapping.get(job_id, "")
+                    # job url
+                    event_data["urls"] = self.job_url_mapping.get(job_id, "")
             else:
                 job_id = data["id"]
             allowed = False
-            for storage in self.storages.values():
-                allowed = allowed or job_id in storage["job_ids"]
+            if job_id:
+                for storage in self.storages.values():
+                    allowed = allowed or job_id in storage["job_ids"]
             if not allowed:
                 return
         if event in self.event_types and self.delay_mode:
@@ -193,19 +199,21 @@ class PagesDataRpcWebsocketHandler(DataRpcWebsocketHandler):
 
     def subscribe_to_pages(self, site_ids={}, update_delay=0, mode="urls"):
         self.init_hb(update_delay)
+        result = {
+            "datatype": "pages_subscription_id",
+            "single_subscription_id": "",
+            "id": {},
+        }
         if mode == "urls":
             mongo_q = self.create_pages_query(site_ids=site_ids)
-            return { "datatype": "pages_subscription_id",
-                "id": self.add_storage(mongo_q, storage=self.create_pages_storage_link())
-            }
+            result["single_subscription_id"] = self.add_storage(mongo_q, storage=self.create_pages_storage_link())
         elif mode == "ids":
             res = {}
             for site_id in site_ids:
                 mongo_q = self.create_pages_query(site_ids=site_ids[site_id])
                 res[site_id] = self.add_storage(mongo_q, storage=self.create_pages_storage_link())
-            return { "datatype": "pages_subscription_id",
-                "id": res,
-            }
+            result["id"] = res
+        return result
 
     @gen.coroutine
     def write_event(self, event, data, handler_id=None):

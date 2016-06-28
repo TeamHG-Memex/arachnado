@@ -93,7 +93,7 @@ class TestJobsAPI(tornado.testing.AsyncHTTPTestCase):
         response = yield ws_client.read_message()
         json_response = json.loads(response)
         print(json_response)
-        subs_id = json_response.get("data", {}).get("result").get("id", -1)
+        subs_id = json_response.get("data", {}).get("result").get("single_subscription_id", -1)
         self.assertNotEqual(subs_id, -1)
         self.execute_cancel(ws_client, subs_id, True)
 
