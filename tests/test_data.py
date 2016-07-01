@@ -2,6 +2,7 @@
 import tornado
 import json
 from tornado import web, websocket
+import tornado.testing
 
 import tests.utils as u
 
