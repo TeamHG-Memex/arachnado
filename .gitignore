@@ -20,3 +20,4 @@ bot_spiders/
 .coverage.*
 htmlcov/
 .scrapy
+docs/_build
