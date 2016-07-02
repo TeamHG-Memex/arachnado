@@ -5,7 +5,7 @@ from arachnado.storages.mongotail import MongoTailStorage
 
 
 class Sites(object):
-
+    """ 'Known sites' object exposed via JSON-RPC """
     logger = logging.getLogger(__name__)
 
     def __init__(self, handler, site_storage, **kwargs):

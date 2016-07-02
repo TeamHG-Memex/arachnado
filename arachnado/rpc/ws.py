@@ -62,6 +62,9 @@ class RpcWebsocketHandler(ArachnadoRPC, websocket.WebSocketHandler):
         self._pinger.stop()
 
     def _resources(self):
+        # FIXME: remove it, make explicit. This code helps to call _on_close
+        # methods of rpc.Jobs, rpc.Pages and rpc.Sites when ws connection
+        # is closed.
         for resource_name, resource in self.__dict__.items():
             if hasattr(RequestHandler, resource_name):
                 continue

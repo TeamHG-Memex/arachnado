@@ -16,22 +16,24 @@ class MongoStorage(object):
     """
     def __init__(self, mongo_uri, cache=False):
         self.mongo_uri = mongo_uri
-        self.cache_flag = cache
         _, _, _, _, self.col = motor_from_uri(mongo_uri)
         self.signal_manager = SignalManager()
         # Used for unsubscribe
         # disconnect() requires reference to original callback
         self._callbacks = {}
-        if cache:
-            self.cache = defaultdict(dict)
-        else:
-            self.cache = None
         self.fetching = False
         self.signals = {
             'created': object(),
             'updated': object(),
             'deleted': object(),
         }
+        # XXX: cache is used in arachnado.cron and arachnado.site_checker.
+        # Is it needed?
+        self.cache_flag = cache
+        if cache:
+            self.cache = defaultdict(dict)
+        else:
+            self.cache = None
 
     def subscribe(self, events=None, callback=None):
         if events is None:
