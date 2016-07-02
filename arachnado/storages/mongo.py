@@ -9,7 +9,11 @@ from arachnado.utils.mongo import motor_from_uri, replace_dots
 
 
 class MongoStorage(object):
-
+    """
+    Utility class for working with MongoDB data.
+    It supports CRUD operations and allows to subscribe to
+    created/updated/deleted events.
+    """
     def __init__(self, mongo_uri, cache=False):
         self.mongo_uri = mongo_uri
         self.cache_flag = cache
@@ -17,7 +21,7 @@ class MongoStorage(object):
         self.signal_manager = SignalManager()
         # Used for unsubscribe
         # disconnect() requires reference to original callback
-        self.subscription_callbacks = {}
+        self._callbacks = {}
         if cache:
             self.cache = defaultdict(dict)
         else:
@@ -29,38 +33,38 @@ class MongoStorage(object):
             'deleted': object(),
         }
 
-    def subscribe(self, subscriptions=None, callback=None):
-        if subscriptions is None:
-            subscriptions = self.available_subscriptions
-        if not isinstance(subscriptions, list):
-            subscriptions = [subscriptions]
-        for subscription in subscriptions:
-            try:
-                self.signal_manager.connect(callback,
-                                            self.signals[subscription],
-                                            weak=False)
-                self.subscription_callbacks[subscription] = callback
-            except KeyError as exc:
-                raise ValueError('Invalid subscription type: {}'.format(exc))
+    def subscribe(self, events=None, callback=None):
+        if events is None:
+            events = self.available_events
+        if not isinstance(events, list):
+            events = [events]
+        for event_name in events:
+            if event_name not in self.signals:
+                raise ValueError('Invalid event name: {}'.format(event_name))
+            self.signal_manager.connect(callback,
+                                        self.signals[event_name],
+                                        weak=False)
+            self._callbacks[event_name] = callback
 
-    def unsubscribe(self, subscriptions=None):
-        if subscriptions is None:
-            subscriptions = self.available_subscriptions
-        if not isinstance(subscriptions, list):
-            subscriptions = [subscriptions]
-        for subscription in subscriptions:
+    def unsubscribe(self, events=None):
+        if events is None:
+            events = self.available_events
+        if not isinstance(events, list):
+            events = [events]
+        for event_name in events:
             try:
                 self.signal_manager.disconnect(
-                    self.subscription_callbacks[subscription],
-                    self.signals[subscription],
+                    self._callbacks[event_name],
+                    self.signals[event_name],
                     weak=False
                 )
-                self.subscription_callbacks.pop(subscription, None)
+                self._callbacks.pop(event_name, None)
             except KeyError:
+                # FIXME: when can it happen?
                 pass
 
     @property
-    def available_subscriptions(self):
+    def available_events(self):
         return list(self.signals.keys())
 
     @coroutine

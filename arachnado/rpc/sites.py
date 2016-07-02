@@ -22,15 +22,14 @@ class Sites(object):
         self.storage.delete(site)
 
     def subscribe(self):
-        for subscription in self.storage.available_subscriptions:
+        for event_name in self.storage.available_events:
             self.storage.subscribe(
-                subscription,
-                lambda data, subscription=subscription:
-                self._publish(data, subscription)
+                event_name,
+                partial(self._publish, event=event_name)
             )
 
     def _on_close(self):
-        self.storage.unsubscribe(self.storage.available_subscriptions)
+        self.storage.unsubscribe(self.storage.available_events)
 
-    def _publish(self, data, subscription):
-        self.handler.write_event('sites.{}'.format(subscription), data)
+    def _publish(self, event, data):
+        self.handler.write_event('sites.{}'.format(event), data)
