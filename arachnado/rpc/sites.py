@@ -1,4 +1,7 @@
 import logging
+from functools import partial
+
+from arachnado.storages.mongotail import MongoTailStorage
 
 
 class Sites(object):
@@ -7,7 +10,7 @@ class Sites(object):
 
     def __init__(self, handler, site_storage, **kwargs):
         self.handler = handler
-        self.storage = site_storage
+        self.storage = site_storage  # type: MongoTailStorage
 
     def list(self):
         return self.storage.fetch()

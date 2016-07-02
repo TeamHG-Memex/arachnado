@@ -1,15 +1,22 @@
 import logging
 
+from arachnado.storages.mongotail import MongoTailStorage
+
 
 class Jobs(object):
+    """
+    This object is exposed for RPC requests.
+    It allows to subscribe for scraping job updates.
+    """
     handler_id = None
     logger = logging.getLogger(__name__)
 
     def __init__(self, handler, job_storage, **kwargs):
         self.handler = handler
-        self.storage = job_storage
+        self.storage = job_storage  # type: MongoTailStorage
 
     def subscribe(self, last_id=0, query=None, fields=None):
+        """ Subscribe for job updates. """
         self.storage.subscribe('tailed', self._publish, last_id=last_id,
                                query=query, fields=fields)
 

@@ -13,7 +13,7 @@ License is MIT.
 Install
 -------
 
-Arachnado requires Python 2.7.
+Arachnado requires Python 2.7 or Python 3.5.
 To install Arachnado use pip::
 
     pip install arachnado
