@@ -1,11 +1,6 @@
 import logging
-
-from arachnado.utils.misc import json_encode
-# A little monkey patching to have custom types encoded right
-# from jsonrpclib import jsonrpc
-# jsonrpc.jdumps = json_encode
-# import tornadorpc
 import json
+from collections import deque
 from tornado import gen
 import tornado.ioloop
 from bson.objectid import ObjectId
@@ -18,15 +13,14 @@ from arachnado.rpc.pages import Pages
 
 from arachnado.crawler_process import agg_stats_changed, CrawlerProcessSignals as CPS
 from arachnado.rpc.ws import RpcWebsocketHandler
+from arachnado.utils.misc import json_encode
 
 logger = logging.getLogger(__name__)
-# tornadorpc.config.verbose = True
-# tornadorpc.config.short_errors = True
 
 
 class DataRpcWebsocketHandler(RpcWebsocketHandler):
     """ basic class for Data API handlers"""
-    stored_data = []
+    stored_data = deque()
     delay_mode = False
     event_types = []
     data_hb = None
@@ -52,15 +46,15 @@ class DataRpcWebsocketHandler(RpcWebsocketHandler):
             )
             self.data_hb.start()
 
-    def add_storage(self, mongo_q, storage):
-        self.dispatcher.add_object(storage)
+    def add_storage_wrapper(self, mongo_q, storage_wrapper):
+        self.dispatcher.add_object(storage_wrapper)
         new_id = str(len(self.storages))
         self.storages[new_id] = {
-            "storage": storage,
+            "storage": storage_wrapper,
             "job_ids": set([])
         }
-        storage.handler_id = new_id
-        storage.subscribe(query=mongo_q)
+        storage_wrapper.handler_id = new_id
+        storage_wrapper.subscribe(query=mongo_q)
         return new_id
 
     def cancel_subscription(self, subscription_id):
@@ -79,8 +73,6 @@ class DataRpcWebsocketHandler(RpcWebsocketHandler):
         self.dispatcher["cancel_subscription"] = self.cancel_subscription
 
     def on_close(self):
-        # import traceback
-        # traceback.print_stack()
         logger.info("connection closed")
         for storage in self.storages.values():
             storage["storage"]._on_close()
@@ -98,9 +90,8 @@ class DataRpcWebsocketHandler(RpcWebsocketHandler):
                 self.write_event("jobs:state", job)
 
     def send_updates(self):
-        logger.debug("send_updates: {}".format(len(self.stored_data)))
         while len(self.stored_data):
-            item = self.stored_data.pop(0)
+            item = self.stored_data.popleft()
             return self._send_event(item["event"], item["data"])
 
 
@@ -113,7 +104,7 @@ class JobsDataRpcWebsocketHandler(DataRpcWebsocketHandler):
         mongo_q = self.create_jobs_query(include=include, exclude=exclude)
         self.init_hb(update_delay)
         return { "datatype": "job_subscription_id",
-            "id": self.add_storage(mongo_q, storage=self.create_jobs_storage_link())
+            "id": self.add_storage_wrapper(mongo_q, storage_wrapper=self.create_jobs_storage_link())
         }
 
     @gen.coroutine
@@ -128,8 +119,8 @@ class JobsDataRpcWebsocketHandler(DataRpcWebsocketHandler):
             if event == 'stats:changed':
                 if len(data) > 1:
                     job_id = data[0]
-                    # dumps for back compatibility
-                    event_data = {"stats": json.dumps(data[1]),
+                    # two fields with same content for back compatibility
+                    event_data = {"stats": data[1],
                                   "stats_dict": data[1],
                                   }
                     # same as crawl_id
@@ -146,6 +137,12 @@ class JobsDataRpcWebsocketHandler(DataRpcWebsocketHandler):
                     allowed = allowed or job_id in storage["job_ids"]
             if not allowed:
                 return
+        if 'stats' in event_data:
+            if not isinstance(event_data['stats'], dict):
+                try:
+                    event_data['stats'] = json.loads(event_data['stats'])
+                except Exception as ex:
+                    logger.warning("Invalid stats field in job {}".format(event_data.get("_id", "MISSING MONGO ID")))
         if event in self.event_types and self.delay_mode:
             self.stored_data.append({"event":event, "data":event_data})
         else:
@@ -173,8 +170,6 @@ class JobsDataRpcWebsocketHandler(DataRpcWebsocketHandler):
         return jobs
 
     def on_close(self):
-        # import traceback
-        # traceback.print_stack()
         logger.info("connection closed")
         if self.cp:
             self.cp.signals.disconnect(self.on_stats_changed, agg_stats_changed)
@@ -206,12 +201,12 @@ class PagesDataRpcWebsocketHandler(DataRpcWebsocketHandler):
         }
         if mode == "urls":
             mongo_q = self.create_pages_query(site_ids=site_ids)
-            result["single_subscription_id"] = self.add_storage(mongo_q, storage=self.create_pages_storage_link())
+            result["single_subscription_id"] = self.add_storage_wrapper(mongo_q, storage_wrapper=self.create_pages_storage_link())
         elif mode == "ids":
             res = {}
             for site_id in site_ids:
                 mongo_q = self.create_pages_query(site_ids=site_ids[site_id])
-                res[site_id] = self.add_storage(mongo_q, storage=self.create_pages_storage_link())
+                res[site_id] = self.add_storage_wrapper(mongo_q, storage_wrapper=self.create_pages_storage_link())
             result["id"] = res
         return result
 
