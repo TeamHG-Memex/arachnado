@@ -13,12 +13,22 @@ from arachnado.rpc.pages import Pages
 
 class ArachnadoRPC(object):
     """ Base class for all Arachnado RPC resources.
+    Use it as a mixin for tornado.web.RequestHandler subclasses.
+
+    It provides :meth:`handle_request` method which handles
+    Jobs, Sites and Pages RPC requests.
     """
+    rpc_objects = tuple()
+
     def initialize(self, *args, **kwargs):
+        jobs = Jobs(self, *args, **kwargs)
+        sites = Sites(self, *args, **kwargs)
+        pages = Pages(self, *args, **kwargs)
+        self.rpc_objects = [jobs, sites, pages]
+
         self.dispatcher = Dispatcher()
-        self.dispatcher.add_object(Jobs(self, *args, **kwargs))
-        self.dispatcher.add_object(Sites(self, *args, **kwargs))
-        self.dispatcher.add_object(Pages(self, *args, **kwargs))
+        for obj in self.rpc_objects:
+            self.dispatcher.add_object(obj)
 
     def handle_request(self, body):
         response = JSONRPCResponseManager.handle(body, self.dispatcher)

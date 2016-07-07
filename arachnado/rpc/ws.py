@@ -46,24 +46,19 @@ class RpcWebsocketHandler(ArachnadoRPC, websocket.WebSocketHandler):
     def open(self):
         """ Forward open event to resource objects.
         """
-        for resource in self._resources():
+        logger.debug("Connection opened %s", self)
+        for resource in self.rpc_objects:
             if hasattr(resource, '_on_open'):
                 resource._on_open()
         self._pinger = PeriodicCallback(lambda: self.ping(b'PING'), 1000 * 15)
         self._pinger.start()
-        logger.info("Pinger initiated")
+        logger.debug("Pinger initiated %s", self)
 
     def on_close(self):
         """ Forward on_close event to resource objects.
         """
-        for resource in self._resources():
+        logger.debug("Connection closed %s", self)
+        for resource in self.rpc_objects:
             if hasattr(resource, '_on_close'):
                 resource._on_close()
         self._pinger.stop()
-
-    def _resources(self):
-        for resource_name, resource in self.__dict__.items():
-            if hasattr(RequestHandler, resource_name):
-                continue
-            yield resource
-

@@ -2,6 +2,7 @@
 import tornado
 import json
 from tornado import web, websocket
+import tornado.testing
 
 import tests.utils as u
 
@@ -11,16 +12,11 @@ class TestJobsAPI(tornado.testing.AsyncHTTPTestCase):
     jobs_uri = r"/ws-jobs-data"
 
     def setUp(self):
-        print("setUp:")
         tornado.ioloop.IOLoop.current().run_sync(u.init_db)
         super(TestJobsAPI, self).setUp()
 
     def get_app(self):
         return u.get_app(self.pages_uri, self.jobs_uri)
-
-    # @tornado.testing.gen_test
-    # def test_fail(self):
-    #     self.assertTrue(False)
 
     @tornado.testing.gen_test
     def test_jobs_no_filter(self):
@@ -39,7 +35,6 @@ class TestJobsAPI(tornado.testing.AsyncHTTPTestCase):
         ws_client.write_message(json.dumps(jobs_command))
         response = yield ws_client.read_message()
         json_response = json.loads(response)
-        print(json_response)
         subs_id = json_response.get("data", {}).get("result").get("id", -1)
         self.assertNotEqual(subs_id, -1)
         self.execute_cancel(ws_client, subs_id, True)
@@ -62,7 +57,6 @@ class TestJobsAPI(tornado.testing.AsyncHTTPTestCase):
         ws_client.write_message(json.dumps(jobs_command))
         response = yield ws_client.read_message()
         json_response = json.loads(response)
-        print(json_response)
         subs_id = json_response.get("data", {}).get("result").get("id", -1)
         self.assertNotEqual(subs_id, -1)
         cnt = 0
@@ -70,8 +64,11 @@ class TestJobsAPI(tornado.testing.AsyncHTTPTestCase):
             response = yield ws_client.read_message()
             json_response = json.loads(response)
             if json_response is None:
-                self.assertFail()
+                self.assertTrue(False)
                 break
+            else:
+                self.assertTrue('stats' in json_response["data"])
+                self.assertTrue(isinstance(json_response["data"]["stats"], dict))
             cnt += 1
         self.execute_cancel(ws_client, subs_id, True)
 
@@ -92,9 +89,18 @@ class TestJobsAPI(tornado.testing.AsyncHTTPTestCase):
         ws_client.write_message(json.dumps(pages_command))
         response = yield ws_client.read_message()
         json_response = json.loads(response)
-        print(json_response)
         subs_id = json_response.get("data", {}).get("result").get("single_subscription_id", -1)
         self.assertNotEqual(subs_id, -1)
+        cnt = 0
+        while cnt < 1:
+            response = yield ws_client.read_message()
+            json_response = json.loads(response)
+            if json_response is None:
+                self.assertTrue(False)
+                break
+            else:
+                self.assertTrue('url' in json_response["data"])
+            cnt += 1
         self.execute_cancel(ws_client, subs_id, True)
 
     @tornado.testing.gen_test
@@ -118,5 +124,4 @@ class TestJobsAPI(tornado.testing.AsyncHTTPTestCase):
         ws_client.write_message(json.dumps(jobs_command))
         response = yield ws_client.read_message()
         json_response = json.loads(response)
-        print(json_response)
         self.assertEqual(json_response.get("data", {}).get("result"), expected)

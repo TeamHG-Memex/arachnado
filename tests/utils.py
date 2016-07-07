@@ -6,6 +6,7 @@ from arachnado.rpc.data import PagesDataRpcWebsocketHandler, JobsDataRpcWebsocke
 from arachnado.storages.mongotail import MongoTailStorage
 from arachnado.utils.mongo import motor_from_uri
 
+
 def get_db_uri():
     return "mongodb://localhost:27017/arachnado-test"
 
@@ -29,21 +30,21 @@ def get_app(ws_pages_uri, ws_jobs_uri):
 
 
 @tornado.gen.coroutine
+def import_file(file_path, mongo_uri):
+    _, _, _, _, col = motor_from_uri(mongo_uri)
+    # col.drop()
+    with open(file_path, "r") as fin:
+        for text_line in fin:
+            record = json.loads(text_line)
+            yield col.insert(record)
+
+
+@tornado.gen.coroutine
 def init_db():
     db_uri = get_db_uri()
-    # items_uri = "{}/items".format(db_uri)
-    uri = "{}/jobs".format(db_uri)
-    in_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "jobs.jl")
-    _, _, _, _, col = motor_from_uri(uri)
-    col_cnt = yield col.count()
-    print(col_cnt)
-    col.drop()
-    col_cnt = yield col.count()
-    print(col_cnt)
-    with open(in_path, "r") as fin:
-        for text_line in fin:
-            job = json.loads(text_line)
-            print(job["_id"])
-            res = yield col.insert(job)
-
-
+    jobs_uri = "{}/jobs".format(db_uri)
+    jobs_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "jobs.jl")
+    import_file(jobs_path, jobs_uri)
+    items_uri = "{}/items".format(db_uri)
+    items_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "items.jl")
+    import_file(items_path, items_uri)

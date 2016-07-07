@@ -85,9 +85,9 @@ class MongoExportPipeline(object):
     def get_spider_urls(cls, spider):
         options = getattr(spider.crawler, 'start_options', None)
         if options and "domain" in options:
-            return options["domain"]
+            return [options["domain"]]
         else:
-            return " ".join(spider.start_urls)
+            return spider.start_urls
 
     @tt_coroutine
     def open_spider(self, spider):
