@@ -13,7 +13,7 @@ License is MIT.
 Install
 -------
 
-Arachnado requires Python 2.7.
+Arachnado requires Python 2.7 or Python 3.5.
 To install Arachnado use pip::
 
     pip install arachnado
@@ -41,13 +41,13 @@ the server::
 For available options check
 https://github.com/TeamHG-Memex/arachnado/blob/master/arachnado/config/defaults.conf.
 
-Test
------------
-To start unit tests for API:
+Tests
+-----
 
-python -m tornado.test.runtests tests.test_data
-or
-python3 -m tornado.test.runtests tests.test_data
+To run tests make sure tox_ is installed, then
+execute ``tox`` command from the source root.
+
+.. _tox: https://testrun.org/tox/latest/
 
 Development
 -----------

@@ -300,7 +300,13 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
 
     @classmethod
     def _request_info(cls, request):
-        return {'url': request.url, 'method': request.method}
+        info = {'url': request.url, 'method': request.method}
+        if 'splash' in request.meta:
+            splash_args = request.meta['splash'].get('args', {})
+            if 'url' in splash_args:
+                info['url'] = splash_args['url']
+            info['method'] = splash_args.get('http_method', 'GET')
+        return info
 
     @classmethod
     def _slot_info(cls, key, slot):

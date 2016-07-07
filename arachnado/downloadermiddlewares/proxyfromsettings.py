@@ -11,6 +11,7 @@ class ProxyFromSettingsMiddleware(HttpProxyMiddleware):
 
     def __init__(self, settings):
         self.proxies = {}
+        self.auth_encoding = settings.get('HTTPPROXY_AUTH_ENCODING')
         proxies = [
             ('http', settings.get('HTTP_PROXY')),
             ('https', settings.get('HTTPS_PROXY')),

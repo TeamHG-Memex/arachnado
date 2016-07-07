@@ -11,17 +11,19 @@ from scrapy.settings import Settings
 import arachnado.settings
 from arachnado.crawler_process import ArachnadoCrawler
 from arachnado.spider import CrawlWebsiteSpider, ArachnadoSpider
-from arachnado.utils.spiders import get_spider_cls
+from arachnado.utils.spiders import get_spider_cls, find_spider_cls
 
 
 class DomainCrawlers(object):
     """
     Helper class to create and start crawlers.
     """
-    def __init__(self, crawler_process, spider_packages, settings):
+    def __init__(self, crawler_process, spider_packages, default_spider_name,
+                 settings):
         self.settings = get_settings(settings)
         self.crawler_process = crawler_process
         self.spider_packages = spider_packages
+        self.default_spider_name = default_spider_name
 
     def resume(self, job_storage):
         @gen.coroutine
@@ -37,8 +39,10 @@ class DomainCrawlers(object):
 
     def start(self, domain, args, settings, crawl_id=None):
         """ Create, start and return a crawler for a given domain. """
-        spider_cls = get_spider_cls(domain, self.spider_packages,
-                                    CrawlWebsiteSpider)
+        default_cls = find_spider_cls(
+            self.default_spider_name,
+            self.spider_packages + ['arachnado.spider'])
+        spider_cls = get_spider_cls(domain, self.spider_packages, default_cls)
         if not spider_cls:
             return
 

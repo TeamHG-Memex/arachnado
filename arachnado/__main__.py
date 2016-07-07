@@ -73,8 +73,8 @@ def main(port, host, start_manhole, manhole_port, manhole_host, loglevel, opts):
     jobs_uri = _getval(storage_opts, 'jobs_uri_env', 'jobs_uri')
     sites_uri = _getval(storage_opts, 'sites_uri_env', 'sites_uri')
 
-    settings.update({k: v for k, v in opts['arachnado.scrapy'].items()
-                     if k.isupper()})
+    scrapy_opts = opts['arachnado.scrapy']
+    settings.update({k: v for k, v in scrapy_opts.items() if k.isupper()})
 
     settings.update({
         'MONGO_EXPORT_ENABLED': storage_opts['enabled'],
@@ -91,10 +91,12 @@ def main(port, host, start_manhole, manhole_port, manhole_host, loglevel, opts):
     site_checker_crawler = get_site_checker_crawler(site_storage)
     crawler_process.crawl(site_checker_crawler)
 
-    spider_packages = opts['arachnado.scrapy']['spider_packages']
+    spider_packages = scrapy_opts['spider_packages']
+    default_spider_name = scrapy_opts['default_spider_name']
     domain_crawlers = DomainCrawlers(
         crawler_process=crawler_process,
         spider_packages=_parse_spider_packages(spider_packages),
+        default_spider_name=default_spider_name,
         settings=settings
     )
     domain_crawlers.resume(job_storage)

@@ -17,7 +17,7 @@ class Cron(object):
         self.waiting_calls = {}
         self.domain_crawlers = domain_crawlers
         self.site_storage = site_storage
-        self.site_storage.subscribe(self.site_storage.available_subscriptions,
+        self.site_storage.subscribe(self.site_storage.available_events,
                                     self.rerun)
 
     def start(self):
@@ -96,10 +96,8 @@ class Cron(object):
         args = _key_value_to_dict(site.get('args', []))
         settings = _key_value_to_dict(site.get('settings', []))
 
-        if not site.get('engine'):
-            site['engine'] = 'generic'
-
-        if site['engine'] == 'generic':
+        # checking for == 'generic' to be backwards compatible
+        if not site.get('engine') or site['engine'] == 'generic':
             url = site['url']
         else:
             url = 'spider://' + site['engine']

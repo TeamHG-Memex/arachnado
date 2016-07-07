@@ -6,6 +6,9 @@ from arachnado.storages.mongo import MongoStorage
 
 
 class MongoTailStorage(MongoStorage):
+    """
+    This MongoStorage subclass allows to subscribe to a mongo query.
+    """
     fetch_delay = 0
 
     def __init__(self, mongo_uri, *args, **kwargs):
@@ -13,18 +16,24 @@ class MongoTailStorage(MongoStorage):
         self.tailing = False
         self.signals['tailed'] = object()
 
-    def subscribe(self, subscriptions, callback, last_id=None, query=None,
+    def subscribe(self, events, callback, last_id=None, query=None,
                   fields=None):
-        if 'tailed' in subscriptions:
+        if 'tailed' in events:
             self.tail(query, fields, last_id)
-        super(MongoTailStorage, self).subscribe(subscriptions, callback)
+        super(MongoTailStorage, self).subscribe(events, callback)
 
-    def unsubscribe(self, subscriptions):
-        if 'tailed' in subscriptions:
+    def unsubscribe(self, events):
+        if 'tailed' in events:
             self.untail()
+        # FIXME: shouldn't it unsubscribe from other events, i.e. call super()?
 
     @coroutine
     def tail(self, query=None, fields=None, last_object_id=None):
+        """
+        Execute ``query`` periodically, fetching new results.
+        ``self.signals['tailed']`` signal with each result is sent
+        when a new document appears.
+        """
         if self.tailing:
             raise RuntimeError('This storage is already tailing')
         self.tailing = True
