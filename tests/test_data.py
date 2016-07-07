@@ -104,7 +104,8 @@ class TestJobsAPI(tornado.testing.AsyncHTTPTestCase):
         self.execute_cancel(ws_client, subs_id, True)
 
     @tornado.testing.gen_test
-    def test_pages_filter(self):
+    def test_pages_filter_ids_mode(self):
+        url_value = 'http://example.com'
         pages_command = {
             'event': 'rpc:request',
             'data': {
@@ -112,7 +113,7 @@ class TestJobsAPI(tornado.testing.AsyncHTTPTestCase):
                 'jsonrpc': '2.0',
                 'method': 'subscribe_to_pages',
                 'params': {'mode': 'ids',
-                           'site_ids': {1: {'http://example.com': None}}
+                           'site_ids': {1: {url_value: None}}
                 }
             },
         }
@@ -132,9 +133,42 @@ class TestJobsAPI(tornado.testing.AsyncHTTPTestCase):
                 break
             else:
                 self.assertTrue('url' in json_response["data"])
+                self.assertTrue(url_value in json_response["data"]["url"])
             cnt += 1
         self.execute_cancel(ws_client, subs_id, True)
 
+    @tornado.testing.gen_test
+    def test_pages_filter_url_mode(self):
+        url_value = 'http://example.com'
+        pages_command = {
+            'event': 'rpc:request',
+            'data': {
+                'id': "test_pages_0",
+                'jsonrpc': '2.0',
+                'method': 'subscribe_to_pages',
+                'params': {'site_ids': {url_value: None}
+                }
+            },
+        }
+        ws_url = "ws://localhost:" + str(self.get_http_port()) + self.pages_uri
+        ws_client = yield tornado.websocket.websocket_connect(ws_url)
+        ws_client.write_message(json.dumps(pages_command))
+        response = yield ws_client.read_message()
+        json_response = json.loads(response)
+        subs_id = json_response.get("data", {}).get("result").get("single_subscription_id", -1)
+        self.assertNotEqual(subs_id, -1)
+        cnt = 0
+        while cnt < 1:
+            response = yield ws_client.read_message()
+            json_response = json.loads(response)
+            if json_response is None:
+                self.assertTrue(False)
+                break
+            else:
+                self.assertTrue('url' in json_response["data"])
+                self.assertTrue(url_value in json_response["data"]["url"])
+            cnt += 1
+        self.execute_cancel(ws_client, subs_id, True)
 
     @tornado.testing.gen_test
     def test_wrong_cancel(self):

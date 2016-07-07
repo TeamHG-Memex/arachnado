@@ -20,14 +20,14 @@ logger = logging.getLogger(__name__)
 
 class DataRpcWebsocketHandler(RpcWebsocketHandler):
     """ basic class for Data API handlers"""
-    stored_data = deque()
+    stored_data = None
     delay_mode = False
+    # static variable, same for all instances
     event_types = []
     data_hb = None
     i_args = None
     i_kwargs = None
-    storages = {}
-    # TODO: allow client to update this
+    storages = None
     max_msg_size = 2**20
 
     def _send_event(self, event, data):
@@ -65,12 +65,18 @@ class DataRpcWebsocketHandler(RpcWebsocketHandler):
         else:
             return False
 
+    def set_max_message_size(self, max_size):
+        self.max_msg_size = max_size
+
     def initialize(self, *args, **kwargs):
+        self.stored_data = deque()
+        self.storages = {}
         self.i_args = args
         self.i_kwargs = kwargs
         self.cp = kwargs.get("crawler_process", None)
         self.dispatcher = Dispatcher()
         self.dispatcher["cancel_subscription"] = self.cancel_subscription
+        self.dispatcher["set_max_message_size"] = self.set_max_message_size
 
     def on_close(self):
         logger.info("connection closed")
@@ -97,13 +103,13 @@ class DataRpcWebsocketHandler(RpcWebsocketHandler):
 
 class JobsDataRpcWebsocketHandler(DataRpcWebsocketHandler):
     event_types = ['stats:changed',]
-    mongo_id_mapping = {}
-    job_url_mapping = {}
+    mongo_id_mapping = None
+    job_url_mapping = None
 
     def subscribe_to_jobs(self, include=[], exclude=[], update_delay=0):
         mongo_q = self.create_jobs_query(include=include, exclude=exclude)
         self.init_hb(update_delay)
-        return { "datatype": "job_subscription_id",
+        return {"datatype": "job_subscription_id",
             "id": self.add_storage_wrapper(mongo_q, storage_wrapper=self.create_jobs_storage_link())
         }
 
@@ -164,6 +170,8 @@ class JobsDataRpcWebsocketHandler(DataRpcWebsocketHandler):
     def initialize(self, *args, **kwargs):
         super(JobsDataRpcWebsocketHandler, self).initialize(*args, **kwargs)
         self.dispatcher["subscribe_to_jobs"] = self.subscribe_to_jobs
+        self.mongo_id_mapping = {}
+        self.job_url_mapping = {}
 
     def create_jobs_storage_link(self):
         jobs = Jobs(self, *self.i_args, **self.i_kwargs)
@@ -192,7 +200,7 @@ class PagesDataRpcWebsocketHandler(DataRpcWebsocketHandler):
     """ pages API"""
     event_types = ['pages.tailed']
 
-    def subscribe_to_pages(self, site_ids={}, update_delay=0, mode="urls"):
+    def subscribe_to_pages(self, site_ids=None, update_delay=0, mode="urls"):
         self.init_hb(update_delay)
         result = {
             "datatype": "pages_subscription_id",
@@ -204,9 +212,13 @@ class PagesDataRpcWebsocketHandler(DataRpcWebsocketHandler):
             result["single_subscription_id"] = self.add_storage_wrapper(mongo_q, storage_wrapper=self.create_pages_storage_link())
         elif mode == "ids":
             res = {}
-            for site_id in site_ids:
-                mongo_q = self.create_pages_query(site_ids=site_ids[site_id])
-                res[site_id] = self.add_storage_wrapper(mongo_q, storage_wrapper=self.create_pages_storage_link())
+            if site_ids:
+                for site_id in site_ids:
+                    mongo_q = self.create_pages_query(site_ids=site_ids[site_id])
+                    res[site_id] = self.add_storage_wrapper(mongo_q, storage_wrapper=self.create_pages_storage_link())
+            else:
+                mongo_q = {}
+                result["single_subscription_id"] = self.add_storage_wrapper(mongo_q, storage_wrapper=self.create_pages_storage_link())
             result["id"] = res
         return result
 
@@ -231,12 +243,13 @@ class PagesDataRpcWebsocketHandler(DataRpcWebsocketHandler):
             for site in site_ids:
                 url_only = False
                 url_field_name = "url"
-                if site_ids[site]:
-                    if "url_field" in site_ids[site]:
-                        url_field_name = site_ids[site]["url_field"]
-                        item_id = site_ids[site]["id"]
+                site_value = site_ids[site]
+                if site_value:
+                    if isinstance(site_value, dict):
+                        url_field_name = site_value.get("url_field", "url")
+                        item_id = site_value["id"]
                     else:
-                        item_id = site_ids[site]
+                        item_id = site_value
                     try:
                         item_id = ObjectId(item_id)
                         conditions.append(
