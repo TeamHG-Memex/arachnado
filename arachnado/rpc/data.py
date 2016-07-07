@@ -229,12 +229,13 @@ class PagesDataRpcWebsocketHandler(DataRpcWebsocketHandler):
         conditions = []
         if site_ids:
             for site in site_ids:
+                url_only = False
+                url_field_name = "url"
                 if site_ids[site]:
                     if "url_field" in site_ids[site]:
                         url_field_name = site_ids[site]["url_field"]
                         item_id = site_ids[site]["id"]
                     else:
-                        url_field_name = "url"
                         item_id = site_ids[site]
                     try:
                         item_id = ObjectId(item_id)
@@ -245,9 +246,13 @@ class PagesDataRpcWebsocketHandler(DataRpcWebsocketHandler):
                         )
                     except InvalidId:
                         logger.warning("Invlaid ObjectID: {}, will use url condition only.".format(item_id))
-                        conditions.append(
-                            {url_field_name:{"$regex": site + '.*'}}
-                        )
+                        url_only = True
+                else:
+                    url_only = True
+                if url_only:
+                    conditions.append(
+                        {url_field_name:{"$regex": site + '.*'}}
+                    )
         items_q = {}
         if len(conditions) == 1:
             items_q = conditions[0]
