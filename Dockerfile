@@ -35,12 +35,12 @@ RUN npm install
 
 # install arachnado
 COPY . /app
+RUN pip install --editable /app
 
 # npm install is executed again because node_modules can be overwritten
 # if .dockerignore is not active (may happen with docker-compose or DockerHub)
 RUN npm install
 RUN npm run build
-RUN pip3 install .
 
 # use e.g. -v /path/to/my/arachnado/config.conf:/etc/arachnado.conf
 # docker run option to override arachnado parameters
@@ -49,7 +49,7 @@ VOLUME /etc/arachnado.conf
 # this folder is added to PYTHONPATH, so modules from there are available
 # for spider_packages Arachnado option
 VOLUME /python-packages
-ENV PYTHONPATH $PYTHONPATH:/python-packages
+ENV PYTHONPATH $PYTHONPATH:/python-packages:/app
 
 EXPOSE 8888
-ENTRYPOINT ["arachnado"]
+CMD ["arachnado"]
