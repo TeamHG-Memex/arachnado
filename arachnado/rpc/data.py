@@ -33,8 +33,6 @@ class DataRpcWebsocketHandler(RpcWebsocketHandler):
     def _send_event(self, event, data):
         message = json_encode({'event': event, 'data': data})
         if len(message) < self.max_msg_size:
-            # logging.info("{}: {}: {}".format(self.cnt, event, len(message)))
-            # self.cnt += 1
             return super(DataRpcWebsocketHandler, self).write_event(event, data)
 
     def init_hb(self, update_delay):
@@ -46,7 +44,8 @@ class DataRpcWebsocketHandler(RpcWebsocketHandler):
             )
             self.data_hb.start()
 
-    def add_storage_wrapper(self, mongo_q, storage_wrapper):
+    def add_storage_wrapper(self, mongo_q):
+        storage_wrapper = self.create_storage_wapper()
         self.dispatcher.add_object(storage_wrapper)
         new_id = str(len(self.storages))
         self.storages[new_id] = {
@@ -98,19 +97,22 @@ class DataRpcWebsocketHandler(RpcWebsocketHandler):
     def send_updates(self):
         while len(self.stored_data):
             item = self.stored_data.popleft()
-            return self._send_event(item["event"], item["data"])
+            self._send_event(item["event"], item["data"])
 
+    def create_storage_wapper(self):
+        return None
 
 class JobsDataRpcWebsocketHandler(DataRpcWebsocketHandler):
     event_types = ['stats:changed',]
     mongo_id_mapping = None
     job_url_mapping = None
+    stored_jobs_stats = None
 
-    def subscribe_to_jobs(self, include=[], exclude=[], update_delay=0):
+    def subscribe_to_jobs(self, include=None, exclude=None, update_delay=0):
         mongo_q = self.create_jobs_query(include=include, exclude=exclude)
         self.init_hb(update_delay)
         return {"datatype": "job_subscription_id",
-            "id": self.add_storage_wrapper(mongo_q, storage_wrapper=self.create_jobs_storage_link())
+            "id": self.add_storage_wrapper(mongo_q)
         }
 
     @gen.coroutine
@@ -150,16 +152,34 @@ class JobsDataRpcWebsocketHandler(DataRpcWebsocketHandler):
                 except Exception as ex:
                     logger.warning("Invalid stats field in job {}".format(event_data.get("_id", "MISSING MONGO ID")))
         if event in self.event_types and self.delay_mode:
-            self.stored_data.append({"event":event, "data":event_data})
+            item_id = event_data.get("_id", None)
+            if item_id:
+                if item_id in self.stored_jobs_stats:
+                    self.stored_jobs_stats[item_id]["data"]["stats"].update(event_data["stats"])
+                    self.stored_jobs_stats[item_id]["data"]["stats_dict"].update(event_data["stats_dict"])
+                else:
+                    item = {"event":event, "data":event_data}
+                    self.stored_jobs_stats[item_id] = item
+            else:
+                logger.warning("Job data without _id field from event {}".format(event))
         else:
             return self._send_event(event, event_data)
 
+    def send_updates(self):
+        super(JobsDataRpcWebsocketHandler, self).send_updates()
+        for job_id in set(self.stored_jobs_stats.keys()):
+            item = self.stored_jobs_stats.pop(job_id, None)
+            if item:
+                self._send_event(item["event"], item["data"])
+
     def create_jobs_query(self, include, exclude):
         conditions = []
-        for inc_str in include:
-            conditions.append({"urls":{'$regex': '.*' + inc_str + '.*'}})
-        for exc_str in exclude:
-            conditions.append({"urls":{'$regex': '^((?!' + exc_str + ').)*$'}})
+        if include:
+            for inc_str in include:
+                conditions.append({"urls":{'$regex': inc_str }})
+        if exclude:
+            for exc_str in exclude:
+                conditions.append({"urls":{'$regex': '^((?!' + exc_str + ').)*$'}})
         jobs_q = {}
         if len(conditions) == 1:
             jobs_q = conditions[0]
@@ -172,20 +192,21 @@ class JobsDataRpcWebsocketHandler(DataRpcWebsocketHandler):
         self.dispatcher["subscribe_to_jobs"] = self.subscribe_to_jobs
         self.mongo_id_mapping = {}
         self.job_url_mapping = {}
+        self.stored_jobs_stats = {}
 
-    def create_jobs_storage_link(self):
+    def create_storage_wapper(self):
         jobs = Jobs(self, *self.i_args, **self.i_kwargs)
         return jobs
 
     def on_close(self):
-        logger.info("connection closed")
+        logger.debug("connection closed")
         if self.cp:
             self.cp.signals.disconnect(self.on_stats_changed, agg_stats_changed)
             self.cp.signals.disconnect(self.on_spider_closed, CPS.spider_closed)
         super(JobsDataRpcWebsocketHandler, self).on_close()
 
     def open(self):
-        logger.info("new connection")
+        logger.debug("new connection")
         super(JobsDataRpcWebsocketHandler, self).open()
         if self.cp:
             self.cp.signals.connect(self.on_stats_changed, agg_stats_changed)
@@ -200,26 +221,25 @@ class PagesDataRpcWebsocketHandler(DataRpcWebsocketHandler):
     """ pages API"""
     event_types = ['pages.tailed']
 
-    def subscribe_to_pages(self, site_ids=None, update_delay=0, mode="urls"):
+    def subscribe_to_pages(self, urls=None, url_groups=None, update_delay=0):
         self.init_hb(update_delay)
         result = {
             "datatype": "pages_subscription_id",
             "single_subscription_id": "",
             "id": {},
         }
-        if mode == "urls":
-            mongo_q = self.create_pages_query(site_ids=site_ids)
-            result["single_subscription_id"] = self.add_storage_wrapper(mongo_q, storage_wrapper=self.create_pages_storage_link())
-        elif mode == "ids":
+        if urls:
+            mongo_q = self.create_pages_query(urls)
+            result["single_subscription_id"] = self.add_storage_wrapper(mongo_q)
+        if url_groups:
             res = {}
-            if site_ids:
-                for site_id in site_ids:
-                    mongo_q = self.create_pages_query(site_ids=site_ids[site_id])
-                    res[site_id] = self.add_storage_wrapper(mongo_q, storage_wrapper=self.create_pages_storage_link())
-            else:
-                mongo_q = {}
-                result["single_subscription_id"] = self.add_storage_wrapper(mongo_q, storage_wrapper=self.create_pages_storage_link())
+            for group_id in url_groups:
+                mongo_q = self.create_pages_query(url_groups[group_id])
+                res[group_id] = self.add_storage_wrapper(mongo_q)
             result["id"] = res
+        if not urls and not url_groups:
+            mongo_q = {}
+            result["single_subscription_id"] = self.add_storage_wrapper(mongo_q)
         return result
 
     @gen.coroutine
@@ -233,17 +253,17 @@ class PagesDataRpcWebsocketHandler(DataRpcWebsocketHandler):
         super(PagesDataRpcWebsocketHandler, self).initialize(*args, **kwargs)
         self.dispatcher["subscribe_to_pages"] = self.subscribe_to_pages
 
-    def create_pages_storage_link(self):
+    def create_storage_wapper(self):
         pages = Pages(self, *self.i_args, **self.i_kwargs)
         return pages
 
-    def create_pages_query(self, site_ids):
+    def create_pages_query(self, url_ids):
         conditions = []
-        if site_ids:
-            for site in site_ids:
+        if url_ids:
+            for site in url_ids:
                 url_only = False
                 url_field_name = "url"
-                site_value = site_ids[site]
+                site_value = url_ids[site]
                 if site_value:
                     if isinstance(site_value, dict):
                         url_field_name = site_value.get("url_field", "url")
@@ -253,7 +273,7 @@ class PagesDataRpcWebsocketHandler(DataRpcWebsocketHandler):
                     try:
                         item_id = ObjectId(item_id)
                         conditions.append(
-                            {"$and":[{url_field_name:{"$regex": site + '.*'}},
+                            {"$and":[{url_field_name:{"$regex": site }},
                                 {"_id":{"$gt":item_id}}
                             ]}
                         )
@@ -264,7 +284,7 @@ class PagesDataRpcWebsocketHandler(DataRpcWebsocketHandler):
                     url_only = True
                 if url_only:
                     conditions.append(
-                        {url_field_name:{"$regex": site + '.*'}}
+                        {url_field_name:{"$regex": site}}
                     )
         items_q = {}
         if len(conditions) == 1:

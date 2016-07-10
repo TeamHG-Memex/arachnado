@@ -3,17 +3,22 @@ import tornado
 import json
 from tornado import web, websocket
 import tornado.testing
+from tornado.ioloop import TimeoutError
 
 import tests.utils as u
 
 
-class TestJobsAPI(tornado.testing.AsyncHTTPTestCase):
+class TestDataAPI(tornado.testing.AsyncHTTPTestCase):
     pages_uri = r"/ws-pages-data"
     jobs_uri = r"/ws-jobs-data"
 
-    def setUp(self):
-        tornado.ioloop.IOLoop.current().run_sync(u.init_db)
-        super(TestJobsAPI, self).setUp()
+    @classmethod
+    def setUpClass(cls):
+        u.init_db()
+
+    @classmethod
+    def tearDownClass(cls):
+        u.clear_db()
 
     def get_app(self):
         return u.get_app(self.pages_uri, self.jobs_uri)
@@ -104,7 +109,7 @@ class TestJobsAPI(tornado.testing.AsyncHTTPTestCase):
         self.execute_cancel(ws_client, subs_id, True)
 
     @tornado.testing.gen_test
-    def test_pages_filter_ids_mode(self):
+    def test_pages_filter_url_groups(self):
         url_value = 'http://example.com'
         pages_command = {
             'event': 'rpc:request',
@@ -112,8 +117,7 @@ class TestJobsAPI(tornado.testing.AsyncHTTPTestCase):
                 'id': "test_pages_0",
                 'jsonrpc': '2.0',
                 'method': 'subscribe_to_pages',
-                'params': {'mode': 'ids',
-                           'site_ids': {1: {url_value: None}}
+                'params': {'url_groups': {1: {url_value: None}}
                 }
             },
         }
@@ -138,7 +142,7 @@ class TestJobsAPI(tornado.testing.AsyncHTTPTestCase):
         self.execute_cancel(ws_client, subs_id, True)
 
     @tornado.testing.gen_test
-    def test_pages_filter_url_mode(self):
+    def test_pages_filter_urls(self):
         url_value = 'http://example.com'
         pages_command = {
             'event': 'rpc:request',
@@ -146,7 +150,7 @@ class TestJobsAPI(tornado.testing.AsyncHTTPTestCase):
                 'id': "test_pages_0",
                 'jsonrpc': '2.0',
                 'method': 'subscribe_to_pages',
-                'params': {'site_ids': {url_value: None}
+                'params': {'urls': {url_value: None}
                 }
             },
         }

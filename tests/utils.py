@@ -2,9 +2,17 @@
 import os
 import tornado
 import json
+from pymongo import MongoClient
+from pymongo.errors import DuplicateKeyError
+
 from arachnado.rpc.data import PagesDataRpcWebsocketHandler, JobsDataRpcWebsocketHandler
 from arachnado.storages.mongotail import MongoTailStorage
 from arachnado.utils.mongo import motor_from_uri
+
+
+def get_mongo_db():
+    client = MongoClient('mongodb://localhost:27017/')
+    return client["arachnado-test"]
 
 
 def get_db_uri():
@@ -29,22 +37,26 @@ def get_app(ws_pages_uri, ws_jobs_uri):
     return app
 
 
-@tornado.gen.coroutine
-def import_file(file_path, mongo_uri):
-    _, _, _, _, col = motor_from_uri(mongo_uri)
-    # col.drop()
-    with open(file_path, "r") as fin:
-        for text_line in fin:
-            record = json.loads(text_line)
-            yield col.insert(record)
-
-
-@tornado.gen.coroutine
+# @tornado.gen.coroutine
 def init_db():
-    db_uri = get_db_uri()
-    jobs_uri = "{}/jobs".format(db_uri)
-    jobs_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "jobs.jl")
-    import_file(jobs_path, jobs_uri)
-    items_uri = "{}/items".format(db_uri)
-    items_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "items.jl")
-    import_file(items_path, items_uri)
+    db = get_mongo_db()
+    collections = ["jobs", "items"]
+    for collection in collections:
+        col_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "{}.jl".format(collection))
+        col = db[collection]
+        with open(col_path, "r") as fin:
+            for text_line in fin:
+                record = json.loads(text_line)
+                try:
+                    col.insert(record)
+                except DuplicateKeyError:
+                    pass
+
+
+# @tornado.gen.coroutine
+def clear_db():
+    db = get_mongo_db()
+    collections = ["jobs", "items"]
+    for collection in collections:
+        col = db[collection]
+        col.drop()
