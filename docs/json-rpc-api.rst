@@ -4,7 +4,7 @@ JSON RPC API
 Arachnado provides JSON-RPC_ API for working with jobs and crawled items
 (pages). The API works over WebSocket transport.
 
-**FIXME**: JSON-RPC request objects are wrapped:
+JSON-RPC request objects are wrapped:
 ``{"event": "rpc:request", "data": <JSON-RPC request>}``.
 Responses are also wrapped:
 ``{"event": "rpc:response", "data": <JSON-RPC response>}``.
@@ -71,8 +71,8 @@ subscribe_to_jobs
     * include - an array of regexes which should match URLs to include;
     * exclude - an array of regexes; URLs matched by these regexes are excluded
       from the result;
-    * update_delay - int, a minimum number of ms between websocket mesages
-      (FIXME).
+    * update_delay - (opional) int, a minimum number of ms between websocket messages.
+    If this parameter set then Arachnado will aggregate job statistics.
 
     Response contains subscription ID in ``['data']['result']['id']`` field::
 
@@ -99,17 +99,113 @@ subscribe_to_jobs
                   'status': 'finished'},
          'event': 'jobs.tailed'}
 
-
 cancel_subscription
     Stop receiving updates about jobs. Parameters:
 
     * subscription_id
 
 
-Working with pages (items)
+set_max_message_size
+    Set maximum message size in bytes for websockets channel.
+    Messages larger than specified limit are dropped.
+    Default value is 2**20.
+    To disable this chack set max size to zero.
+    Parameters:
+    * max_size - an array of regexes which should match URLs to include;
+
+    Response returns result(true/false) at result field::
+
+        {"event": "rpc:response",
+         "data": {
+                "id": "test_set_0",
+                "result": true,
+                "jsonrpc": "2.0"
+         }}
+
+
+Working with pages (crawled items)
 --------------------------
 
+Open a websocket connection to ``/ws-pages-data`` in order to use
+jobs JSON-RPC API for scraping jobs.
 
+subscribe_to_pages
+    Get crawled pages(items) for specific urls.
+    Allows to get all pages or only crawled since last update.
+    To get only new pages set last seen page id (from "id" field of page record) for an url.
+    To get all pages set page id to None.
+
+    Parameters:
+
+    * urls - a dictionary of <url>:<last seen page id pairs>. Arachnado will create one subscription id for all urls;
+    * url_groups - a dictionary of <url group id>: <dictionary like urls param>. Arachnado will create one subscription id for each url group.
+
+    Command example::
+
+            {'event': 'rpc:request',
+                'data': {
+                    'id': "sample_0",
+                    'jsonrpc': '2.0',
+                    'method': 'subscribe_to_pages',
+                    'params': {'urls': {'http://example.com': None},
+                               'url_groups': {'gr1': {'http://example1.com': None},
+                                              'gr2': {'http://example2.com': "57863974a8cb9c15e8f3d53a"}}
+                    }
+                },
+            }
+
+    Response example::
+
+        {"event": "rpc:response",
+         "data": {
+            "result": {
+            "datatype": "pages_subscription_id",
+            "single_subscription_id": "112",
+            "id": {
+                "gr1": "113",
+                "gr2": "114",
+            }},
+            "id": "sample_0",
+            "jsonrpc": "2.0"}
+        }
+
+    Use these IDs to cancel subscriptions.
+
+    After the subscription Arachnado will start to send information
+    about crawled pages. Messages look like this::
+
+        {"data": {
+            "status": 200,
+            "items": [],
+             "_id": "57863974a8cb9c15e8f3d53a",
+             "url": "http://example.com/index.php",
+             "headers": {},
+             "_type": "page",
+             "body": ""},
+        "event": "pages.tailed"}
+
+
+cancel_subscription
+    Stop receiving updates. Parameters:
+
+    * subscription_id
+
+set_max_message_size
+    Set maximum message size in bytes for websockets channel.
+    Messages larger than specified limit are dropped.
+    Default value is 2**20.
+    To disable this chack set max size to zero.
+    Parameters:
+    * max_size - an array of regexes which should match URLs to include;
+
+    Response returns result(true/false) at result field::
+
+        {"event": "rpc:response",
+         "data": {
+                "id": "test_set_0",
+                "result": true,
+                "jsonrpc": "2.0"
+         }}
 
 
 .. _JSON-RPC: http://www.jsonrpc.org/specification

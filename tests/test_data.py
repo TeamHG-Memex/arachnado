@@ -24,6 +24,27 @@ class TestDataAPI(tornado.testing.AsyncHTTPTestCase):
         return u.get_app(self.pages_uri, self.jobs_uri)
 
     @tornado.testing.gen_test
+    def test_set_message_size(self):
+        test_command = {
+            'event': 'rpc:request',
+            'data': {
+                'id': "test_set_0",
+                'jsonrpc': '2.0',
+                'method': 'set_max_message_size',
+                'params': {
+                    "max_size":100
+                },
+            },
+        }
+        ws_url = "ws://localhost:" + str(self.get_http_port()) + self.jobs_uri
+        ws_client = yield tornado.websocket.websocket_connect(ws_url)
+        ws_client.write_message(json.dumps(test_command))
+        response = yield ws_client.read_message()
+        json_response = json.loads(response)
+        res = json_response.get("data", {}).get("result", False)
+        self.assertTrue(res)
+
+    @tornado.testing.gen_test
     def test_jobs_no_filter(self):
         jobs_command = {
             'event': 'rpc:request',

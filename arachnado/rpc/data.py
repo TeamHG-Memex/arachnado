@@ -32,7 +32,7 @@ class DataRpcWebsocketHandler(RpcWebsocketHandler):
 
     def _send_event(self, event, data):
         message = json_encode({'event': event, 'data': data})
-        if len(message) < self.max_msg_size:
+        if len(message) < self.max_msg_size or not self.max_msg_size:
             return super(DataRpcWebsocketHandler, self).write_event(event, data)
 
     def init_hb(self, update_delay):
@@ -66,6 +66,7 @@ class DataRpcWebsocketHandler(RpcWebsocketHandler):
 
     def set_max_message_size(self, max_size):
         self.max_msg_size = max_size
+        return True
 
     def initialize(self, *args, **kwargs):
         self.stored_data = deque()
@@ -221,8 +222,7 @@ class PagesDataRpcWebsocketHandler(DataRpcWebsocketHandler):
     """ pages API"""
     event_types = ['pages.tailed']
 
-    def subscribe_to_pages(self, urls=None, url_groups=None, update_delay=0):
-        self.init_hb(update_delay)
+    def subscribe_to_pages(self, urls=None, url_groups=None):
         result = {
             "datatype": "pages_subscription_id",
             "single_subscription_id": "",
