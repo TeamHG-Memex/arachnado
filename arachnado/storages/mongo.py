@@ -98,6 +98,11 @@ class MongoStorage(object):
         raise Return(result)
 
     @coroutine
+    def ensure_index(self, key_or_list):
+        result = yield self.col.ensure_index(key_or_list)
+        raise Return(result)
+
+    @coroutine
     def update(self, doc):
         doc = replace_dots(doc)
         doc_copy = deepcopy(doc)

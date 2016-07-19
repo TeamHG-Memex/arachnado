@@ -24,7 +24,7 @@ class DataRpcWebsocketHandler(RpcWebsocketHandler):
     delay_mode = False
     # static variable, same for all instances
     event_types = []
-    data_hb = None
+    heartbeat_data = None
     i_args = None
     i_kwargs = None
     storages = None
@@ -32,17 +32,20 @@ class DataRpcWebsocketHandler(RpcWebsocketHandler):
 
     def _send_event(self, event, data):
         message = json_encode({'event': event, 'data': data})
+        # if message size is higher then ws connection can be dropped without proper message
         if len(message) < self.max_msg_size or not self.max_msg_size:
             return super(DataRpcWebsocketHandler, self).write_event(event, data)
+        else:
+            logger.info("Message from {} event size exceeded. Message wasn't sent.".format(event))
 
-    def init_hb(self, update_delay):
-        if update_delay > 0 and not self.data_hb:
+    def init_heartbeat(self, update_delay):
+        if update_delay > 0 and not self.heartbeat_data:
             self.delay_mode = True
-            self.data_hb = tornado.ioloop.PeriodicCallback(
+            self.heartbeat_data = tornado.ioloop.PeriodicCallback(
                 lambda: self.send_updates(),
                 update_delay
             )
-            self.data_hb.start()
+            self.heartbeat_data.start()
 
     def add_storage_wrapper(self, mongo_q):
         storage_wrapper = self.create_storage_wapper()
@@ -82,8 +85,8 @@ class DataRpcWebsocketHandler(RpcWebsocketHandler):
         logger.info("connection closed")
         for storage in self.storages.values():
             storage["storage"]._on_close()
-        if self.data_hb:
-            self.data_hb.stop()
+        if self.heartbeat_data:
+            self.heartbeat_data.stop()
         super(DataRpcWebsocketHandler, self).on_close()
 
     def open(self):
@@ -109,9 +112,9 @@ class JobsDataRpcWebsocketHandler(DataRpcWebsocketHandler):
     job_url_mapping = None
     stored_jobs_stats = None
 
-    def subscribe_to_jobs(self, include=None, exclude=None, update_delay=0):
-        mongo_q = self.create_jobs_query(include=include, exclude=exclude)
-        self.init_hb(update_delay)
+    def subscribe_to_jobs(self, include=None, exclude=None, update_delay=0, last_id=None):
+        mongo_q = self.create_jobs_query(include=include, exclude=exclude, last_id=last_id)
+        self.init_heartbeat(update_delay)
         return {"datatype": "job_subscription_id",
             "id": self.add_storage_wrapper(mongo_q)
         }
@@ -128,10 +131,7 @@ class JobsDataRpcWebsocketHandler(DataRpcWebsocketHandler):
             if event == 'stats:changed':
                 if len(data) > 1:
                     job_id = data[0]
-                    # two fields with same content for back compatibility
-                    event_data = {"stats": data[1],
-                                  "stats_dict": data[1],
-                                  }
+                    event_data = {"stats": data[1]}
                     # same as crawl_id
                     event_data["id"] = job_id
                     # mongo id
@@ -173,8 +173,10 @@ class JobsDataRpcWebsocketHandler(DataRpcWebsocketHandler):
             if item:
                 self._send_event(item["event"], item["data"])
 
-    def create_jobs_query(self, include, exclude):
+    def create_jobs_query(self, include, exclude, last_id):
         conditions = []
+        if last_id:
+            conditions.append({"_id":{"$gt":last_id}})
         if include:
             for inc_str in include:
                 conditions.append({"urls":{'$regex': inc_str }})
