@@ -19,6 +19,9 @@ class Pages(object):
     def _on_close(self):
         self.storage.unsubscribe('tailed')
 
+    def unsubscribe(self):
+        self.storage.unsubscribe('tailed')
+
     def _publish(self, data):
         if self.storage.tailing:
             self.handler.write_event('pages.tailed', data)

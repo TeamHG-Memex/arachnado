@@ -106,24 +106,25 @@ class DataRpcWebsocketHandler(RpcWebsocketHandler):
     def create_storage_wapper(self):
         return None
 
+
 class JobsDataRpcWebsocketHandler(DataRpcWebsocketHandler):
     event_types = ['stats:changed',]
     mongo_id_mapping = None
     job_url_mapping = None
     stored_jobs_stats = None
 
-    def subscribe_to_jobs(self, include=None, exclude=None, update_delay=0, last_id=None):
-        mongo_q = self.create_jobs_query(include=include, exclude=exclude, last_id=last_id)
+    def subscribe_to_jobs(self, include=None, exclude=None, update_delay=0, id=None):
+        mongo_q = self.create_jobs_query(include=include, exclude=exclude, last_id=id)
         self.init_heartbeat(update_delay)
         return {"datatype": "job_subscription_id",
             "id": self.add_storage_wrapper(mongo_q)
         }
 
     @gen.coroutine
-    def write_event(self, event, data, handler_id=None):
+    def write_event(self, event, data, callback_meta=None):
         event_data = data
-        if event == 'jobs.tailed' and "id" in data and handler_id:
-            self.storages[handler_id]["job_ids"].add(data["id"])
+        if event == 'jobs.tailed' and "id" in data and callback_meta:
+            self.storages[callback_meta]["job_ids"].add(data["id"])
             self.mongo_id_mapping[data["id"]] = data.get("_id", None)
             self.job_url_mapping[data["id"]] = data.get("urls", None)
         if event in ['stats:changed', 'jobs:state']:
@@ -224,6 +225,7 @@ class PagesDataRpcWebsocketHandler(DataRpcWebsocketHandler):
     """ pages API"""
     event_types = ['pages.tailed']
 
+    @gen.coroutine
     def subscribe_to_pages(self, urls=None, url_groups=None):
         result = {
             "datatype": "pages_subscription_id",
@@ -231,21 +233,46 @@ class PagesDataRpcWebsocketHandler(DataRpcWebsocketHandler):
             "id": {},
         }
         if urls:
-            mongo_q = self.create_pages_query(urls)
-            result["single_subscription_id"] = self.add_storage_wrapper(mongo_q)
+            result["single_subscription_id"] = yield self.create_subscribtion_to_urls(urls)
         if url_groups:
             res = {}
             for group_id in url_groups:
-                mongo_q = self.create_pages_query(url_groups[group_id])
-                res[group_id] = self.add_storage_wrapper(mongo_q)
+                res[group_id] = yield self.create_subscribtion_to_urls(url_groups[group_id])
             result["id"] = res
         if not urls and not url_groups:
-            mongo_q = {}
-            result["single_subscription_id"] = self.add_storage_wrapper(mongo_q)
-        return result
+            stor_id, storage = self.add_storage()
+            result["single_subscription_id"] = stor_id
+            storage["pages"].subscribe(query={})
+        raise gen.Return(result)
 
     @gen.coroutine
-    def write_event(self, event, data, handler_id=None):
+    def create_subscribtion_to_urls(self, urls):
+        jobs_to_subscribe = []
+        stor_id, storage = self.add_storage()
+        result = stor_id
+        for url in urls:
+            last_id = urls[url]
+            jobs = Jobs(self, *self.i_args, **self.i_kwargs)
+            jobs.callback_meta = {
+                "subscription_id":stor_id,
+                "last_id":last_id
+            }
+            jobs.callback = self.job_query_callback
+            jobs_q = self.create_jobs_query(url)
+            jobs_ds = yield jobs.storage.fetch(jobs_q)
+            job_ids =[x["_id"] for x in jobs_ds]
+            storage["job_ids"].update(job_ids)
+            pages_query = self.create_pages_query(job_ids, last_id)
+            storage["filters"].append(pages_query)
+            jobs_to_subscribe.append([jobs_q,  jobs])
+        if storage["filters"]:
+            storage["pages"].subscribe(query={"$or": storage["filters"]})
+        for jobs_q, jobs in jobs_to_subscribe:
+            jobs.subscribe(query=jobs_q)
+        raise gen.Return(result)
+
+    @gen.coroutine
+    def write_event(self, event, data):
         if event in self.event_types and self.delay_mode:
             self.stored_data.append({"event":event, "data":data})
         else:
@@ -253,44 +280,76 @@ class PagesDataRpcWebsocketHandler(DataRpcWebsocketHandler):
 
     def initialize(self, *args, **kwargs):
         super(PagesDataRpcWebsocketHandler, self).initialize(*args, **kwargs)
+        # key is a subscription id
+        # contains jobs storage, pages storage and set of job ids for pages subscription
         self.dispatcher["subscribe_to_pages"] = self.subscribe_to_pages
 
-    def create_storage_wapper(self):
-        pages = Pages(self, *self.i_args, **self.i_kwargs)
-        return pages
+    @gen.coroutine
+    def job_query_callback(self, event, data, callback_meta=None):
+        if event == 'jobs.tailed' and "_id" in data and callback_meta:
+            storage = self.storages[callback_meta["subscription_id"]]
+            job_id = data["_id"]
+            if job_id not in storage["job_ids"]:
+                # stop pages subscription
+                storage["pages"].unsubscribe()
+                # create new pages query
+                pages_query = self.create_pages_query([job_id], callback_meta["last_id"])
+                storage["filters"].append(pages_query)
+                # subscribe to pages
+                storage["pages"].subscribe(query={"$or": storage["filters"]})
+            else:
+                logger.debug("Already subscribed to job {}".format(job_id))
+        else:
+            logger.warning("Jobs callback without with incomplete data")
 
-    def create_pages_query(self, url_ids):
-        conditions = []
-        if url_ids:
-            for site in url_ids:
-                url_only = False
-                url_field_name = "url"
-                site_value = url_ids[site]
-                if site_value:
-                    if isinstance(site_value, dict):
-                        url_field_name = site_value.get("url_field", "url")
-                        item_id = site_value["id"]
-                    else:
-                        item_id = site_value
-                    try:
-                        item_id = ObjectId(item_id)
-                        conditions.append(
-                            {"$and":[{url_field_name:{"$regex": site }},
-                                {"_id":{"$gt":item_id}}
-                            ]}
-                        )
-                    except InvalidId:
-                        logger.warning("Invlaid ObjectID: {}, will use url condition only.".format(item_id))
-                        url_only = True
-                else:
-                    url_only = True
-                if url_only:
-                    conditions.append(
-                        {url_field_name:{"$regex": site}}
-                    )
+    def create_jobs_query(self, url):
+        if url:
+            return {"urls":{'$regex': url }}
+        else:
+            return {}
+
+    def create_pages_query(self, job_ids=None, last_id=None):
+        filters = []
+        job_conditions_lst = []
+        if job_ids:
+            for job_id in job_ids:
+                job_conditions_lst.append({"_job_id":{'$eq': job_id }})
+        if job_conditions_lst:
+            if len(job_conditions_lst) > 1:
+                filters.append({"$or": job_conditions_lst})
+            else:
+                filters.append(job_conditions_lst[0])
+        if last_id:
+            try:
+                page_id = ObjectId(last_id)
+                filters.append({"_id":{"$gt":page_id}})
+            except InvalidId:
+                logger.warning("Invalid ObjectID: {}, will use job ids filter only.".format(last_id))
         items_q = {}
-        if len(conditions) == 1:
-            items_q = conditions[0]
-        elif len(conditions):
-            items_q = {"$or": conditions}
+        if len(filters) == 1:
+            items_q = filters[0]
+        elif len(filters):
+            items_q = {"$and": filters}
         return items_q
+
+    def add_storage(self):
+        pages = Pages(self, *self.i_args, **self.i_kwargs)
+        self.dispatcher.add_object(pages)
+        new_id = str(len(self.storages))
+        self.storages[new_id] = {
+            "pages": pages,
+            "jobs": [],
+            "job_ids": set([]),
+            "filters": [],
+        }
+        return new_id, self.storages[new_id]
+
+    def cancel_subscription(self, subscription_id):
+        storage = self.storages.pop(subscription_id, None)
+        if storage:
+            for jobs in storage["jobs"]:
+                jobs._on_close()
+            storage["pages"]._on_close()
+            return True
+        else:
+            return False

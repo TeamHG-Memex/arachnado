@@ -72,7 +72,7 @@ subscribe_to_jobs
     * exclude - an array of regexes; URLs matched by these regexes are excluded
       from the result;
     * update_delay - (opional) int, a minimum number of ms between websocket messages;
-    * last_id - optional, ObjectID value of a last previously seen job.
+    * id - optional, ObjectID value of a last previously seen job.
       When passed, only new job data is returned.
     If this parameter set then Arachnado will aggregate job statistics.
 

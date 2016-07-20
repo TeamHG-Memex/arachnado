@@ -8,7 +8,8 @@ class Jobs(object):
     This object is exposed for RPC requests.
     It allows to subscribe for scraping job updates.
     """
-    handler_id = None
+    callback_meta = None
+    callback = None
     logger = logging.getLogger(__name__)
 
     def __init__(self, handler, job_storage, **kwargs):
@@ -24,8 +25,12 @@ class Jobs(object):
         self.storage.unsubscribe('tailed')
 
     def _publish(self, data):
+        if self.callback:
+            _callback = self.callback
+        else:
+            _callback = self.handler.write_event
         if self.storage.tailing:
-            if self.handler_id:
-                self.handler.write_event('jobs.tailed', data, handler_id=self.handler_id)
+            if self.callback_meta:
+                _callback('jobs.tailed', data, callback_meta=self.callback_meta)
             else:
-                self.handler.write_event('jobs.tailed', data)
+                _callback('jobs.tailed', data)
