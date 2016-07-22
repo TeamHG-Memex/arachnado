@@ -47,22 +47,22 @@ class DataRpcWebsocketHandler(RpcWebsocketHandler):
             )
             self.heartbeat_data.start()
 
-    def add_storage_wrapper(self, mongo_q):
-        storage_wrapper = self.create_storage_wapper()
-        self.dispatcher.add_object(storage_wrapper)
-        new_id = str(len(self.storages))
-        self.storages[new_id] = {
-            "storage": storage_wrapper,
-            "job_ids": set([])
-        }
-        storage_wrapper.handler_id = new_id
-        storage_wrapper.subscribe(query=mongo_q)
-        return new_id
+    # def add_storage_wrapper(self, mongo_q):
+    #     storage_wrapper = self.create_storage_wapper()
+    #     self.dispatcher.add_object(storage_wrapper)
+    #     new_id = str(len(self.storages))
+    #     self.storages[new_id] = {
+    #         "storage": storage_wrapper,
+    #         "job_ids": set([])
+    #     }
+    #     storage_wrapper.handler_id = new_id
+    #     storage_wrapper.subscribe(query=mongo_q)
+    #     return new_id
 
     def cancel_subscription(self, subscription_id):
         storage = self.storages.pop(subscription_id, None)
         if storage:
-            storage._on_close()
+            storage.on_close()
             return True
         else:
             return False
@@ -84,7 +84,7 @@ class DataRpcWebsocketHandler(RpcWebsocketHandler):
     def on_close(self):
         logger.info("connection closed")
         for storage in self.storages.values():
-            storage["storage"]._on_close()
+            storage.on_close()
         if self.heartbeat_data:
             self.heartbeat_data.stop()
         super(DataRpcWebsocketHandler, self).on_close()
@@ -113,18 +113,29 @@ class JobsDataRpcWebsocketHandler(DataRpcWebsocketHandler):
     job_url_mapping = None
     stored_jobs_stats = None
 
-    def subscribe_to_jobs(self, include=None, exclude=None, update_delay=0, id=None):
-        mongo_q = self.create_jobs_query(include=include, exclude=exclude, last_id=id)
+    @gen.coroutine
+    def subscribe_to_jobs(self, include=None, exclude=None, update_delay=0, last_job_id=None):
         self.init_heartbeat(update_delay)
+        stor_id, storage = self.add_storage()
+        jobs_storage = Jobs(self, *self.i_args, **self.i_kwargs)
+        jobs = yield jobs_storage.storage.fetch(query={})
+        jobs_storage.callback_meta = stor_id
+        # jobs_storage.handler_id = stor_id
+        storage.add_jobs_subscription(jobs_storage, include=include, exclude=exclude, last_id=last_job_id)
         return {"datatype": "job_subscription_id",
-            "id": self.add_storage_wrapper(mongo_q)
-        }
+            "id": stor_id}
+
+    def add_storage(self):
+        new_id = str(len(self.storages))
+        storage = DataSubscription()
+        self.storages[new_id] = storage
+        return new_id, storage
 
     @gen.coroutine
     def write_event(self, event, data, callback_meta=None):
         event_data = data
         if event == 'jobs.tailed' and "id" in data and callback_meta:
-            self.storages[callback_meta]["job_ids"].add(data["id"])
+            self.storages[callback_meta].job_ids.add(data["id"])
             self.mongo_id_mapping[data["id"]] = data.get("_id", None)
             self.job_url_mapping[data["id"]] = data.get("urls", None)
         if event in ['stats:changed', 'jobs:state']:
@@ -144,7 +155,7 @@ class JobsDataRpcWebsocketHandler(DataRpcWebsocketHandler):
             allowed = False
             if job_id:
                 for storage in self.storages.values():
-                    allowed = allowed or job_id in storage["job_ids"]
+                    allowed = allowed or job_id in storage.job_ids
             if not allowed:
                 return
         if 'stats' in event_data:
@@ -158,7 +169,6 @@ class JobsDataRpcWebsocketHandler(DataRpcWebsocketHandler):
             if item_id:
                 if item_id in self.stored_jobs_stats:
                     self.stored_jobs_stats[item_id]["data"]["stats"].update(event_data["stats"])
-                    self.stored_jobs_stats[item_id]["data"]["stats_dict"].update(event_data["stats_dict"])
                 else:
                     item = {"event":event, "data":event_data}
                     self.stored_jobs_stats[item_id] = item
@@ -174,33 +184,12 @@ class JobsDataRpcWebsocketHandler(DataRpcWebsocketHandler):
             if item:
                 self._send_event(item["event"], item["data"])
 
-    def create_jobs_query(self, include, exclude, last_id):
-        conditions = []
-        if last_id:
-            conditions.append({"_id":{"$gt":last_id}})
-        if include:
-            for inc_str in include:
-                conditions.append({"urls":{'$regex': inc_str }})
-        if exclude:
-            for exc_str in exclude:
-                conditions.append({"urls":{'$regex': '^((?!' + exc_str + ').)*$'}})
-        jobs_q = {}
-        if len(conditions) == 1:
-            jobs_q = conditions[0]
-        elif len(conditions):
-            jobs_q = {"$and": conditions }
-        return jobs_q
-
     def initialize(self, *args, **kwargs):
         super(JobsDataRpcWebsocketHandler, self).initialize(*args, **kwargs)
         self.dispatcher["subscribe_to_jobs"] = self.subscribe_to_jobs
         self.mongo_id_mapping = {}
         self.job_url_mapping = {}
         self.stored_jobs_stats = {}
-
-    def create_storage_wapper(self):
-        jobs = Jobs(self, *self.i_args, **self.i_kwargs)
-        return jobs
 
     def on_close(self):
         logger.debug("connection closed")
@@ -242,7 +231,7 @@ class PagesDataRpcWebsocketHandler(DataRpcWebsocketHandler):
         if not urls and not url_groups:
             stor_id, storage = self.add_storage()
             result["single_subscription_id"] = stor_id
-            storage["pages"].subscribe(query={})
+            storage.pages.subscribe(query={})
         raise gen.Return(result)
 
     @gen.coroutine
@@ -261,12 +250,12 @@ class PagesDataRpcWebsocketHandler(DataRpcWebsocketHandler):
             jobs_q = self.create_jobs_query(url)
             jobs_ds = yield jobs.storage.fetch(jobs_q)
             job_ids =[x["_id"] for x in jobs_ds]
-            storage["job_ids"].update(job_ids)
-            pages_query = self.create_pages_query(job_ids, last_id)
-            storage["filters"].append(pages_query)
+            storage.job_ids.update(job_ids)
+            pages_query = storage.create_pages_query(job_ids, last_id)
+            storage.filters.append(pages_query)
+            storage.jobs.append(jobs)
             jobs_to_subscribe.append([jobs_q,  jobs])
-        if storage["filters"]:
-            storage["pages"].subscribe(query={"$or": storage["filters"]})
+        storage.subscribe_to_pages()
         for jobs_q, jobs in jobs_to_subscribe:
             jobs.subscribe(query=jobs_q)
         raise gen.Return(result)
@@ -289,16 +278,7 @@ class PagesDataRpcWebsocketHandler(DataRpcWebsocketHandler):
         if event == 'jobs.tailed' and "_id" in data and callback_meta:
             storage = self.storages[callback_meta["subscription_id"]]
             job_id = data["_id"]
-            if job_id not in storage["job_ids"]:
-                # stop pages subscription
-                storage["pages"].unsubscribe()
-                # create new pages query
-                pages_query = self.create_pages_query([job_id], callback_meta["last_id"])
-                storage["filters"].append(pages_query)
-                # subscribe to pages
-                storage["pages"].subscribe(query={"$or": storage["filters"]})
-            else:
-                logger.debug("Already subscribed to job {}".format(job_id))
+            storage.update_pages_subscription(job_id, callback_meta["last_id"])
         else:
             logger.warning("Jobs callback without with incomplete data")
 
@@ -308,12 +288,69 @@ class PagesDataRpcWebsocketHandler(DataRpcWebsocketHandler):
         else:
             return {}
 
+    def add_storage(self):
+        new_id = str(len(self.storages))
+        pages = Pages(self, *self.i_args, **self.i_kwargs)
+        self.storages[new_id] = DataSubscription(pages)
+        return new_id, self.storages[new_id]
+
+    def cancel_subscription(self, subscription_id):
+        storage = self.storages.pop(subscription_id, None)
+        if storage:
+            storage.on_close()
+            return True
+        else:
+            return False
+
+
+class DataSubscription(object):
+
+    def __init__(self, pages_storage=None):
+        self.pages = pages_storage
+        self.jobs = []
+        self.job_ids = set([])
+        self.filters = []
+
+    def on_close(self):
+        for jobs in self.jobs:
+            jobs._on_close()
+        if self.pages:
+            self.pages._on_close()
+
+    def subscribe_to_pages(self, require_filters=True):
+        if self.filters:
+            if len(self.filters) == 1:
+                self.pages.subscribe(query=self.filters[0])
+            elif len(self.filters) > 1:
+                self.pages.subscribe(query={"$or": self.filters})
+        elif not require_filters:
+            self.pages.subscribe(query={})
+        else:
+            logger.warning("No subscription - empty filter list")
+
+    def add_jobs_subscription(self, jobs_storage, include=None, exclude=None, last_id=None):
+        jobs_query = self.create_jobs_subscription_query(include=include, exclude=exclude, last_id=last_id)
+        self.jobs.append(jobs_storage)
+        jobs_storage.subscribe(query=jobs_query)
+
+    def update_pages_subscription(self, job_id, last_id):
+        if job_id not in self.job_ids:
+            # stop pages subscription
+            self.pages.unsubscribe()
+            # create new pages query
+            pages_query = self.create_pages_query([job_id], last_id)
+            self.filters.append(pages_query)
+            # subscribe to pages
+            self.subscribe_to_pages()
+        else:
+            logger.debug("Already subscribed to job {}".format(job_id))
+
     def create_pages_query(self, job_ids=None, last_id=None):
         filters = []
         job_conditions_lst = []
         if job_ids:
             for job_id in job_ids:
-                job_conditions_lst.append({"_job_id":{'$eq': job_id }})
+                job_conditions_lst.append({"_job_id":{'$eq': str(job_id) }})
         if job_conditions_lst:
             if len(job_conditions_lst) > 1:
                 filters.append({"$or": job_conditions_lst})
@@ -328,28 +365,23 @@ class PagesDataRpcWebsocketHandler(DataRpcWebsocketHandler):
         items_q = {}
         if len(filters) == 1:
             items_q = filters[0]
-        elif len(filters):
+        elif len(filters) > 1:
             items_q = {"$and": filters}
         return items_q
 
-    def add_storage(self):
-        pages = Pages(self, *self.i_args, **self.i_kwargs)
-        self.dispatcher.add_object(pages)
-        new_id = str(len(self.storages))
-        self.storages[new_id] = {
-            "pages": pages,
-            "jobs": [],
-            "job_ids": set([]),
-            "filters": [],
-        }
-        return new_id, self.storages[new_id]
-
-    def cancel_subscription(self, subscription_id):
-        storage = self.storages.pop(subscription_id, None)
-        if storage:
-            for jobs in storage["jobs"]:
-                jobs._on_close()
-            storage["pages"]._on_close()
-            return True
-        else:
-            return False
+    def create_jobs_subscription_query(self, include, exclude, last_id):
+        conditions = []
+        if last_id:
+            conditions.append({"_id":{"$gt":last_id}})
+        if include:
+            for inc_str in include:
+                conditions.append({"urls":{'$regex': inc_str }})
+        if exclude:
+            for exc_str in exclude:
+                conditions.append({"urls":{'$regex': '^((?!' + exc_str + ').)*$'}})
+        jobs_q = {}
+        if len(conditions) == 1:
+            jobs_q = conditions[0]
+        elif len(conditions):
+            jobs_q = {"$and": conditions }
+        return jobs_q

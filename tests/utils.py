@@ -37,7 +37,6 @@ def get_app(ws_pages_uri, ws_jobs_uri):
     return app
 
 
-# @tornado.gen.coroutine
 def init_db():
     db = get_mongo_db()
     collections = ["jobs", "items"]
@@ -53,7 +52,6 @@ def init_db():
                     pass
 
 
-# @tornado.gen.coroutine
 def clear_db():
     db = get_mongo_db()
     collections = ["jobs", "items"]
