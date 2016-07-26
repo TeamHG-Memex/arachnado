@@ -20,24 +20,20 @@ class RpcWebsocketHandler(ArachnadoRPC, websocket.WebSocketHandler):
 
     def on_message(self, message):
         try:
-            msg = json.loads(message)
-            event, data = msg['event'], msg['data']
+            data = json.loads(message)
         except (TypeError, ValueError):
             logger.warn('Invalid message skipped: {!r}'.format(message[:500]))
             return
-        if event == 'rpc:request':
-            self.handle_request(json.dumps(data))
-        else:
-            logger.warn('Unsupported event type: {!r}'.format(event))
+        self.handle_request(json.dumps(data))
 
     def send_data(self, data):
-        self.write_event('rpc:response', data)
+        self.write_event(data)
 
     @gen.coroutine
-    def write_event(self, event, data):
+    def write_event(self, data):
         if isinstance(data, six.string_types):
             data = json.loads(data)
-        message = json_encode({'event': event, 'data': data})
+        message = json_encode(data)
         try:
             self.write_message(message)
         except websocket.WebSocketClosedError:

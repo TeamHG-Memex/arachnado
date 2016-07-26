@@ -36,7 +36,7 @@ JSON-RPC responses::
     }
 
 Working with jobs
------------------
+--------------------------
 
 JSON-RPC API allows to
 
@@ -59,7 +59,7 @@ New API
 =======
 
 Working with jobs
------------------
+--------------------------
 
 Open a websocket connection to ``/ws-jobs-data`` in order to use
 jobs JSON-RPC API for scraping jobs.
@@ -72,7 +72,7 @@ subscribe_to_jobs
     * exclude - an array of regexes; URLs matched by these regexes are excluded
       from the result;
     * update_delay - (opional) int, a minimum number of ms between websocket messages;
-    * id - optional, ObjectID value of a last previously seen job.
+    * last_job_id - optional, ObjectID value of a last previously seen job.
       When passed, only new job data is returned.
     If this parameter set then Arachnado will aggregate job statistics.
 
@@ -179,11 +179,11 @@ subscribe_to_pages
         {"data": {
             "status": 200,
             "items": [],
-             "_id": "57863974a8cb9c15e8f3d53a",
-             "url": "http://example.com/index.php",
-             "headers": {},
-             "_type": "page",
-             "body": ""},
+            "_id": "57863974a8cb9c15e8f3d53a",
+            "url": "http://example.com/index.php",
+            "headers": {},
+            "_type": "page",
+            "body": ""},
         "event": "pages.tailed"}
 
 

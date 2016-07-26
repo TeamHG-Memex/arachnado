@@ -23,20 +23,20 @@ class DataRpcWebsocketHandler(RpcWebsocketHandler):
     stored_data = None
     delay_mode = False
     # static variable, same for all instances
-    event_types = []
+    # event_types = []
     heartbeat_data = None
     i_args = None
     i_kwargs = None
     storages = None
     max_msg_size = 2**20
 
-    def _send_event(self, event, data):
-        message = json_encode({'event': event, 'data': data})
+    def _send_event(self, data):
+        message = json_encode(data)
         # if message size is higher then ws connection can be dropped without proper message
         if len(message) < self.max_msg_size or not self.max_msg_size:
-            return super(DataRpcWebsocketHandler, self).write_event(event, data)
+            return super(DataRpcWebsocketHandler, self).write_event(data)
         else:
-            logger.info("Message from {} event size exceeded. Message wasn't sent.".format(event))
+            logger.info("Message size exceeded. Message wasn't sent.")
 
     def init_heartbeat(self, update_delay):
         if update_delay > 0 and not self.heartbeat_data:
@@ -81,22 +81,13 @@ class DataRpcWebsocketHandler(RpcWebsocketHandler):
         logger.info("new connection")
         super(DataRpcWebsocketHandler, self).open()
 
-    def on_spider_closed(self, spider):
-        if self.cp:
-            for job in self.cp.jobs:
-                self.write_event("jobs:state", job)
-
     def send_updates(self):
         while len(self.stored_data):
             item = self.stored_data.popleft()
-            self._send_event(item["event"], item["data"])
-
-    def create_storage_wapper(self):
-        return None
+            self._send_event(item)
 
 
 class JobsDataRpcWebsocketHandler(DataRpcWebsocketHandler):
-    event_types = ['stats:changed',]
     mongo_id_mapping = None
     job_url_mapping = None
     stored_jobs_stats = None
@@ -108,6 +99,8 @@ class JobsDataRpcWebsocketHandler(DataRpcWebsocketHandler):
         jobs_storage = Jobs(self, *self.i_args, **self.i_kwargs)
         jobs = yield jobs_storage.storage.fetch(query={})
         jobs_storage.callback_meta = stor_id
+        # TODO: set jobs callback here
+        jobs_storage.callback = self.on_jobs_tailed
         storage.add_jobs_subscription(jobs_storage, include=include, exclude=exclude, last_id=last_job_id)
         return {"datatype": "job_subscription_id",
             "id": stor_id}
@@ -119,50 +112,26 @@ class JobsDataRpcWebsocketHandler(DataRpcWebsocketHandler):
         return new_id, storage
 
     @gen.coroutine
-    def write_event(self, event, data, callback_meta=None):
-        event_data = data
-        if event == 'jobs.tailed' and "id" in data and callback_meta:
-            self.storages[callback_meta].job_ids.add(data["id"])
-            self.mongo_id_mapping[data["id"]] = data.get("_id", None)
-            self.job_url_mapping[data["id"]] = data.get("urls", None)
-        if event in ['stats:changed', 'jobs:state']:
-            job_id = None
-            if event == 'stats:changed':
-                if len(data) > 1:
-                    job_id = data[0]
-                    event_data = {"stats": data[1]}
-                    # same as crawl_id
-                    event_data["id"] = job_id
-                    # mongo id
-                    event_data["_id"] = self.mongo_id_mapping.get(job_id, "")
-                    # job url
-                    event_data["urls"] = self.job_url_mapping.get(job_id, "")
-            else:
-                job_id = data["id"]
-            allowed = False
-            if job_id:
-                for storage in self.storages.values():
-                    allowed = allowed or job_id in storage.job_ids
-            if not allowed:
-                return
+    def write_event(self, data, aggregate=False):
+        event_data = dict(data)
         if 'stats' in event_data:
             if not isinstance(event_data['stats'], dict):
                 try:
                     event_data['stats'] = json.loads(event_data['stats'])
                 except Exception as ex:
                     logger.warning("Invalid stats field in job {}".format(event_data.get("_id", "MISSING MONGO ID")))
-        if event in self.event_types and self.delay_mode:
+        if aggregate and self.delay_mode:
             item_id = event_data.get("_id", None)
             if item_id:
                 if item_id in self.stored_jobs_stats:
                     self.stored_jobs_stats[item_id]["data"]["stats"].update(event_data["stats"])
                 else:
-                    item = {"event":event, "data":event_data}
+                    item = event_data
                     self.stored_jobs_stats[item_id] = item
             else:
                 logger.warning("Job data without _id field from event {}".format(event))
         else:
-            return self._send_event(event, event_data)
+            return self._send_event(event_data)
 
     def send_updates(self):
         super(JobsDataRpcWebsocketHandler, self).send_updates()
@@ -193,13 +162,41 @@ class JobsDataRpcWebsocketHandler(DataRpcWebsocketHandler):
             self.cp.signals.connect(self.on_spider_closed, CPS.spider_closed)
 
     def on_stats_changed(self, changes, crawler):
-        crawl_id = crawler.spider.crawl_id
-        self.write_event("stats:changed", [crawl_id, changes])
+        job_id = crawler.spider.crawl_id
+        data = {"stats": changes}
+        # same as crawl_id
+        data["id"] = job_id
+        # mongo id
+        data["_id"] = self.mongo_id_mapping.get(job_id, "")
+        # job url
+        data["urls"] = self.job_url_mapping.get(job_id, "")
+        allowed = False
+        for storage in self.storages.values():
+            allowed = allowed or job_id in storage.job_ids
+        if allowed:
+            self.write_event(data, aggregate=True)
+
+    def on_spider_closed(self, spider):
+        if self.cp:
+            for job in self.cp.jobs:
+                job_id = job["id"]
+                allowed = False
+                if job_id:
+                    for storage in self.storages.values():
+                        allowed = allowed or job_id in storage.job_ids
+                if allowed:
+                    self.write_event(job)
+
+    def on_jobs_tailed(self, event, data, callback_meta=None):
+        if event == 'jobs.tailed' and "id" in data and callback_meta:
+            self.storages[callback_meta].job_ids.add(data["id"])
+            self.mongo_id_mapping[data["id"]] = data.get("_id", None)
+            self.job_url_mapping[data["id"]] = data.get("urls", None)
+        self.write_event(data)
 
 
 class PagesDataRpcWebsocketHandler(DataRpcWebsocketHandler):
     """ pages API"""
-    event_types = ['pages.tailed']
 
     @gen.coroutine
     def subscribe_to_pages(self, urls=None, url_groups=None):
@@ -248,11 +245,11 @@ class PagesDataRpcWebsocketHandler(DataRpcWebsocketHandler):
         raise gen.Return(result)
 
     @gen.coroutine
-    def write_event(self, event, data):
-        if event in self.event_types and self.delay_mode:
-            self.stored_data.append({"event":event, "data":data})
+    def write_event(self, data, aggregate=False):
+        if aggregate and self.delay_mode:
+            self.stored_data.append(data)
         else:
-            return self._send_event(event, data)
+            return self._send_event(data)
 
     def initialize(self, *args, **kwargs):
         super(PagesDataRpcWebsocketHandler, self).initialize(*args, **kwargs)
