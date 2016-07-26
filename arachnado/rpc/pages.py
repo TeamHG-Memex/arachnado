@@ -4,6 +4,7 @@ from arachnado.storages.mongotail import MongoTailStorage
 class Pages(object):
     """ Pages (scraped items) object exposed via JSON RPC """
     handler_id = None
+    callback = None
 
     def __init__(self, handler, item_storage, **kwargs):
         self.handler = handler
@@ -23,5 +24,9 @@ class Pages(object):
         self.storage.unsubscribe('tailed')
 
     def _publish(self, data):
+        if self.callback:
+            _callback = self.callback
+        else:
+            _callback = self.handler.write_event
         if self.storage.tailing:
-            self.handler.write_event('pages.tailed', data)
+            _callback('pages.tailed', data)

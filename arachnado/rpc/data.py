@@ -138,7 +138,7 @@ class JobsDataRpcWebsocketHandler(DataRpcWebsocketHandler):
         for job_id in set(self.stored_jobs_stats.keys()):
             item = self.stored_jobs_stats.pop(job_id, None)
             if item:
-                self._send_event(item["event"], item["data"])
+                self._send_event(item)
 
     def initialize(self, *args, **kwargs):
         super(JobsDataRpcWebsocketHandler, self).initialize(*args, **kwargs)
@@ -264,6 +264,9 @@ class PagesDataRpcWebsocketHandler(DataRpcWebsocketHandler):
         else:
             logger.warning("Jobs callback with incomplete data")
 
+    def on_pages_tailed(self, event, data, callback_meta=None):
+        self.write_event(data)
+
     def create_jobs_query(self, url):
         if url:
             return {"urls":{'$regex': url }}
@@ -273,6 +276,7 @@ class PagesDataRpcWebsocketHandler(DataRpcWebsocketHandler):
     def add_storage(self):
         new_id = str(len(self.storages))
         pages = Pages(self, *self.i_args, **self.i_kwargs)
+        pages.callback = self.on_pages_tailed
         self.storages[new_id] = DataSubscription(pages)
         return new_id, self.storages[new_id]
 
