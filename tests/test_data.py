@@ -135,7 +135,7 @@ class TestDataAPI(tornado.testing.AsyncHTTPTestCase):
         pages_command = {
             'event': 'rpc:request',
             'data': {
-                'id': "test_pages_0",
+                'id': "test_pages_1",
                 'jsonrpc': '2.0',
                 'method': 'subscribe_to_pages',
                 'params': {'url_groups': {1: {url_value: None}}
@@ -168,7 +168,7 @@ class TestDataAPI(tornado.testing.AsyncHTTPTestCase):
         pages_command = {
             'event': 'rpc:request',
             'data': {
-                'id': "test_pages_0",
+                'id': "test_pages_2",
                 'jsonrpc': '2.0',
                 'method': 'subscribe_to_pages',
                 'params': {'urls': {url_value: None}
