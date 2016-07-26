@@ -47,18 +47,6 @@ class DataRpcWebsocketHandler(RpcWebsocketHandler):
             )
             self.heartbeat_data.start()
 
-    # def add_storage_wrapper(self, mongo_q):
-    #     storage_wrapper = self.create_storage_wapper()
-    #     self.dispatcher.add_object(storage_wrapper)
-    #     new_id = str(len(self.storages))
-    #     self.storages[new_id] = {
-    #         "storage": storage_wrapper,
-    #         "job_ids": set([])
-    #     }
-    #     storage_wrapper.handler_id = new_id
-    #     storage_wrapper.subscribe(query=mongo_q)
-    #     return new_id
-
     def cancel_subscription(self, subscription_id):
         storage = self.storages.pop(subscription_id, None)
         if storage:
@@ -120,7 +108,6 @@ class JobsDataRpcWebsocketHandler(DataRpcWebsocketHandler):
         jobs_storage = Jobs(self, *self.i_args, **self.i_kwargs)
         jobs = yield jobs_storage.storage.fetch(query={})
         jobs_storage.callback_meta = stor_id
-        # jobs_storage.handler_id = stor_id
         storage.add_jobs_subscription(jobs_storage, include=include, exclude=exclude, last_id=last_job_id)
         return {"datatype": "job_subscription_id",
             "id": stor_id}
@@ -269,8 +256,6 @@ class PagesDataRpcWebsocketHandler(DataRpcWebsocketHandler):
 
     def initialize(self, *args, **kwargs):
         super(PagesDataRpcWebsocketHandler, self).initialize(*args, **kwargs)
-        # key is a subscription id
-        # contains jobs storage, pages storage and set of job ids for pages subscription
         self.dispatcher["subscribe_to_pages"] = self.subscribe_to_pages
 
     @gen.coroutine
@@ -280,7 +265,7 @@ class PagesDataRpcWebsocketHandler(DataRpcWebsocketHandler):
             job_id = data["_id"]
             storage.update_pages_subscription(job_id, callback_meta["last_id"])
         else:
-            logger.warning("Jobs callback without with incomplete data")
+            logger.warning("Jobs callback with incomplete data")
 
     def create_jobs_query(self, url):
         if url:

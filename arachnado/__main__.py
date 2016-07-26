@@ -87,9 +87,7 @@ def main(port, host, start_manhole, manhole_port, manhole_host, loglevel, opts):
     site_storage = MongoStorage(sites_uri, cache=True)
     item_storage = MongoTailStorage(items_uri)
     item_storage.ensure_index("url")
-    print(settings.get('MONGO_EXPORT_JOBID_KEY'))
     item_storage.ensure_index("_job_id")
-    # item_storage.ensure_index(settings.get('MONGO_EXPORT_JOBID_KEY'))
 
     crawler_process = ArachnadoCrawlerProcess(settings)
 
