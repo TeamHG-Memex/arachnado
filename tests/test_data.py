@@ -103,6 +103,11 @@ class TestDataAPI(tornado.testing.AsyncHTTPTestCase):
         response = yield ws_client.read_message()
         json_response = json.loads(response)
         subs_id = json_response.get("result").get("single_subscription_id", -1)
+        if not subs_id:
+            group_sub_ids = json_response.get("result").get("id", {})
+            for group_id in group_sub_ids.keys():
+                if group_sub_ids[group_id] != -1:
+                    subs_id = group_sub_ids[group_id]
         self.assertNotEqual(subs_id, -1)
         if wait_result:
             response = yield ws_client.read_message()

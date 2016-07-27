@@ -76,30 +76,34 @@ subscribe_to_jobs
       When passed, only new job data is returned.
     If this parameter set then Arachnado will aggregate job statistics.
 
-    Response contains subscription ID in ``['data']['result']['id']`` field::
+    Response contains subscription ID in ``['result']['id']`` field::
 
-        {'data': {'id': '<request id>',
-                  'jsonrpc': '2.0',
-                  'result': {'datatype': 'job_subscription_id', 'id': '0'}},
-         'event': 'rpc:response'}
+        {
+            'id': '<request id>',
+            'jsonrpc': '2.0',
+            'result': {'datatype': 'job_subscription_id', 'id': '0'}
+        }
 
     Use this ID to cancel the subscription.
 
     After the subscription Arachnado will start to send information
     about new jobs. Messages look like this::
 
-        {'data': {'_id': '574718bba7a4edb9b026f248',
-                  'finished_at': '2016-05-26 16:03:17',
-                  'id': '97ca610fa8c347dbafeca9fcd02213dd',
-                  'options': {'args': {},
-                              'crawl_id': '97ca610fa8c347dbafeca9fcd02213dd',
-                              'domain': 'scrapy.org',
-                              'settings': {}},
-                  'spider': 'generic',
-                  'started_at': '2016-05-26 16:03:16',
-                  'stats': {...},
-                  'status': 'finished'},
-         'event': 'jobs.tailed'}
+        {
+             '_id': '574718bba7a4edb9b026f248',
+             'finished_at': '2016-05-26 16:03:17',
+             'id': '97ca610fa8c347dbafeca9fcd02213dd',
+             'options': {
+                         'args': {},
+                         'crawl_id': '97ca610fa8c347dbafeca9fcd02213dd',
+                         'domain': 'scrapy.org',
+                         'settings': {}
+                         },
+             'spider': 'generic',
+             'started_at': '2016-05-26 16:03:16',
+             'stats': {...},
+             'status': 'finished'
+        }
 
 cancel_subscription
     Stop receiving updates about jobs. Parameters:
@@ -117,12 +121,12 @@ set_max_message_size
 
     Response returns result(true/false) at result field::
 
-        {"event": "rpc:response",
-         "data": {
-                "id": "test_set_0",
-                "result": true,
-                "jsonrpc": "2.0"
-         }}
+
+         {
+            "id": '<request id>',
+            "result": true,
+            "jsonrpc": "2.0"
+         }
 
 
 Working with pages (crawled items)
@@ -133,6 +137,7 @@ jobs JSON-RPC API for scraping jobs.
 
 subscribe_to_pages
     Get crawled pages(items) for specific urls.
+    Url values are used as regex without any modifications at Arachnado side.
     Allows to get all pages or only crawled since last update.
     To get only new pages set last seen page id (from "id" field of page record) for an url.
     To get all pages set page id to None.
@@ -144,31 +149,32 @@ subscribe_to_pages
 
     Command example::
 
-            {'event': 'rpc:request',
-                'data': {
-                    'id': "sample_0",
-                    'jsonrpc': '2.0',
-                    'method': 'subscribe_to_pages',
-                    'params': {'urls': {'http://example.com': None},
-                               'url_groups': {'gr1': {'http://example1.com': None},
-                                              'gr2': {'http://example2.com': "57863974a8cb9c15e8f3d53a"}}
-                    }
-                },
+            {
+              'id': '<request id>',
+              'jsonrpc': '2.0',
+              'method': 'subscribe_to_pages',
+              'params': {
+                         'urls': {'http://example.com': None},
+                         'url_groups': {
+                                        'gr1': {'http://example1.com': None},
+                                        'gr2': {'http://example2.com': "57863974a8cb9c15e8f3d53a"}}
+                                       }
+                        }
             }
 
-    Response example::
+    Response example for above command::
 
-        {"event": "rpc:response",
-         "data": {
+        {
             "result": {
-            "datatype": "pages_subscription_id",
-            "single_subscription_id": "112",
-            "id": {
-                "gr1": "113",
-                "gr2": "114",
-            }},
-            "id": "sample_0",
-            "jsonrpc": "2.0"}
+                        "datatype": "pages_subscription_id",
+                        "single_subscription_id": "112", # subscription id for http://example.com subscription
+                        "id": {
+                                "gr1": "113", # subscription id for http://example1.com subscription
+                                "gr2": "114", # subscription id for http://example2.com subscription
+                                }
+                      },
+            "id": '<request id>', # command request id
+            "jsonrpc": "2.0"
         }
 
     Use these IDs to cancel subscriptions.
@@ -176,15 +182,15 @@ subscribe_to_pages
     After the subscription Arachnado will start to send information
     about crawled pages. Messages look like this::
 
-        {"data": {
+        {
             "status": 200,
             "items": [],
             "_id": "57863974a8cb9c15e8f3d53a",
             "url": "http://example.com/index.php",
             "headers": {},
             "_type": "page",
-            "body": ""},
-        "event": "pages.tailed"}
+            "body": ""
+        }
 
 
 cancel_subscription
@@ -202,12 +208,11 @@ set_max_message_size
 
     Response returns result(true/false) at result field::
 
-        {"event": "rpc:response",
-         "data": {
-                "id": "test_set_0",
-                "result": true,
-                "jsonrpc": "2.0"
-         }}
+        {
+            "id": '<request id>',,
+            "result": true,
+            "jsonrpc": "2.0"
+        }
 
 
 .. _JSON-RPC: http://www.jsonrpc.org/specification
