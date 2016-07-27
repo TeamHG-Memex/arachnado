@@ -124,7 +124,7 @@ class JobsDataRpcWebsocketHandler(DataRpcWebsocketHandler):
             item_id = event_data.get("_id", None)
             if item_id:
                 if item_id in self.stored_jobs_stats:
-                    self.stored_jobs_stats[item_id]["data"]["stats"].update(event_data["stats"])
+                    self.stored_jobs_stats[item_id]["stats"].update(event_data["stats"])
                 else:
                     item = event_data
                     self.stored_jobs_stats[item_id] = item
