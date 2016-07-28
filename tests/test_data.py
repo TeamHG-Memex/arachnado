@@ -25,7 +25,7 @@ class TestDataAPI(tornado.testing.AsyncHTTPTestCase):
 
     @tornado.testing.gen_test
     def test_set_message_size(self):
-        test_command = self.get_command("test_set_0",'set_max_message_size', {"max_size":100})
+        test_command = self.get_command("test_set_0",'set_max_message_size', {"max_size":10000})
         ws_url = "ws://localhost:" + str(self.get_http_port()) + self.jobs_uri
         ws_client = yield tornado.websocket.websocket_connect(ws_url)
         ws_client.write_message(json.dumps(test_command))

@@ -29,4 +29,4 @@ class Pages(object):
         else:
             _callback = self.handler.write_event
         if self.storage.tailing:
-            _callback('pages.tailed', data)
+            _callback(data)

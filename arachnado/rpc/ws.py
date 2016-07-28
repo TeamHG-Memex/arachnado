@@ -32,8 +32,9 @@ class RpcWebsocketHandler(ArachnadoRPC, websocket.WebSocketHandler):
     @gen.coroutine
     def write_event(self, data):
         if isinstance(data, six.string_types):
-            data = json.loads(data)
-        message = json_encode(data)
+            message = data
+        else:
+            message = json_encode(data)
         try:
             self.write_message(message)
         except websocket.WebSocketClosedError:

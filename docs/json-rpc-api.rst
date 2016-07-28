@@ -4,12 +4,6 @@ JSON RPC API
 Arachnado provides JSON-RPC_ API for working with jobs and crawled items
 (pages). The API works over WebSocket transport.
 
-JSON-RPC request objects are wrapped:
-``{"event": "rpc:request", "data": <JSON-RPC request>}``.
-Responses are also wrapped:
-``{"event": "rpc:response", "data": <JSON-RPC response>}``.
-
-
 JSON-RPC requests have the following format::
 
     {
@@ -36,7 +30,7 @@ JSON-RPC responses::
     }
 
 Working with jobs
---------------------------
+-----------------
 
 JSON-RPC API allows to
 
@@ -59,7 +53,7 @@ New API
 =======
 
 Working with jobs
---------------------------
+-----------------
 
 Open a websocket connection to ``/ws-jobs-data`` in order to use
 jobs JSON-RPC API for scraping jobs.
@@ -71,10 +65,10 @@ subscribe_to_jobs
     * include - an array of regexes which should match URLs to include;
     * exclude - an array of regexes; URLs matched by these regexes are excluded
       from the result;
-    * update_delay - (opional) int, a minimum number of ms between websocket messages;
+    * update_delay - (opional) int, a minimum number of ms between websocket messages. If this parameter set then Arachnado will aggregate job statistics;
     * last_job_id - optional, ObjectID value of a last previously seen job.
       When passed, only new job data is returned.
-    If this parameter set then Arachnado will aggregate job statistics.
+
 
     Response contains subscription ID in ``['result']['id']`` field::
 
@@ -117,7 +111,7 @@ set_max_message_size
     Default value is 2**20.
     To disable this chack set max size to zero.
     Parameters:
-    * max_size - an array of regexes which should match URLs to include;
+    * max_size - maximum message size in bytes.
 
     Response returns result(true/false) at result field::
 
@@ -130,7 +124,7 @@ set_max_message_size
 
 
 Working with pages (crawled items)
---------------------------
+----------------------------------
 
 Open a websocket connection to ``/ws-pages-data`` in order to use
 jobs JSON-RPC API for scraping jobs.
@@ -204,7 +198,7 @@ set_max_message_size
     Default value is 2**20.
     To disable this chack set max size to zero.
     Parameters:
-    * max_size - an array of regexes which should match URLs to include;
+    * max_size - maximum message size in bytes.
 
     Response returns result(true/false) at result field::
 

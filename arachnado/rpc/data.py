@@ -1,5 +1,6 @@
 import logging
 import json
+import sys
 from collections import deque
 from tornado import gen
 import tornado.ioloop
@@ -22,8 +23,6 @@ class DataRpcWebsocketHandler(RpcWebsocketHandler):
     """ basic class for Data API handlers"""
     stored_data = None
     delay_mode = False
-    # static variable, same for all instances
-    # event_types = []
     heartbeat_data = None
     i_args = None
     i_kwargs = None
@@ -33,7 +32,7 @@ class DataRpcWebsocketHandler(RpcWebsocketHandler):
     def _send_event(self, data):
         message = json_encode(data)
         # if message size is higher then ws connection can be dropped without proper message
-        if len(message) < self.max_msg_size or not self.max_msg_size:
+        if sys.getsizeof(message) < self.max_msg_size or not self.max_msg_size:
             return super(DataRpcWebsocketHandler, self).write_event(data)
         else:
             logger.info("Message size exceeded. Message wasn't sent.")
@@ -97,13 +96,11 @@ class JobsDataRpcWebsocketHandler(DataRpcWebsocketHandler):
         self.init_heartbeat(update_delay)
         stor_id, storage = self.add_storage()
         jobs_storage = Jobs(self, *self.i_args, **self.i_kwargs)
-        jobs = yield jobs_storage.storage.fetch(query={})
         jobs_storage.callback_meta = stor_id
-        # TODO: set jobs callback here
         jobs_storage.callback = self.on_jobs_tailed
         storage.add_jobs_subscription(jobs_storage, include=include, exclude=exclude, last_id=last_job_id)
         return {"datatype": "job_subscription_id",
-            "id": stor_id}
+                "id": stor_id}
 
     def add_storage(self):
         new_id = str(len(self.storages))
@@ -187,8 +184,8 @@ class JobsDataRpcWebsocketHandler(DataRpcWebsocketHandler):
                 if allowed:
                     self.write_event(job)
 
-    def on_jobs_tailed(self, event, data, callback_meta=None):
-        if event == 'jobs.tailed' and "id" in data and callback_meta:
+    def on_jobs_tailed(self, data, callback_meta=None):
+        if "id" in data and callback_meta:
             self.storages[callback_meta].job_ids.add(data["id"])
             self.mongo_id_mapping[data["id"]] = data.get("_id", None)
             self.job_url_mapping[data["id"]] = data.get("urls", None)
@@ -256,15 +253,15 @@ class PagesDataRpcWebsocketHandler(DataRpcWebsocketHandler):
         self.dispatcher["subscribe_to_pages"] = self.subscribe_to_pages
 
     @gen.coroutine
-    def job_query_callback(self, event, data, callback_meta=None):
-        if event == 'jobs.tailed' and "_id" in data and callback_meta:
+    def job_query_callback(self, data, callback_meta=None):
+        if "_id" in data and callback_meta:
             storage = self.storages[callback_meta["subscription_id"]]
             job_id = data["_id"]
             storage.update_pages_subscription(job_id, callback_meta["last_id"])
         else:
             logger.warning("Jobs callback with incomplete data")
 
-    def on_pages_tailed(self, event, data, callback_meta=None):
+    def on_pages_tailed(self, data, callback_meta=None):
         self.write_event(data)
 
     def create_jobs_query(self, url):

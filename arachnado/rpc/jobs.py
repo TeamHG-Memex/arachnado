@@ -31,6 +31,6 @@ class Jobs(object):
             _callback = self.handler.write_event
         if self.storage.tailing:
             if self.callback_meta:
-                _callback('jobs.tailed', data, callback_meta=self.callback_meta)
+                _callback(data, callback_meta=self.callback_meta)
             else:
-                _callback('jobs.tailed', data)
+                _callback(data)
