@@ -1,3 +1,4 @@
+import sys
 import json
 import logging
 import six
@@ -30,13 +31,16 @@ class RpcWebsocketHandler(ArachnadoRPC, websocket.WebSocketHandler):
         self.write_event(data)
 
     @gen.coroutine
-    def write_event(self, data):
+    def write_event(self, data, max_message_size=0):
         if isinstance(data, six.string_types):
             message = data
         else:
             message = json_encode(data)
         try:
-            self.write_message(message)
+            if sys.getsizeof(message) < max_message_size or not max_message_size:
+                self.write_message(message)
+            else:
+                logger.info("Message size exceeded. Message wasn't sent.")
         except websocket.WebSocketClosedError:
             pass
 

@@ -30,12 +30,7 @@ class DataRpcWebsocketHandler(RpcWebsocketHandler):
     max_msg_size = 2**20
 
     def _send_event(self, data):
-        message = json_encode(data)
-        # if message size is higher then ws connection can be dropped without proper message
-        if sys.getsizeof(message) < self.max_msg_size or not self.max_msg_size:
-            return super(DataRpcWebsocketHandler, self).write_event(data)
-        else:
-            logger.info("Message size exceeded. Message wasn't sent.")
+        return super(DataRpcWebsocketHandler, self).write_event(data, max_message_size=self.max_msg_size)
 
     def init_heartbeat(self, update_delay):
         if update_delay > 0 and not self.heartbeat_data:
