@@ -20,11 +20,6 @@ class RpcWebsocketHandler(ArachnadoRPC, websocket.WebSocketHandler):
     """
 
     def on_message(self, message):
-        # try:
-        #     data = json.loads(message)
-        # except (TypeError, ValueError):
-        #     logger.warn('Invalid message skipped: {!r}'.format(message[:500]))
-        #     return
         self.handle_request(message)
 
     def send_data(self, data):
