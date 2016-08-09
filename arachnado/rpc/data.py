@@ -226,11 +226,14 @@ class PagesDataRpcWebsocketHandler(DataRpcWebsocketHandler):
             jobs_q = self.create_jobs_query(url)
             jobs_ds = yield jobs.storage.fetch(jobs_q)
             job_ids =[x["_id"] for x in jobs_ds]
-            storage.job_ids.update(job_ids)
-            pages_query = storage.create_pages_query(job_ids, last_id)
-            storage.filters.append(pages_query)
-            storage.jobs.append(jobs)
-            jobs_to_subscribe.append([jobs_q,  jobs])
+            if job_ids:
+                storage.job_ids.update(job_ids)
+                pages_query = storage.create_pages_query(job_ids, last_id)
+                storage.filters.append(pages_query)
+                storage.jobs.append(jobs)
+                jobs_to_subscribe.append([jobs_q,  jobs])
+            else:
+                logger.info("No jobs found for url {}".format(url))
         storage.subscribe_to_pages()
         for jobs_q, jobs in jobs_to_subscribe:
             jobs.subscribe(query=jobs_q)

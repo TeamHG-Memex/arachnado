@@ -29,13 +29,14 @@ JSON-RPC responses::
         "result": ...
     }
 
-Working with jobs
------------------
+Working with jobs and pages
+---------------------------
 
 JSON-RPC API allows to
 
 * get information about scraping jobs;
 * start new crawls;
+* subscripbe to crawled pages;
 * subscribe to job updates.
 
 jobs.subscribe
@@ -43,10 +44,20 @@ jobs.subscribe
 
     Parameters:
 
-    * last_id - optional, ObjectID value of a last previously seen job.
-      When passed, only new job data is returned.
-    * query - optional, MongoDB query
-    * fields - optional, ...
+    * last_id - optional, ObjectID value of a last previously seen job;
+      When passed, only new job data is returned;
+    * query - optional, MongoDB query;
+    * fields - optional, set of fields to return.
+
+pages.subscribe
+    Get crawled pages and subscribe for new pages.
+
+    Parameters:
+
+    * last_id - optional, ObjectID value of a last previously seen page.
+      When passed, only new job data is returned;
+    * query - optional, MongoDB query;
+    * fields - optional, set of fields to return.
 
 
 New API
@@ -139,7 +150,7 @@ subscribe_to_pages
     Parameters:
 
     * urls - a dictionary of <url>:<last seen page id pairs>. Arachnado will create one subscription id for all urls;
-    * url_groups - a dictionary of <url group id>: <dictionary like urls param>. Arachnado will create one subscription id for each url group.
+    * url_groups - a dictionary of <url group id>: {<url>:<last seen page id pairs>}. Arachnado will create one subscription id for each url group.
 
     Command example::
 
@@ -196,7 +207,7 @@ set_max_message_size
     Set maximum message size in bytes for websockets channel.
     Messages larger than specified limit are dropped.
     Default value is 2**20.
-    To disable this chack set max size to zero.
+    To disable this check set max size to zero.
     Parameters:
     * max_size - maximum message size in bytes.
 
