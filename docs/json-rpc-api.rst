@@ -144,6 +144,10 @@ subscribe_to_pages
     Get crawled pages(items) for specific urls.
     Url values are used as regex without any modifications at Arachnado side.
     Allows to get all pages or only crawled since last update.
+    Search function uses job start urls, not page urls.
+    For example, if job was started for www.mysite.com and then goes to www.example.com (by redirect, etc.),
+    all its pages will be returned by www.mysite.com search query.
+    To search pages by its own urls use pages.subscribe method described above.
     To get only new pages set last seen page id (from "id" field of page record) for an url.
     To get all pages set page id to None.
 
