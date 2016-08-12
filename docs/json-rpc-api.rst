@@ -120,7 +120,7 @@ set_max_message_size
     Set maximum message size in bytes for websockets channel.
     Messages larger than specified limit are dropped.
     Default value is 2**20.
-    To disable this chack set max size to zero.
+    To disable this check set max size to zero.
     Parameters:
     * max_size - maximum message size in bytes.
 
