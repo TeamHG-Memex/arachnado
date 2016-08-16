@@ -1,13 +1,16 @@
 import logging
+from functools import partial
+
+from arachnado.storages.mongotail import MongoTailStorage
 
 
 class Sites(object):
-
+    """ 'Known sites' object exposed via JSON-RPC """
     logger = logging.getLogger(__name__)
 
     def __init__(self, handler, site_storage, **kwargs):
         self.handler = handler
-        self.storage = site_storage
+        self.storage = site_storage  # type: MongoTailStorage
 
     def list(self):
         return self.storage.fetch()
@@ -22,15 +25,14 @@ class Sites(object):
         self.storage.delete(site)
 
     def subscribe(self):
-        for subscription in self.storage.available_subscriptions:
+        for event_name in self.storage.available_events:
             self.storage.subscribe(
-                subscription,
-                lambda data, subscription=subscription:
-                self._publish(data, subscription)
+                event_name,
+                partial(self._publish, event=event_name)
             )
 
     def _on_close(self):
-        self.storage.unsubscribe(self.storage.available_subscriptions)
+        self.storage.unsubscribe(self.storage.available_events)
 
-    def _publish(self, data, subscription):
-        self.handler.write_event('sites.{}'.format(subscription), data)
+    def _publish(self, event, data):
+        self.handler.write_event('sites.{}'.format(event), data)

@@ -8,6 +8,9 @@ from tornado.web import Application, RequestHandler, url, HTTPError
 from arachnado.utils.misc import json_encode
 from arachnado.monitor import Monitor
 from arachnado.handler_utils import ApiHandler, NoEtagsMixin
+
+from arachnado.rpc.data import PagesDataRpcWebsocketHandler, JobsDataRpcWebsocketHandler
+
 from arachnado.rpc import RpcHttpHandler
 from arachnado.rpc.ws import RpcWebsocketHandler
 
@@ -28,16 +31,23 @@ def get_application(crawler_process, domain_crawlers,
     debug = opts['arachnado']['debug']
 
     handlers = [
+        # UI
         url(r"/", Index, context, name="index"),
         url(r"/help", Help, context, name="help"),
+
+        # simple API used by UI
         url(r"/crawler/start", StartCrawler, context, name="start"),
         url(r"/crawler/stop", StopCrawler, context, name="stop"),
         url(r"/crawler/pause", PauseCrawler, context, name="pause"),
         url(r"/crawler/resume", ResumeCrawler, context, name="resume"),
         url(r"/crawler/status", CrawlerStatus, context, name="status"),
         url(r"/ws-updates", Monitor, context, name="ws-updates"),
+
+        # RPC API
         url(r"/ws-rpc", RpcWebsocketHandler, context, name="ws-rpc"),
         url(r"/rpc", RpcHttpHandler, context, name="rpc"),
+        url(r"/ws-pages-data", PagesDataRpcWebsocketHandler, context, name="ws-pages-data"),
+        url(r"/ws-jobs-data", JobsDataRpcWebsocketHandler, context, name="ws-jobs-data"),
     ]
     return Application(
         handlers=handlers,
@@ -143,6 +153,8 @@ class ResumeCrawler(_ControlJobHandler):
 
 class CrawlerStatus(BaseRequestHandler):
     """ Status for one or more jobs. """
+    # FIXME: does it work? Can we remove it? It is not used
+    # by Arachnado UI.
     def get(self):
         crawl_ids_arg = self.get_argument('crawl_ids', '')
 

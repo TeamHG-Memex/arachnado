@@ -83,8 +83,11 @@ def main(port, host, start_manhole, manhole_port, manhole_host, loglevel, opts):
     })
 
     job_storage = MongoTailStorage(jobs_uri, cache=True)
+    job_storage.ensure_index("urls")
     site_storage = MongoStorage(sites_uri, cache=True)
     item_storage = MongoTailStorage(items_uri)
+    item_storage.ensure_index("url")
+    item_storage.ensure_index("_job_id")
 
     crawler_process = ArachnadoCrawlerProcess(settings)
 

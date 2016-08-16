@@ -1,3 +1,4 @@
+import sys
 import json
 import logging
 import six
@@ -19,49 +20,41 @@ class RpcWebsocketHandler(ArachnadoRPC, websocket.WebSocketHandler):
     """
 
     def on_message(self, message):
-        try:
-            msg = json.loads(message)
-            event, data = msg['event'], msg['data']
-        except (TypeError, ValueError):
-            logger.warn('Invalid message skipped: {!r}'.format(message[:500]))
-            return
-        if event == 'rpc:request':
-            self.handle_request(json.dumps(data))
-        else:
-            logger.warn('Unsupported event type: {!r}'.format(event))
+        self.handle_request(message)
 
     def send_data(self, data):
-        self.write_event('rpc:response', data)
+        self.write_event(data)
 
     @gen.coroutine
-    def write_event(self, event, data):
+    def write_event(self, data, max_message_size=0):
         if isinstance(data, six.string_types):
-            data = json.loads(data)
-        message = json_encode({'event': event, 'data': data})
+            message = data
+        else:
+            message = json_encode(data)
         try:
-            self.write_message(message)
+            if sys.getsizeof(message) < max_message_size or not max_message_size:
+                self.write_message(message)
+            else:
+                logger.info("Message size exceeded. Message wasn't sent.")
         except websocket.WebSocketClosedError:
             pass
 
     def open(self):
         """ Forward open event to resource objects.
         """
-        for resource in self._resources():
+        logger.debug("Connection opened %s", self)
+        for resource in self.rpc_objects:
             if hasattr(resource, '_on_open'):
                 resource._on_open()
         self._pinger = PeriodicCallback(lambda: self.ping(b'PING'), 1000 * 15)
         self._pinger.start()
+        logger.debug("Pinger initiated %s", self)
 
     def on_close(self):
         """ Forward on_close event to resource objects.
         """
-        for resource in self._resources():
+        logger.debug("Connection closed %s", self)
+        for resource in self.rpc_objects:
             if hasattr(resource, '_on_close'):
                 resource._on_close()
         self._pinger.stop()
-
-    def _resources(self):
-        for resource_name, resource in self.__dict__.items():
-            if hasattr(RequestHandler, resource_name):
-                continue
-            yield resource
