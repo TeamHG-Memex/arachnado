@@ -82,12 +82,22 @@ class MongoExportPipeline(object):
         return cls(crawler)
 
     @classmethod
+    def add_url_scheme(cls, url):
+        url = url.strip()
+        if not url.lower().startswith(("http://", "https://")):
+            return "http://{}".format(url)
+        return url
+
+    @classmethod
     def get_spider_urls(cls, spider):
         options = getattr(spider.crawler, 'start_options', None)
+        urls = None
         if options and "domain" in options:
-            return [options["domain"]]
+            urls = [options["domain"]]
         else:
-            return spider.start_urls
+            urls = spider.start_urls
+        urls = [cls.add_url_scheme(x) for x in urls]
+        return urls
 
     @tt_coroutine
     def open_spider(self, spider):
