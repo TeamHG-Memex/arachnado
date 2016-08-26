@@ -25,10 +25,15 @@ def get_app(ws_pages_uri, ws_jobs_uri):
     jobs_uri = "{}/jobs".format(db_uri)
     job_storage = MongoTailStorage(jobs_uri, cache=True)
     item_storage = MongoTailStorage(items_uri)
+    objects_uri = {
+        "pages": items_uri,
+        "jobs": jobs_uri
+    }
     context = {
         'crawler_process': None,
         'job_storage': job_storage,
         'item_storage': item_storage,
+        'objects_uri': objects_uri
     }
     app = tornado.web.Application([
         (ws_pages_uri, PagesDataRpcWebsocketHandler, context),

@@ -76,6 +76,46 @@ class TestDataAPI(tornado.testing.AsyncHTTPTestCase):
         pages_command = self.get_command("test_pages_0",'subscribe_to_pages', {'url_groups': {1: {url_value: None}}})
         yield self.execute_pages_command(pages_command, wait_result=True, required_url=url_value)
 
+    def test_pages_filter_url_multi_groups1(self):
+        @tornado.gen.coroutine
+        def f():
+            pages_command = self.get_command("test_pages_5",'subscribe_to_pages', {'url_groups':{
+                                                                                   1: {'http://example.com': None},
+                                                                                   2: {'http://foo.com': None},
+                                                                                   3: {'http://bar.com': None}
+                                                                                }})
+            yield self.execute_pages_command(pages_command, wait_result=True, max_count=2)
+        self.assertRaises(TimeoutError, self.io_loop.run_sync, f, timeout=3)
+
+    def test_pages_filter_url_multi_groups2(self):
+        @tornado.gen.coroutine
+        def f():
+            pages_command = self.get_command("test_pages_5",'subscribe_to_pages', { "urls":{'http://example.com': None},
+                                                                                    'url_groups':{
+                                                                                       2: {'http://foo.com': None},
+                                                                                       3: {'http://bar.com': None}
+                                                                                }})
+            yield self.execute_pages_command(pages_command, wait_result=True, max_count=2)
+        self.assertRaises(TimeoutError, self.io_loop.run_sync, f, timeout=3)
+
+    @tornado.testing.gen_test
+    def test_pages_filter_url_multi_groups3(self):
+        pages_command = self.get_command("test_pages_5",'subscribe_to_pages', {'url_groups':{
+                                                                               1: {'http://example.com': None},
+                                                                               2: {'http://foo.com': None},
+                                                                               3: {'http://bar.com': None}
+                                                                            }})
+        yield self.execute_pages_command(pages_command, wait_result=True, exact_count=2)
+
+    @tornado.testing.gen_test
+    def test_pages_filter_url_multi_groups4(self):
+        pages_command = self.get_command("test_pages_5",'subscribe_to_pages', { "urls":{'http://example.com': None},
+                                                                                'url_groups':{
+                                                                                   2: {'http://foo.com': None},
+                                                                                   3: {'http://bar.com': None}
+                                                                            }})
+        yield self.execute_pages_command(pages_command, wait_result=True, exact_count=2)
+
     def test_pages_no_result(self):
         @tornado.gen.coroutine
         def f():
@@ -87,16 +127,14 @@ class TestDataAPI(tornado.testing.AsyncHTTPTestCase):
                                              max_count=0)
         self.assertRaises(TimeoutError, self.io_loop.run_sync, f, timeout=3)
 
+    @tornado.testing.gen_test
     def test_pages_exact_count(self):
-        @tornado.gen.coroutine
-        def f():
-            url_value = 'http://example.com'
-            pages_command = self.get_command("test_pages_4",'subscribe_to_pages', {'url_groups': {1: {url_value: None}}})
-            yield self.execute_pages_command(pages_command,
-                                             wait_result=True,
-                                             required_url=url_value,
-                                             max_count=1)
-        self.assertRaises(TimeoutError, self.io_loop.run_sync, f, timeout=3)
+        url_value = 'http://example.com'
+        pages_command = self.get_command("test_pages_4",'subscribe_to_pages', {'url_groups': {1: {url_value: None}}})
+        yield self.execute_pages_command(pages_command,
+                                         wait_result=True,
+                                         required_url=url_value,
+                                         exact_count=1)
 
     @tornado.testing.gen_test
     def test_pages_no_filter(self):
@@ -118,36 +156,40 @@ class TestDataAPI(tornado.testing.AsyncHTTPTestCase):
                }
 
     @tornado.gen.coroutine
-    def execute_pages_command(self, pages_command, wait_result=False, required_url=None, max_count=None):
+    def execute_pages_command(self, pages_command, wait_result=False, required_url=None, max_count=None, exact_count=None):
         ws_url = "ws://localhost:" + str(self.get_http_port()) + self.pages_uri
         ws_client = yield tornado.websocket.websocket_connect(ws_url)
         ws_client.write_message(json.dumps(pages_command))
-        response = yield ws_client.read_message()
-        json_response = json.loads(response)
-        subs_id = json_response.get("result").get("single_subscription_id", -1)
-        if not subs_id:
-            group_sub_ids = json_response.get("result").get("id", {})
-            for group_id in group_sub_ids.keys():
-                if group_sub_ids[group_id] != -1:
-                    subs_id = group_sub_ids[group_id]
-        self.assertNotEqual(subs_id, -1)
-        if wait_result:
-            if max_count is None:
-                response = yield ws_client.read_message()
-                json_response = json.loads(response)
-                if json_response is None:
-                    self.fail("incorrect response")
-            else:
-                cnt = 0
-                while True:
-                    response = yield ws_client.read_message()
-                    json_response = json.loads(response)
-                    if json_response is None:
-                        self.fail("incorrect response")
-                    cnt += 1
+        cnt = 0
+        subs_id = None
+        while True:
+            response = yield ws_client.read_message()
+            json_response = json.loads(response)
+            if json_response is None:
+                self.fail("incorrect json response")
+            datatype = json_response.get("result", {}).get("datatype", None)
+            if datatype == "pages_subscription_id":
+                subs_id = json_response.get("result").get("single_subscription_id", -1)
+                if not subs_id:
+                    group_sub_ids = json_response.get("result").get("id", {})
+                    for group_id in group_sub_ids.keys():
+                        if group_sub_ids[group_id] != -1:
+                            subs_id = group_sub_ids[group_id]
+            elif wait_result:
+                cnt += 1
+                if max_count is None and exact_count is None:
+                    break
+                elif max_count:
                     if cnt > max_count:
                         self.fail("max count of pages exceeded")
-        yield self.execute_cancel(ws_client, subs_id, True)
+                elif exact_count:
+                    if cnt == exact_count:
+                        break
+            else:
+                break
+        if subs_id:
+            self.assertNotEqual(subs_id, -1)
+            yield self.execute_cancel(ws_client, subs_id, True)
 
     @tornado.testing.gen_test
     def test_wrong_cancel(self):

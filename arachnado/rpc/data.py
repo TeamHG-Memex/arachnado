@@ -207,6 +207,8 @@ class PagesDataRpcWebsocketHandler(DataRpcWebsocketHandler):
         if not urls and not url_groups:
             stor_id, storage = self.add_storage()
             result["single_subscription_id"] = stor_id
+            if storage.pages.storage.tailing:
+                logger.warning("Subscription to tailing storage")
             storage.pages.subscribe(query={})
         raise gen.Return(result)
 
@@ -236,6 +238,9 @@ class PagesDataRpcWebsocketHandler(DataRpcWebsocketHandler):
                 logger.info("No jobs found for url {}".format(url))
         storage.subscribe_to_pages()
         for jobs_q, jobs in jobs_to_subscribe:
+            if jobs.storage.tailing:
+                logger.warning(jobs.callback_meta)
+                logger.warning("Subscription to tailing storage")
             jobs.subscribe(query=jobs_q)
         raise gen.Return(result)
 
@@ -312,6 +317,8 @@ class DataSubscription(object):
     def add_jobs_subscription(self, jobs_storage, include=None, exclude=None, last_id=None):
         jobs_query = self.create_jobs_subscription_query(include=include, exclude=exclude, last_id=last_id)
         self.jobs.append(jobs_storage)
+        if jobs_storage.storage.tailing:
+                logger.warning("Subscription to tailing storage")
         jobs_storage.subscribe(query=jobs_query)
 
     def update_pages_subscription(self, job_id, last_id):
