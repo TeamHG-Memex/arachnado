@@ -52,6 +52,7 @@ SPIDER_MIDDLEWARES = {
 
 DOWNLOADER_MIDDLEWARES = {
     'arachnado.downloadermiddlewares.proxyfromsettings.ProxyFromSettingsMiddleware': 10,
+    'arachnado.downloadermiddlewares.droprequests.DropRequestsMiddleware': 20,
     'autologin_middleware.AutologinMiddleware': 605,
     'scrapy.downloadermiddlewares.cookies.CookiesMiddleware': None,
     'autologin_middleware.ExposeCookiesMiddleware': 700,
