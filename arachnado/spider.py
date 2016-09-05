@@ -79,6 +79,8 @@ class CrawlWebsiteSpider(ArachnadoSpider):
 
         self.state['allow_domain'] = allow_domain
 
+        yield self._request_info_item(response)
+
         for elem in self.parse(response):
             yield elem
 
@@ -98,6 +100,8 @@ class CrawlWebsiteSpider(ArachnadoSpider):
             self.logger.info("non-HTML response is skipped: %s" % response.url)
             return
 
+        yield self._request_info_item(response)
+
         if self.settings.getbool('PREFER_PAGINATION'):
             # Follow pagination links; pagination is not a subject of
             # a max depth limit. This also prioritizes pagination links because
@@ -110,6 +114,14 @@ class CrawlWebsiteSpider(ArachnadoSpider):
             if link_looks_like_logout(link):
                 continue
             yield scrapy.Request(link.url, self.parse)
+
+    def _request_info_item(self, response):
+        keys = ['depth', 'download_latency', 'download_slot',
+                'proxy', 'is_page', 'autologin_active']
+        return {
+            key: response.meta[key] for key in keys
+            if key in response.meta
+        }
 
     def _pagination_urls(self, response):
         import autopager

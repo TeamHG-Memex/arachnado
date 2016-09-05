@@ -19,7 +19,7 @@ class PageItemsMiddleware(object):
 
     def process_spider_output(self, response, result, spider):
         result = list(result)
-        items = [r for r in result if isinstance(r, scrapy.Item)]
+        items = [r for r in result if isinstance(r, (scrapy.Item, dict))]
         requests = [r for r in result if isinstance(r, scrapy.Request)]
         page_item = self.get_page_item(response, items)
         return [page_item] + requests
@@ -31,7 +31,6 @@ class PageItemsMiddleware(object):
             'status': response.status,
             'headers': response.headers.to_unicode_dict(),
             'body': response.body_as_unicode(),
-            'meta': response.meta,
             'items': items,
             '_type': type_,
         }
