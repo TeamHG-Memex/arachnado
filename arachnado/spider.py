@@ -116,6 +116,12 @@ class CrawlWebsiteSpider(ArachnadoSpider):
         return [url for url in autopager.urls(response)
                 if self.link_extractor.matches(url)]
 
+    def should_drop_request(self, request):
+        if 'allow_domain' not in self.state:  # first request
+            return
+        if not self.link_extractor.matches(request.url):
+            return True
+
 
 @contextlib.contextmanager
 def _dont_increase_depth(response):
