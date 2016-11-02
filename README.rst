@@ -47,7 +47,7 @@ Tests
 To run tests make sure tox_ is installed, then
 execute ``tox`` command from the source root.
 
-.. _tox: https://testrun.org/tox/latest/
+.. _tox: https://tox.readthedocs.io/en/latest/
 
 Development
 -----------
