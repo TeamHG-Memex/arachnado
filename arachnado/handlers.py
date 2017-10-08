@@ -19,7 +19,7 @@ at_root = lambda *args: os.path.join(os.path.dirname(__file__), *args)
 
 
 def get_application(crawler_process, domain_crawlers,
-                    site_storage, item_storage, job_storage, opts):
+                    site_storage, item_storage, job_storage, opts, objects_uri):
     context = {
         'crawler_process': crawler_process,
         'domain_crawlers': domain_crawlers,
@@ -27,6 +27,7 @@ def get_application(crawler_process, domain_crawlers,
         'site_storage': site_storage,
         'item_storage': item_storage,
         'opts': opts,
+        'objects_uri': objects_uri
     }
     debug = opts['arachnado']['debug']
 
@@ -42,6 +43,7 @@ def get_application(crawler_process, domain_crawlers,
         url(r"/crawler/resume", ResumeCrawler, context, name="resume"),
         url(r"/crawler/status", CrawlerStatus, context, name="status"),
         url(r"/ws-updates", Monitor, context, name="ws-updates"),
+        url(r"/jobs", JobsList, context, name="jobs"),
 
         # RPC API
         url(r"/ws-rpc", RpcWebsocketHandler, context, name="ws-rpc"),
@@ -85,6 +87,14 @@ class Index(NoEtagsMixin, BaseRequestHandler):
         jobs = self.crawler_process.jobs
         initial_data_json = json_encode({"jobs": jobs})
         return self.render("index.html", initial_data_json=initial_data_json)
+
+
+class JobsList(NoEtagsMixin, BaseRequestHandler):
+
+    def get(self):
+        jobs = self.crawler_process.jobs
+        initial_data_json = json_encode(jobs)
+        self.write(initial_data_json)
 
 
 class Help(BaseRequestHandler):

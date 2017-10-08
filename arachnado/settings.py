@@ -9,7 +9,9 @@ SCHEDULER_DISK_QUEUE = 'scrapy.squeues.PickleFifoDiskQueue'
 SCHEDULER_MEMORY_QUEUE = 'scrapy.squeues.FifoMemoryQueue'
 LOG_UNSERIALIZABLE_REQUESTS = True
 DISK_QUEUES_ROOT = './.scrapy/jobs'
-
+SCHEDULER = "arachnado.scheduler.scheduler.Scheduler"
+REDIS_SCHEDULER_QUEUE_CLASS = "arachnado.scheduler.queue.SpiderPriorityQueue"
+DUPEFILTER_CLASS = "arachnado.scheduler.dupefilter.RedisDupeFilter"
 # Turn it ON if the goal is to crawl the whole webiste
 # (vs crawling most recent content):
 PREFER_PAGINATION = False
@@ -17,7 +19,6 @@ PREFER_PAGINATION = False
 # To enable autologin turn this option ON and pass AUTOLOGIN_URL
 # (e.g. 'http://127.0.0.1:8089')
 AUTOLOGIN_ENABLED = False
-# AUTOLOGIN_URL = 'http://127.0.0.1:8089'
 
 BOT_NAME = 'arachnado'
 COOKIES_DEBUG = False
@@ -48,18 +49,26 @@ DOWNLOADER = 'arachnado.crawler_process.ArachnadoDownloader'
 
 SPIDER_MIDDLEWARES = {
     'arachnado.spidermiddlewares.pageitems.PageItemsMiddleware': 100,
+    'arachnado.spidermiddlewares.depth.DepthMiddleware': 150,
+    'scrapy.spidermiddlewares.depth.DepthMiddleware': None,
 }
 
 DOWNLOADER_MIDDLEWARES = {
-    'arachnado.downloadermiddlewares.proxyfromsettings.ProxyFromSettingsMiddleware': 10,
-    'arachnado.downloadermiddlewares.droprequests.DropRequestsMiddleware': 20,
+    'arachnado.pagecache.httpcache.HttpCacheMiddleware': 230,
+    'arachnado.downloadermiddlewares.proxyfromsettings.ProxyFromSettingsMiddleware': 240,
+    'arachnado.downloadermiddlewares.droprequests.DropRequestsMiddleware': 250,
     'autologin_middleware.AutologinMiddleware': 605,
     'scrapy.downloadermiddlewares.cookies.CookiesMiddleware': None,
     'autologin_middleware.ExposeCookiesMiddleware': 700,
+    'scrapy_splash.SplashCookiesMiddleware': 723,
+    'scrapy_splash.SplashMiddleware': 725,
+    'scrapy.downloadermiddlewares.httpauth.HttpAuthMiddleware': 720,
+    'scrapy.downloadermiddlewares.downloadtimeout.DownloadTimeoutMiddleware': 730,
 }
 
 ITEM_PIPELINES = {
-    'arachnado.pipelines.mongoexport.MongoExportPipeline': 10,
+    'arachnado.pipelines.nodupsexport.NoDupsExportPipeline': 10,
+    'arachnado.pipelines.esexport.ElasticSearchExportPipeline': 20,
 }
 
 EXTENSIONS = {
@@ -68,6 +77,9 @@ EXTENSIONS = {
 
 MONGO_EXPORT_ENABLED = True
 MONGO_EXPORT_JOBID_KEY = '_job_id'
-HTTPCACHE_ENABLED = False
-# This storage is read-only. Responses are stored by PageExport middleware
-HTTPCACHE_STORAGE = 'arachnado.pagecache.mongo.MongoCacheStorage'
+
+HTTPCACHE_ENABLED = True
+HTTPCACHE_CLEANUP_PARAMS = {}
+HTTPCACHE_STORAGE = 'arachnado.pagecache.composite.CompositeCacheStorage'
+HTTPCACHE_POLICY = 'arachnado.pagecache.policy.CrawledDatePolicy'
+HTTPCACHE_MAX_DAYS_AGE = 15

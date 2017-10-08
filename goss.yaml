@@ -1,0 +1,18 @@
+file:
+  /app/arachnado/__main__.py:
+    exists: true
+port:
+  tcp:8888:
+    listening: true
+    ip:
+    - 0.0.0.0
+process:
+  arachnado:
+    running: true
+http:
+  http://localhost:8888:
+    status: 200
+    timeout: 5000
+    body:
+    - Arachnado Web Crawler
+

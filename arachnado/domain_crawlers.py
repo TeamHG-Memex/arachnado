@@ -39,10 +39,11 @@ class DomainCrawlers(object):
 
     def start(self, domain, args, settings, crawl_id=None):
         """ Create, start and return a crawler for a given domain. """
+        lookup_packages = self.spider_packages + ['arachnado.spider']
         default_cls = find_spider_cls(
             self.default_spider_name,
-            self.spider_packages + ['arachnado.spider'])
-        spider_cls = get_spider_cls(domain, self.spider_packages, default_cls)
+            lookup_packages)
+        spider_cls = get_spider_cls(domain, lookup_packages, default_cls)
         if not spider_cls:
             return
 

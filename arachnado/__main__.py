@@ -61,9 +61,14 @@ def main(port, host, start_manhole, manhole_port, manhole_host, loglevel, opts):
     from arachnado.domain_crawlers import DomainCrawlers
     from arachnado.cron import Cron
 
+
     settings = {
         'LOG_LEVEL': loglevel,
     }
+
+    main_opts = opts['arachnado']
+    if "logfile" in main_opts:
+        settings['LOG_FILE'] = main_opts["logfile"]
 
     # mongo export options
     storage_opts = opts['arachnado.storage']
@@ -72,6 +77,11 @@ def main(port, host, start_manhole, manhole_port, manhole_host, loglevel, opts):
     items_uri = _getval(storage_opts, 'items_uri_env', 'items_uri')
     jobs_uri = _getval(storage_opts, 'jobs_uri_env', 'jobs_uri')
     sites_uri = _getval(storage_opts, 'sites_uri_env', 'sites_uri')
+    objects_uri = {
+        "pages": items_uri,
+        "jobs": jobs_uri,
+        "sites": sites_uri
+    }
 
     scrapy_opts = opts['arachnado.scrapy']
     settings.update({k: v for k, v in scrapy_opts.items() if k.isupper()})
@@ -108,7 +118,7 @@ def main(port, host, start_manhole, manhole_port, manhole_host, loglevel, opts):
     cron.start()
 
     app = get_application(crawler_process, domain_crawlers,
-                          site_storage, item_storage, job_storage, opts)
+                          site_storage, item_storage, job_storage, opts, objects_uri)
     app.listen(int(port), host)
     logger.info("Arachnado v%s is started on %s:%s" % (__version__, host, port))
 
