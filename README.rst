@@ -74,5 +74,5 @@ or auto-build static files on each change during development::
 ----
 
 .. image:: https://hyperiongray.s3.amazonaws.com/define-hg.svg
-	:target: https://hyperiongray.com/?pk_campaign=github&pk_kwd=arachnado
+	:target: https://www.hyperiongray.com/?pk_campaign=github&pk_kwd=arachnado
 	:alt: define hyperiongray
