@@ -1,4 +1,4 @@
-scrapy == 1.1.0
+scrapy == 1.8.1
 tornado == 4.2      # tornado==4.3 seems to cause problems
 psutil == 4.2.0
 Twisted == 16.2.0
