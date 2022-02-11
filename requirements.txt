@@ -1,7 +1,7 @@
 scrapy == 1.1.0
 tornado == 4.2      # tornado==4.3 seems to cause problems
 psutil == 4.2.0
-Twisted == 16.2.0
+Twisted == 22.1.0
 motor == 0.6.2
 pymongo==2.8        # required for motor 0.6.2
 docopt == 0.6.2
