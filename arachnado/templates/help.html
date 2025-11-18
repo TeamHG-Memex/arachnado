@@ -5,4 +5,46 @@
 {% block content %}
     <h2>Help</h2>
     <p>Arachnado is a tool to get all data from a website and store it in a database.</p>
+    
+    <h3>Getting Started</h3>
+    <p>Enter a domain or URL in the form above and click "Start crawl" to begin crawling.</p>
+    <p>The crawler will follow all links within the same domain and store the discovered pages in the database.</p>
+    
+    <h3>Using Custom Spiders</h3>
+    <p>Arachnado supports custom Scrapy spiders for specialized crawling logic.</p>
+    <p>To use a custom spider, enter a URL in the format: <code>spider://spidername</code></p>
+    <p>For example: <code>spider://mycustom</code></p>
+    
+    <h4>Setting Up Custom Spiders</h4>
+    <ol>
+        <li>Create a Scrapy spider with a <code>name</code> attribute</li>
+        <li>Configure the <code>spider_packages</code> option in your Arachnado config file:
+            <pre>[arachnado.scrapy]
+spider_packages = myspiders.spiders</pre>
+        </li>
+        <li>Ensure your spider package is in Python's path</li>
+        <li>Use <code>spider://spidername</code> in the domain field to trigger your spider</li>
+    </ol>
+    
+    <h4>Example Custom Spider</h4>
+    <pre>import scrapy
+from arachnado.spider import ArachnadoSpider
+
+class MySpider(ArachnadoSpider):
+    name = 'mycustom'
+    
+    def start_requests(self):
+        url = self.domain  # Set by Arachnado
+        yield scrapy.Request(url, self.parse)
+    
+    def parse(self, response):
+        yield {
+            'url': response.url,
+            'title': response.css('title::text').get(),
+        }</pre>
+    
+    <p>For more details, see the <a href="https://github.com/TeamHG-Memex/arachnado/blob/master/docs/custom-spiders.rst">Custom Spiders documentation</a>.</p>
+    
+    <h3>API Access</h3>
+    <p>Arachnado provides both HTTP and WebSocket APIs for programmatic access. See the documentation for details.</p>
 {% end %}

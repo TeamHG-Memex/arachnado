@@ -15,6 +15,7 @@ License is MIT.
 
    intro
    config
+   custom-spiders
    http-api
    json-rpc-api
 
