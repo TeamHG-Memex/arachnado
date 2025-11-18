@@ -14,6 +14,7 @@ License is MIT.
    :maxdepth: 2
 
    intro
+   faq
    config
    http-api
    json-rpc-api
