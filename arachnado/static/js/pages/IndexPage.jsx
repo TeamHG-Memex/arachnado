@@ -7,6 +7,7 @@ var { JobList } = require("../components/JobList");
 var { AggregateJobStats } = require("../components/JobStats");
 var { ProcessStatsTable } = require("../components/ProcessStats");
 var { CrawlForm } = require("../components/CrawlForm");
+var { ProjectUpload } = require("../components/ProjectUpload");
 
 
 export var IndexPage = React.createClass({
@@ -15,6 +16,7 @@ export var IndexPage = React.createClass({
             <div className="row">
                 <div className="col-lg-7 col-md-7">
                     <CrawlForm action={window.START_CRAWL_URL} />
+                    <ProjectUpload />
                     <Panel collapsible defaultExpanded header="Jobs" bsStyle="primary">
                         <JobList/>
                     </Panel>
