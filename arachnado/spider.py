@@ -114,7 +114,11 @@ class CrawlWebsiteSpider(ArachnadoSpider):
         allow_pattern = None
         if start_path and start_path != '/':
             # Escape the path for regex and match URLs that start with this path
-            allow_pattern = '^' + re.escape(start_path)
+            # Remove trailing slash for the pattern to match both /path and /path/*
+            base_path = start_path.rstrip('/')
+            # Pattern: match exact path or anything under it
+            # e.g., for /docs/api it matches /docs/api, /docs/api/, /docs/api/v1, etc.
+            allow_pattern = '^' + re.escape(base_path) + '(/|$)'
         
         return LinkExtractor(
             allow_domains=[self.state['allow_domain']],

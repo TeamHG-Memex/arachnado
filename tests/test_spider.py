@@ -100,8 +100,8 @@ class TestCrawlWebsiteSpider(unittest.TestCase):
         
         # Should have allow pattern
         self.assertIsNotNone(link_extractor.allow)
-        # Pattern should start with escaped path
-        self.assertEqual(link_extractor.allow, '^/docs/')
+        # Pattern should match both /docs and /docs/* but not /doc or /documents
+        self.assertEqual(link_extractor.allow, '^/docs(/|$)')
 
 
 if __name__ == '__main__':
