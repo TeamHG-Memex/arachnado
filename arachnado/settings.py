@@ -68,6 +68,8 @@ EXTENSIONS = {
 
 MONGO_EXPORT_ENABLED = True
 MONGO_EXPORT_JOBID_KEY = '_job_id'
+MONGO_EXPORT_ITEMS_URI = 'mongodb://localhost:27017/arachnado/items'
+MONGO_EXPORT_JOBS_URI = 'mongodb://localhost:27017/arachnado/jobs'
 HTTPCACHE_ENABLED = False
 # This storage is read-only. Responses are stored by PageExport middleware
 HTTPCACHE_STORAGE = 'arachnado.pagecache.mongo.MongoCacheStorage'
