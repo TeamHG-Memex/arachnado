@@ -54,6 +54,33 @@ Development
 
 * Source code: https://github.com/TeamHG-Memex/arachnado
 * Issue tracker: https://github.com/TeamHG-Memex/arachnado/issues
+* Documentation: https://arachnado.readthedocs.io/
+
+Building From Source
+~~~~~~~~~~~~~~~~~~~~
+
+To build Arachnado from source for development:
+
+1. Clone the repository::
+
+    git clone https://github.com/TeamHG-Memex/arachnado.git
+    cd arachnado
+
+2. Install Python dependencies::
+
+    pip install -r requirements.txt
+    pip install -e .
+
+3. Install JavaScript dependencies and build assets::
+
+    npm install
+    npm run build
+
+For detailed development instructions, including how to create custom extensions,
+see the `Development Guide <https://arachnado.readthedocs.io/>`_ in the documentation.
+
+Building Frontend Assets
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 To build Arachnado static assets node.js + npm are required.
 Install all JavaScript requirements using npm - run the following command
