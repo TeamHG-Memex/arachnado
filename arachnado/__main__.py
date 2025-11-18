@@ -13,6 +13,8 @@ Options:
   -h --host <host>          Host to bind.
   -c --config <path>        Path to config file.
   -L --loglevel <level>     Set log level.
+  --resume-on-start         Resume unfinished crawls on start.
+  --no-resume-on-start      Don't resume unfinished crawls on start.
   --manhole                 Start a manhole server.
   --manhole-port <port>     Manhole server port.
   --manhole-host <host>     Manhole server host.
@@ -102,7 +104,8 @@ def main(port, host, start_manhole, manhole_port, manhole_host, loglevel, opts):
         default_spider_name=default_spider_name,
         settings=settings
     )
-    domain_crawlers.resume(job_storage)
+    if opts['arachnado']['resume_on_start']:
+        domain_crawlers.resume(job_storage)
 
     cron = Cron(domain_crawlers, site_storage)
     cron.start()
@@ -161,8 +164,16 @@ def _get_opts(args):
         'port': '--manhole-port',
         'host': '--manhole-host',
     })
+    
+    # Handle resume_on_start with both positive and negative flags
+    if args['--resume-on-start']:
+        overrides.append(['arachnado', 'resume_on_start', True])
+    elif args['--no-resume-on-start']:
+        overrides.append(['arachnado', 'resume_on_start', False])
+    
     opts = load_config(config_files, overrides)
     ensure_bool(opts, 'arachnado', 'debug')
+    ensure_bool(opts, 'arachnado', 'resume_on_start')
     ensure_bool(opts, 'arachnado.storage', 'enabled')
     ensure_bool(opts, 'arachnado.manhole', 'enabled')
     return opts
