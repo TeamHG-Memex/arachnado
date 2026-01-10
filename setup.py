@@ -82,5 +82,11 @@ setup(
     extras_require={
         'mongo': [],   # backwards compatibility
         'extras': ['autopager >= 0.2'],
+        'bot-detector': [
+            # bot_detector is an optional dependency for detecting bot/crawler
+            # engines in web pages. It's not available on PyPI and needs to be
+            # installed separately if needed. The package is gracefully handled
+            # if not available - site_checker.py will work without it.
+        ],
     }
 )

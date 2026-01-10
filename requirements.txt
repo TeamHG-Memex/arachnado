@@ -10,3 +10,8 @@ json-rpc==1.10.3
 croniter == 0.3.12
 autopager == 0.2
 autologin-middleware == 0.1.1
+
+# Optional dependencies:
+# bot_detector - Used by site_checker.py for detecting bot/crawler engines in web pages.
+#                Not available on PyPI, needs to be installed separately if needed.
+#                The application works without it (gracefully handles ImportError).
