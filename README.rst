@@ -41,6 +41,32 @@ the server::
 For available options check
 https://github.com/TeamHG-Memex/arachnado/blob/master/arachnado/config/defaults.conf.
 
+Features
+--------
+
+Arachnado provides several features for managing web crawls:
+
+* **Web UI**: Start, stop, pause, and resume crawls through a user-friendly interface
+* **HTTP API**: Programmatic access to all crawling functions
+* **Custom Spiders**: Upload your own Scrapy projects and run custom spiders
+* **Job Management**: Monitor running jobs and view crawl statistics
+* **MongoDB Storage**: Store crawled items and job information
+
+Uploading Custom Spiders
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+You can upload your own Scrapy projects via the web UI:
+
+1. Package your Scrapy project as a zip or tar.gz file
+2. Use the "Upload Scrapy Project" panel on the main page
+3. Enter a project name and select your archive file
+4. Click "Upload Project"
+
+Once uploaded, you can run spiders from your project by using the
+``spider://<spider_name>`` format in the crawl form.
+
+For more details on the HTTP API for uploading projects, see the documentation.
+
 Tests
 -----
 
