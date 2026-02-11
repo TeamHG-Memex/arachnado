@@ -49,7 +49,6 @@ class EventedStatsCollector(StatsCollector):
         self.signals = SignalManager(self)
         self._changes = {}
         self._task = PeriodicCallback(self.emit_changes, self.accumulate_time*1000)
-        self._task.start()
 
         # FIXME: this is ugly
         self.crawler = crawler  # used by ArachnadoCrawlerProcess
