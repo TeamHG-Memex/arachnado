@@ -41,6 +41,19 @@ the server::
 For available options check
 https://github.com/TeamHG-Memex/arachnado/blob/master/arachnado/config/defaults.conf.
 
+Custom Spiders
+--------------
+
+Arachnado supports running custom Scrapy spiders. To use a custom spider:
+
+1. Create a Scrapy spider with a ``name`` attribute
+2. Configure Arachnado to load your spider package via the ``spider_packages``
+   config option
+3. Use ``spider://spidername`` as the domain when starting a crawl
+
+For detailed instructions, see the `Custom Spiders documentation
+<https://github.com/TeamHG-Memex/arachnado/blob/master/docs/custom-spiders.rst>`_.
+
 Tests
 -----
 
