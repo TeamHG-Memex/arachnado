@@ -31,6 +31,33 @@ function sortedRequests(requests, seenAt) {
 }
 
 
+function _downloadsEqual(d1, d2) {
+    // Quick check: compare active requests count and slots count
+    if (!d1 || !d2) return d1 === d2;
+    if (d1.active.length !== d2.active.length) return false;
+    if (d1.slots.length !== d2.slots.length) return false;
+    
+    // Check if active request URLs are the same
+    var urls1 = d1.active.map(r => r.url).sort();
+    var urls2 = d2.active.map(r => r.url).sort();
+    if (urls1.length !== urls2.length) return false;
+    for (var i = 0; i < urls1.length; i++) {
+        if (urls1[i] !== urls2[i]) return false;
+    }
+    
+    // Check slots
+    for (var i = 0; i < d1.slots.length; i++) {
+        var s1 = d1.slots[i];
+        var s2 = d2.slots[i];
+        if (s1.key !== s2.key) return false;
+        if (s1.active.length !== s2.active.length) return false;
+        if (s1.transferring.length !== s2.transferring.length) return false;
+    }
+    
+    return true;
+}
+
+
 export var ShortTermQueueWidget = React.createClass({
     propTypes: {
         job: React.PropTypes.object.isRequired,
@@ -38,6 +65,11 @@ export var ShortTermQueueWidget = React.createClass({
 
     getInitialState: function () {
         return {seenAt: {}};
+    },
+
+    shouldComponentUpdate: function(nextProps, nextState) {
+        // Only update if downloads data has actually changed
+        return !_downloadsEqual(this.props.job.downloads, nextProps.job.downloads);
     },
 
     componentWillReceiveProps: function(nextProps) {
