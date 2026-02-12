@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 import os
-from six.moves.configparser import SafeConfigParser
+from six.moves.configparser import ConfigParser
 
 _ROOT = os.path.abspath(os.path.dirname(__file__))
 
@@ -14,7 +14,7 @@ FILENAMES = [
 
 
 def load_config(config_files=(), overrides=()):
-    cp = SafeConfigParser()
+    cp = ConfigParser()
     cp.optionxform = str  # make parsing case-sensitive
     cp.read(FILENAMES + config_files)
 
