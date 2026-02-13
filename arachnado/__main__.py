@@ -89,7 +89,7 @@ def main(port, host, start_manhole, manhole_port, manhole_host, loglevel, opts):
     item_storage.ensure_index("url")
     item_storage.ensure_index("_job_id")
 
-    crawler_process = ArachnadoCrawlerProcess(settings)
+    crawler_process = ArachnadoCrawlerProcess(settings, job_storage)
 
     site_checker_crawler = get_site_checker_crawler(site_storage)
     crawler_process.crawl(site_checker_crawler)
