@@ -5,7 +5,7 @@ import logging
 from scrapy import signals
 from scrapy.exceptions import DontCloseSpider
 from scrapy.crawler import Crawler
-from scrapy.xlib.tx import ResponseFailed
+from twisted.web.client import ResponseFailed
 from twisted.internet import reactor
 from twisted.internet.error import (
     TimeoutError, DNSLookupError,
