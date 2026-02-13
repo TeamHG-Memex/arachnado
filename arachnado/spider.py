@@ -2,11 +2,13 @@
 from __future__ import absolute_import
 import contextlib
 import logging
+import re
 
 import scrapy
 from scrapy.linkextractors import LinkExtractor
 from scrapy.http.response.html import HtmlResponse
 from autologin_middleware import link_looks_like_logout
+from six.moves.urllib.parse import urlparse
 
 from arachnado.utils.misc import add_scheme_if_missing, get_netloc
 
@@ -78,6 +80,24 @@ class CrawlWebsiteSpider(ArachnadoSpider):
             allow_domain = allow_domain[len("www."):]
 
         self.state['allow_domain'] = allow_domain
+        
+        # Extract the path from the start URL to enable path-based filtering
+        parsed_url = urlparse(response.url)
+        start_path = parsed_url.path
+        # Normalize the path: ensure it ends with / for directory-style paths
+        # or keep as-is for file-style paths
+        if start_path and not start_path.endswith('/'):
+            # Check if it looks like a file (has extension) or directory
+            if '.' in start_path.split('/')[-1]:
+                # Looks like a file, use parent directory
+                start_path = '/'.join(start_path.split('/')[:-1])
+                if start_path:
+                    start_path += '/'
+            else:
+                # Looks like a directory without trailing slash
+                start_path += '/'
+        
+        self.state['start_path'] = start_path if start_path else '/'
 
         yield self._request_info_item(response)
 
@@ -86,8 +106,23 @@ class CrawlWebsiteSpider(ArachnadoSpider):
 
     @property
     def link_extractor(self):
+        # Get the start path for filtering
+        start_path = self.state.get('start_path', '/')
+        
+        # Create allow pattern if we have a meaningful path
+        # Only filter by path if it's not the root path
+        allow_pattern = None
+        if start_path and start_path != '/':
+            # Escape the path for regex and match URLs that start with this path
+            # Remove trailing slash for the pattern to match both /path and /path/*
+            base_path = start_path.rstrip('/')
+            # Pattern: match exact path or anything under it
+            # e.g., for /docs/api it matches /docs/api, /docs/api/, /docs/api/v1, etc.
+            allow_pattern = '^' + re.escape(base_path) + '(/|$)'
+        
         return LinkExtractor(
             allow_domains=[self.state['allow_domain']],
+            allow=allow_pattern,
             canonicalize=False,
         )
 
