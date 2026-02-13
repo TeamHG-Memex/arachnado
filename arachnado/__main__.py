@@ -96,11 +96,13 @@ def main(port, host, start_manhole, manhole_port, manhole_host, loglevel, opts):
 
     spider_packages = scrapy_opts['spider_packages']
     default_spider_name = scrapy_opts['default_spider_name']
+    projects_dir = scrapy_opts.get('uploaded_projects_dir')
     domain_crawlers = DomainCrawlers(
         crawler_process=crawler_process,
         spider_packages=_parse_spider_packages(spider_packages),
         default_spider_name=default_spider_name,
-        settings=settings
+        settings=settings,
+        projects_dir=projects_dir
     )
     domain_crawlers.resume(job_storage)
 
