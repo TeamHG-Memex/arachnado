@@ -51,6 +51,16 @@ class ProcessStatsMonitor(object):
     def _emit(self):
         cpu_times = self.process.cpu_times()
         ram_usage = self.process.memory_info()
+        
+        # Get file descriptors/handles count (platform-specific)
+        # num_fds() is available on Unix/Linux/macOS
+        # num_handles() is available on Windows
+        num_fds = None
+        if hasattr(self.process, 'num_fds'):
+            num_fds = self.process.num_fds()
+        elif hasattr(self.process, 'num_handles'):
+            num_fds = self.process.num_handles()
+        
         stats = {
             'ram_percent': self.process.memory_percent(),
             'ram_rss': ram_usage.rss,
@@ -58,7 +68,7 @@ class ProcessStatsMonitor(object):
             'cpu_percent': self.process.cpu_percent(),
             'cpu_time_user': cpu_times.user,
             'cpu_time_system': cpu_times.system,
-            'num_fds': self.process.num_fds(),
+            'num_fds': num_fds,
             'context_switches': self.process.num_ctx_switches(),
             'num_threads': self.process.num_threads(),
             'server_time': int(time.time()*1000),
