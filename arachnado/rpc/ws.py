@@ -20,10 +20,33 @@ class RpcWebsocketHandler(ArachnadoRPC, websocket.WebSocketHandler):
     """
 
     def on_message(self, message):
-        self.handle_request(message)
+        # Parse FancyWebSocket message format: {event: "rpc:request", data: {...}}
+        try:
+            msg_obj = json.loads(message)
+            if isinstance(msg_obj, dict) and 'event' in msg_obj and 'data' in msg_obj:
+                if msg_obj['event'] == 'rpc:request':
+                    # Extract the JSON-RPC request from the data field
+                    rpc_request = json.dumps(msg_obj['data'])
+                    self.handle_request(rpc_request)
+                else:
+                    logger.warning("Unexpected event type: %s", msg_obj['event'])
+            else:
+                # Fallback to direct handling for backward compatibility
+                self.handle_request(message)
+        except (ValueError, KeyError, TypeError) as e:
+            logger.error("Failed to parse WebSocket message: %s", e)
+            # Try direct handling as fallback
+            self.handle_request(message)
 
     def send_data(self, data):
-        self.write_event(data)
+        # Wrap JSON-RPC response in FancyWebSocket format
+        if isinstance(data, six.string_types):
+            data = json.loads(data)
+        wrapped_response = {
+            'event': 'rpc:response',
+            'data': data
+        }
+        self.write_event(wrapped_response)
 
     @gen.coroutine
     def write_event(self, data, max_message_size=0):
