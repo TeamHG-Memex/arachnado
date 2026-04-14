@@ -166,14 +166,17 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
     assigns unique ids to each spider job, workarounds some Scrapy
     issues and provides extra stats.
     """
-    def __init__(self, settings=None):
+    def __init__(self, settings=None, job_storage=None):
         self.signals = SignalManager(self)
         self.signals.connect(self.on_spider_closed,
                              CrawlerProcessSignals.spider_closed)
+        self.signals.connect(self.on_spider_opened,
+                             CrawlerProcessSignals.spider_opened)
         self._finished_jobs = []
         self._paused_jobs = set()
         self.procmon = ProcessStatsMonitor()
         self.procmon.start()
+        self.job_storage = job_storage
 
         super(ArachnadoCrawlerProcess, self).__init__(settings)
 
@@ -216,11 +219,23 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
         """ Pause a crawling job """
         self._paused_jobs.add(crawl_id)
         self.get_crawler(crawl_id).engine.pause()
+        self._update_job_status(crawl_id, 'paused')
 
     def resume_job(self, crawl_id):
         """ Resume a crawling job """
         self._paused_jobs.remove(crawl_id)
         self.get_crawler(crawl_id).engine.unpause()
+        self._update_job_status(crawl_id, 'running')
+
+    def _update_job_status(self, crawl_id, status):
+        """ Update job status in MongoDB """
+        if self.job_storage is not None:
+            from tornado.ioloop import IOLoop
+            IOLoop.current().add_callback(
+                self.job_storage.col.update,
+                {'id': crawl_id},
+                {'$set': {'status': status}}
+            )
 
     def get_crawler(self, crawl_id):
         if crawl_id is not None:
@@ -251,6 +266,18 @@ class ArachnadoCrawlerProcess(CrawlerProcess):
         """ Terminate the process (exit from application). """
         self.procmon.stop()
         return super(ArachnadoCrawlerProcess, self).stop()
+
+    def on_spider_opened(self, spider):
+        """ Check if spider should be paused on startup """
+        if hasattr(spider, 'crawl_id') and spider.crawl_id in self._paused_jobs:
+            # Spider was marked as paused before opening, pause it now
+            try:
+                crawler = self.get_crawler(spider.crawl_id)
+                crawler.engine.pause()
+                logger.info("Paused spider %s on startup", spider.crawl_id)
+            except Exception as e:
+                logger.error("Error pausing spider %s on startup: %s", 
+                           spider.crawl_id, e)
 
     def on_spider_closed(self, spider, reason):
         # spiders are closed not that often, insert(0,...) should be fine

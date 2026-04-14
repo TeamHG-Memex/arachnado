@@ -95,12 +95,19 @@ class MongoExportPipeline(object):
             yield self.items_col.ensure_index(self.job_id_key)
             yield self.jobs_col.ensure_index('id', unique=True)
 
+            # Check if job already exists and has a status
+            existing_job = yield self.jobs_col.find_one({'id': spider.crawl_id})
+            # Preserve "paused" status if job was paused before restart
+            status = 'running'
+            if existing_job and existing_job.get('status') == 'paused':
+                status = 'paused'
+
             job = yield self.jobs_col.find_and_modify({
                 'id': spider.crawl_id,
             }, {
                 'id': spider.crawl_id,
                 'started_at': datetime.datetime.utcnow(),
-                'status': 'running',
+                'status': status,
                 'spider': spider.name,
                 "urls": self.get_spider_urls(spider),
                 'options': getattr(spider.crawler, 'start_options', {}),

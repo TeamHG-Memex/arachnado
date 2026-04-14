@@ -28,11 +28,24 @@ class DomainCrawlers(object):
     def resume(self, job_storage):
         @gen.coroutine
         def _resume():
+            # Resume running and shutdown jobs
             query = {"status": {"$in": ["shutdown", "running"]}}
             for job in (yield job_storage.fetch(query)):
                 if 'options' not in job:
                     warnings.warn("invalid job without options, can't resume: %s" % job)
                     continue
+                self.start(**job['options'])
+            
+            # Resume paused jobs (they will be immediately paused again)
+            query = {"status": "paused"}
+            for job in (yield job_storage.fetch(query)):
+                if 'options' not in job:
+                    warnings.warn("invalid job without options, can't resume: %s" % job)
+                    continue
+                crawl_id = job['options'].get('crawl_id')
+                if crawl_id:
+                    # Mark as paused before starting so it gets paused on spider_opened
+                    self.crawler_process._paused_jobs.add(crawl_id)
                 self.start(**job['options'])
 
         IOLoop.instance().add_callback(_resume)
