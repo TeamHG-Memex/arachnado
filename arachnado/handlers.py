@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 import os
+import tempfile
+import logging
 
 from tornado.web import Application, RequestHandler, url, HTTPError
 # from tornado.escape import json_decode
@@ -13,6 +15,8 @@ from arachnado.rpc.data import PagesDataRpcWebsocketHandler, JobsDataRpcWebsocke
 
 from arachnado.rpc import RpcHttpHandler
 from arachnado.rpc.ws import RpcWebsocketHandler
+
+logger = logging.getLogger(__name__)
 
 
 at_root = lambda *args: os.path.join(os.path.dirname(__file__), *args)
@@ -42,6 +46,10 @@ def get_application(crawler_process, domain_crawlers,
         url(r"/crawler/resume", ResumeCrawler, context, name="resume"),
         url(r"/crawler/status", CrawlerStatus, context, name="status"),
         url(r"/ws-updates", Monitor, context, name="ws-updates"),
+
+        # Project upload
+        url(r"/project/upload", UploadProject, context, name="upload-project"),
+        url(r"/project/list", ListProjects, context, name="list-projects"),
 
         # RPC API
         url(r"/ws-rpc", RpcWebsocketHandler, context, name="ws-rpc"),
@@ -166,3 +174,89 @@ class CrawlerStatus(BaseRequestHandler):
                     if job['id'] in crawl_ids]
 
         self.write(json_encode({"jobs": jobs}))
+
+
+class UploadProject(ApiHandler, BaseRequestHandler):
+    """
+    This endpoint handles uploading Scrapy projects.
+    """
+    def post(self):
+        try:
+            if not hasattr(self.domain_crawlers, 'project_manager'):
+                raise HTTPError(500, reason="Project upload is not configured")
+            
+            # Get the uploaded file
+            if 'project_file' not in self.request.files:
+                raise HTTPError(400, reason="No file uploaded")
+            
+            file_info = self.request.files['project_file'][0]
+            project_name = self.get_body_argument('project_name', '').strip()
+            
+            if not project_name:
+                raise HTTPError(400, reason="Project name is required")
+            
+            # Validate project name (alphanumeric, underscores, hyphens only)
+            import re
+            if not re.match(r'^[a-zA-Z0-9_-]+$', project_name):
+                raise HTTPError(400, reason="Invalid project name. Use only letters, numbers, underscores, and hyphens.")
+            
+            # Save uploaded file to a temporary location
+            temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.archive')
+            try:
+                temp_file.write(file_info['body'])
+                temp_file.close()
+                
+                # Extract the project
+                project_path = self.domain_crawlers.project_manager.extract_project(
+                    temp_file.name, project_name
+                )
+                
+                # Get spider packages from the project
+                spider_packages = self.domain_crawlers.project_manager.get_project_spider_packages(project_name)
+                
+                # Update domain_crawlers with new spider packages
+                self.domain_crawlers.add_spider_packages(spider_packages)
+                
+                logger.info("Uploaded project '%s' with spider packages: %s", project_name, spider_packages)
+                
+                if self.is_json:
+                    self.write({
+                        "status": "ok",
+                        "project_name": project_name,
+                        "spider_packages": spider_packages
+                    })
+                else:
+                    self.redirect("/")
+                    
+            finally:
+                # Clean up temp file
+                if os.path.exists(temp_file.name):
+                    os.unlink(temp_file.name)
+                    
+        except HTTPError:
+            raise
+        except Exception as e:
+            logger.error("Error uploading project: %s", e, exc_info=True)
+            if self.is_json:
+                self.set_status(500)
+                self.write({"status": "error", "message": str(e)})
+            else:
+                raise HTTPError(500, reason=str(e))
+
+
+class ListProjects(ApiHandler, BaseRequestHandler):
+    """
+    This endpoint lists uploaded projects.
+    """
+    def get(self):
+        try:
+            if not hasattr(self.domain_crawlers, 'project_manager'):
+                projects = []
+            else:
+                projects = self.domain_crawlers.project_manager.list_projects()
+            
+            self.write(json_encode({"projects": projects}))
+        except Exception as e:
+            logger.error("Error listing projects: %s", e, exc_info=True)
+            self.set_status(500)
+            self.write({"status": "error", "message": str(e)})

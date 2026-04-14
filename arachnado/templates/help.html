@@ -5,4 +5,25 @@
 {% block content %}
     <h2>Help</h2>
     <p>Arachnado is a tool to get all data from a website and store it in a database.</p>
+    
+    <h3>Starting a Crawl</h3>
+    <p>Enter a website URL in the crawl form and click "Crawl" to start crawling. 
+    You can configure crawl options by clicking the gear icon.</p>
+    
+    <h3>Uploading Custom Spiders</h3>
+    <p>You can upload your own Scrapy projects to run custom spiders:</p>
+    <ol>
+        <li>Package your Scrapy project as a <code>.zip</code> or <code>.tar.gz</code> file</li>
+        <li>Click on "Upload Scrapy Project" panel on the main page</li>
+        <li>Enter a project name (letters, numbers, underscores, and hyphens only)</li>
+        <li>Select your project archive file</li>
+        <li>Click "Upload Project"</li>
+    </ol>
+    <p>After uploading, you can run spiders from your project by entering 
+    <code>spider://&lt;spider_name&gt;</code> in the crawl form, where 
+    <code>&lt;spider_name&gt;</code> is the name of your spider.</p>
+    
+    <h3>Managing Jobs</h3>
+    <p>Active crawl jobs are listed in the "Jobs" panel. You can stop, pause, or resume jobs 
+    using the controls shown for each job.</p>
 {% end %}

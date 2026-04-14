@@ -12,6 +12,7 @@ import arachnado.settings
 from arachnado.crawler_process import ArachnadoCrawler
 from arachnado.spider import CrawlWebsiteSpider, ArachnadoSpider
 from arachnado.utils.spiders import get_spider_cls, find_spider_cls
+from arachnado.utils.projects import ProjectManager
 
 
 class DomainCrawlers(object):
@@ -19,11 +20,38 @@ class DomainCrawlers(object):
     Helper class to create and start crawlers.
     """
     def __init__(self, crawler_process, spider_packages, default_spider_name,
-                 settings):
+                 settings, projects_dir=None):
         self.settings = get_settings(settings)
         self.crawler_process = crawler_process
-        self.spider_packages = spider_packages
+        self.spider_packages = list(spider_packages)  # Make a copy
         self.default_spider_name = default_spider_name
+        
+        # Initialize project manager if projects_dir is provided
+        if projects_dir:
+            self.project_manager = ProjectManager(projects_dir)
+            # Load existing projects on startup
+            self._load_existing_projects()
+        else:
+            self.project_manager = None
+    
+    def _load_existing_projects(self):
+        """Load spider packages from existing uploaded projects."""
+        if not self.project_manager:
+            return
+        
+        for project_name in self.project_manager.list_projects():
+            spider_packages = self.project_manager.get_project_spider_packages(project_name)
+            self.add_spider_packages(spider_packages)
+    
+    def add_spider_packages(self, packages):
+        """
+        Add new spider packages to the list of searched packages.
+        
+        :param packages: List of package names to add
+        """
+        for package in packages:
+            if package not in self.spider_packages:
+                self.spider_packages.append(package)
 
     def resume(self, job_storage):
         @gen.coroutine
